@@ -1,6 +1,5 @@
 {
-  "cuestionario": {
-    "id": "caso-nuevo-coach-calificacion-leads",
+  "id": "caso-nuevo-coach-calificacion-leads",
     "cliente": "Caso nuevo — coach/consultor (ficticio, construido para la prueba)",
     "estado": "caso_de_prueba",
     "usa_scoring": true,
@@ -93,5 +92,4 @@
         }
       ]
     }
-  }
 }
