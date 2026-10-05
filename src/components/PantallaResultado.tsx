@@ -10,13 +10,6 @@ export default function PantallaResultado({
   return (
     <main className="questionnaire result-screen">
       <p className="eyebrow">Resultado</p>
-      {calculo.tipo === "segmentado" && (
-        <p className="result-summary">
-          Segmento: <strong>{calculo.segmento}</strong>
-          <span aria-hidden="true"> · </span>
-          Puntaje: <strong>{calculo.puntajeTotal}</strong>
-        </p>
-      )}
       <article className="question-card">
         <p>{calculo.resultado.contenido}</p>
         {calculo.resultado.cta && (

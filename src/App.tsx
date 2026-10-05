@@ -28,13 +28,12 @@ export default function App() {
     const mensaje =
       calculo.tipo === "sin_segmento"
         ? "No se encontró un segmento para el puntaje obtenido."
-        : `No se encontró un resultado para el segmento "${calculo.segmento}".`;
+        : "No se pudo encontrar un resultado para el cuestionario.";
 
     return (
       <main className="validation-errors" role="alert">
         <h1>No se pudo determinar el resultado</h1>
         <p>{mensaje}</p>
-        <p>Puntaje obtenido: {calculo.puntajeTotal}</p>
       </main>
     );
   }
