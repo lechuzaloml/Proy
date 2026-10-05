@@ -14,3 +14,8 @@ sin modificar sus diez reglas.
 4. **Cobertura de rangos de scoring fuera del MVP:** validar que las reglas
    `reglas_scoring` no se solapen y cubran todo el puntaje posible está
    **explícitamente fuera del alcance del MVP**. No se valida en esta etapa.
+5. **Puntaje y segmento internos:** el puntaje total y el segmento obtenido
+   son información interna para el negocio (determinan qué resultado
+   mostrar), pero nunca se muestran al usuario final que responde el
+   cuestionario — evita que alguien ajuste sus respuestas a propósito para
+   obtener un segmento más favorable.

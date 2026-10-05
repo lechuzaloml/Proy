@@ -1,0 +1,89 @@
+{
+  "id": "merkatics-onboarding-agentes-seguros",
+  "cliente": "Merkatics",
+  "estado": "en_desarrollo",
+  "usa_scoring": false,
+  "posicion_contacto": "inicio",
+  "secciones": [
+    "Identidad y contacto profesional",
+    "Trayectoria y autoridad",
+    "Cartera y especialización actual",
+    "Objetivo del proyecto",
+    "Casos de impacto y prueba social",
+    "Presencia digital y canales actuales",
+    "Marca y tono",
+    "Restricciones y cumplimiento",
+    "Logística de la Sesión de Estrategia"
+  ],
+  "preguntas": [
+    {
+      "id": "p1",
+      "seccion": "Identidad y contacto profesional",
+      "texto": "Nombre completo, tal como deseas que aparezca públicamente",
+      "tipo": "abierta",
+      "participa_scoring": false
+    },
+    {
+      "id": "p2",
+      "seccion": "Identidad y contacto profesional",
+      "texto": "¿Con qué aseguradora(s) trabajas actualmente?",
+      "tipo": "abierta",
+      "participa_scoring": false
+    },
+    {
+      "id": "p3",
+      "seccion": "Identidad y contacto profesional",
+      "texto": "¿Eres agente independiente, atado a una sola aseguradora, o parte de una agencia/GA?",
+      "tipo": "opcion_multiple",
+      "opciones": [
+        { "texto": "Independiente" },
+        { "texto": "Atado a una sola aseguradora" },
+        { "texto": "Parte de una agencia/GA" }
+      ],
+      "participa_scoring": false
+    },
+    {
+      "id": "p4",
+      "seccion": "Trayectoria y autoridad",
+      "texto": "¿Cuántos años de experiencia tienes en la industria de seguros de vida?",
+      "tipo": "abierta",
+      "participa_scoring": false
+    },
+    {
+      "id": "p5",
+      "seccion": "Cartera y especialización actual",
+      "texto": "¿Cuál es tu especialización principal?",
+      "tipo": "abierta",
+      "participa_scoring": false
+    },
+    {
+      "id": "p6",
+      "seccion": "Objetivo del proyecto",
+      "texto": "Del 1 al 10, ¿qué tan urgente es este proyecto para ti hoy?",
+      "tipo": "escala",
+      "escala": {
+        "min": 1,
+        "max": 10
+      },
+      "participa_scoring": false
+    },
+    {
+      "id": "p7",
+      "seccion": "Marca y tono",
+      "texto": "¿Qué tono de comunicación te representa mejor?",
+      "tipo": "abierta",
+      "participa_scoring": false
+    },
+    {
+      "id": "p8",
+      "seccion": "Logística de la Sesión de Estrategia",
+      "texto": "¿Qué modalidad prefieres?",
+      "tipo": "abierta",
+      "participa_scoring": false
+    }
+  ],
+  "resultado": {
+    "tipo": "fijo",
+    "contenido": "Gracias por completar tu registro. Nuestro equipo revisará tu información."
+  }
+}
