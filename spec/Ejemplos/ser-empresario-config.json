@@ -1,0 +1,149 @@
+{
+  "id": "ser-empresario-seleccion-historias",
+  "cliente": "Ser Empresario",
+  "estado": "produccion",
+  "usa_scoring": false,
+  "posicion_contacto": "final",
+  "secciones": [],
+  "preguntas": [
+    {
+      "id": "p1",
+      "texto": "¿Cuál describe mejor tu posición actual?",
+      "tipo": "opcion_multiple",
+      "opciones": [
+        { "texto": "Fundador o propietario" },
+        { "texto": "Director general o alta dirección" },
+        { "texto": "Ejecutivo o líder de área" },
+        { "texto": "Profesional independiente" },
+        { "texto": "Líder social, académico o institucional" }
+      ],
+      "participa_scoring": false
+    },
+    {
+      "id": "p2",
+      "texto": "¿Cuántos años llevas construyendo tu trayectoria?",
+      "tipo": "opcion_multiple",
+      "opciones": [
+        { "texto": "Menos de 2 años" },
+        { "texto": "Entre 2 y 5 años" },
+        { "texto": "Entre 5 y 10 años" },
+        { "texto": "Entre 10 y 20 años" },
+        { "texto": "Más de 20 años" }
+      ],
+      "participa_scoring": false
+    },
+    {
+      "id": "p3",
+      "texto": "¿Cuál ha sido el alcance de tu liderazgo?",
+      "tipo": "opcion_multiple",
+      "opciones": [
+        { "texto": "Dentro de una organización" },
+        { "texto": "En varias empresas o proyectos" },
+        { "texto": "En una industria" },
+        { "texto": "En la comunidad binacional" },
+        { "texto": "A escala nacional o internacional" }
+      ],
+      "participa_scoring": false
+    },
+    {
+      "id": "p4",
+      "texto": "¿Tu trayectoria incluye una historia de transformación, adversidad o reinvención?",
+      "tipo": "opcion_multiple",
+      "opciones": [
+        { "texto": "Sí, tengo una historia así" },
+        { "texto": "No, ha sido un crecimiento más lineal" }
+      ],
+      "participa_scoring": false
+    },
+    {
+      "id": "p5",
+      "texto": "¿Qué tan medible o cuantificable es el impacto que has generado?",
+      "tipo": "escala",
+      "escala": {
+        "min": 1,
+        "max": 5,
+        "etiqueta_min": "Difícil de medir",
+        "etiqueta_max": "Totalmente cuantificable"
+      },
+      "participa_scoring": false
+    },
+    {
+      "id": "p6",
+      "texto": "¿Existe actualmente un acontecimiento que quieras posicionar?",
+      "tipo": "opcion_multiple",
+      "opciones": [
+        { "texto": "Aniversario" },
+        { "texto": "Expansión" },
+        { "texto": "Lanzamiento" },
+        { "texto": "Reconocimiento" },
+        { "texto": "Sucesión o legado" },
+        { "texto": "Nueva etapa profesional" },
+        { "texto": "Ninguno por ahora" }
+      ],
+      "participa_scoring": false
+    },
+    {
+      "id": "p7",
+      "texto": "¿Qué tan diferenciadora consideras tu historia frente a otras en tu industria?",
+      "tipo": "escala",
+      "escala": {
+        "min": 1,
+        "max": 5,
+        "etiqueta_min": "Similar a otras",
+        "etiqueta_max": "Muy singular"
+      },
+      "participa_scoring": false
+    },
+    {
+      "id": "p8",
+      "texto": "¿Qué importancia tiene para ti fortalecer tu autoridad y reputación profesional en este momento?",
+      "tipo": "escala",
+      "escala": {
+        "min": 1,
+        "max": 5,
+        "etiqueta_min": "Poco importante",
+        "etiqueta_max": "Prioridad actual"
+      },
+      "participa_scoring": false
+    },
+    {
+      "id": "p9",
+      "texto": "¿Qué mensaje deseas dejar a otros empresarios?",
+      "tipo": "abierta",
+      "limite_caracteres": 400,
+      "participa_scoring": false
+    },
+    {
+      "id": "p10",
+      "texto": "¿Quién necesita conocer tu historia?",
+      "tipo": "abierta",
+      "participa_scoring": false
+    },
+    {
+      "id": "p11",
+      "texto": "Si tu perfil resulta seleccionado, ¿estarías dispuesto a participar en una entrevista editorial y sesión fotográfica?",
+      "tipo": "opcion_multiple",
+      "opciones": [
+        { "texto": "Sí, estoy disponible" },
+        { "texto": "Todavía no estoy seguro" }
+      ],
+      "participa_scoring": false
+    },
+    {
+      "id": "p12",
+      "texto": "¿En qué periodo te interesaría publicar?",
+      "tipo": "opcion_multiple",
+      "opciones": [
+        { "texto": "En el próximo mes" },
+        { "texto": "En 1 a 3 meses" },
+        { "texto": "En 3 a 6 meses" },
+        { "texto": "Aún no lo tengo definido" }
+      ],
+      "participa_scoring": false
+    }
+  ],
+  "resultado": {
+    "tipo": "fijo",
+    "contenido": "Gracias por completar el formulario. Revisaremos tu información y te contactaremos si tu perfil es seleccionado."
+  }
+}
