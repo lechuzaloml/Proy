@@ -1,0 +1,97 @@
+{
+  "cuestionario": {
+    "id": "caso-nuevo-coach-calificacion-leads",
+    "cliente": "Caso nuevo — coach/consultor (ficticio, construido para la prueba)",
+    "estado": "caso_de_prueba",
+    "usa_scoring": true,
+    "posicion_contacto": "final",
+    "secciones": [
+      "Sobre tu negocio",
+      "Tu situación actual"
+    ],
+    "preguntas": [
+      {
+        "id": "p1",
+        "seccion": "Sobre tu negocio",
+        "texto": "¿Cuál es tu facturación mensual aproximada?",
+        "tipo": "opcion_multiple",
+        "opciones": [
+          { "texto": "Menos de $20,000 MXN", "puntos": 0 },
+          { "texto": "Entre $20,000 y $80,000 MXN", "puntos": 10 },
+          { "texto": "Más de $80,000 MXN", "puntos": 20 }
+        ],
+        "participa_scoring": true
+      },
+      {
+        "id": "p2",
+        "seccion": "Sobre tu negocio",
+        "texto": "¿Cuánto tiempo llevas operando tu negocio?",
+        "tipo": "opcion_multiple",
+        "opciones": [
+          { "texto": "Menos de 6 meses", "puntos": 0 },
+          { "texto": "Entre 6 meses y 2 años", "puntos": 5 },
+          { "texto": "Más de 2 años", "puntos": 15 }
+        ],
+        "participa_scoring": true
+      },
+      {
+        "id": "p3",
+        "seccion": "Tu situación actual",
+        "texto": "¿Qué tan urgente es para ti resolver esto ahora mismo?",
+        "tipo": "escala",
+        "escala": {
+          "min": 1,
+          "max": 5,
+          "etiqueta_min": "No es urgente",
+          "etiqueta_max": "Lo necesito ya"
+        },
+        "participa_scoring": true,
+        "puntos_por_valor": { "1": 0, "2": 5, "3": 10, "4": 15, "5": 20 }
+      },
+      {
+        "id": "p4",
+        "seccion": "Tu situación actual",
+        "texto": "¿Ya intentaste resolver esto antes? Cuéntanos qué has probado.",
+        "tipo": "abierta",
+        "participa_scoring": false
+      },
+      {
+        "id": "p5",
+        "seccion": "Tu situación actual",
+        "texto": "¿Tienes presupuesto asignado para resolver esto este trimestre?",
+        "tipo": "opcion_multiple",
+        "opciones": [
+          { "texto": "Sí, ya lo tengo definido", "puntos": 25 },
+          { "texto": "Lo tendría que gestionar", "puntos": 10 },
+          { "texto": "No por ahora", "puntos": 0 }
+        ],
+        "participa_scoring": true
+      }
+    ],
+    "reglas_scoring": [
+      { "puntaje_min": 0, "puntaje_max": 24, "segmento": "frio" },
+      { "puntaje_min": 25, "puntaje_max": 54, "segmento": "tibio" },
+      { "puntaje_min": 55, "puntaje_max": 100, "segmento": "listo" }
+    ],
+    "resultado": {
+      "tipo": "por_segmento",
+      "resultados": [
+        {
+          "segmento": "frio",
+          "contenido": "Todavía no es el momento, pero te dejamos recursos gratuitos para que sigas avanzando por tu cuenta.",
+          "cta": { "texto": "Ver recursos gratuitos", "accion": "redirigir_a_recursos" }
+        },
+        {
+          "segmento": "tibio",
+          "contenido": "Vas por buen camino. Te compartimos una guía y te contactamos para ver si encaja.",
+          "cta": { "texto": "Descargar guía", "accion": "descargar_pdf" }
+        },
+        {
+          "segmento": "listo",
+          "contenido": "Pareces un gran candidato. Agenda una llamada con nosotros esta semana.",
+          "cta": { "texto": "Agendar llamada", "accion": "abrir_calendario" }
+        }
+      ]
+    }
+  }
+}

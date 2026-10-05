@@ -1,0 +1,164 @@
+{
+  "cuestionario": {
+    "id": "ser-empresario-seleccion-historias",
+    "cliente": "Ser Empresario",
+    "estado": "produccion",
+    "usa_scoring": "no_demostrado — el texto fuente no incluye la pantalla de resultado final; solo llega hasta el bloque de contacto",
+    "posicion_contacto": "final",
+    "secciones": [],
+    "preguntas": [
+      {
+        "id": "p1",
+        "seccion": "no_aplica",
+        "texto": "¿Cuál describe mejor tu posición actual?",
+        "tipo": "opcion_multiple",
+        "opciones": [
+          { "texto": "Fundador o propietario", "puntos": "no_demostrado" },
+          { "texto": "Director general o alta dirección", "puntos": "no_demostrado" },
+          { "texto": "Ejecutivo o líder de área", "puntos": "no_demostrado" },
+          { "texto": "Profesional independiente", "puntos": "no_demostrado" },
+          { "texto": "Líder social, académico o institucional", "puntos": "no_demostrado" }
+        ],
+        "participa_scoring": "no_demostrado"
+      },
+      {
+        "id": "p2",
+        "seccion": "no_aplica",
+        "texto": "¿Cuántos años llevas construyendo tu trayectoria?",
+        "tipo": "opcion_multiple",
+        "opciones": [
+          { "texto": "Menos de 2 años", "puntos": "no_demostrado" },
+          { "texto": "Entre 2 y 5 años", "puntos": "no_demostrado" },
+          { "texto": "Entre 5 y 10 años", "puntos": "no_demostrado" },
+          { "texto": "Entre 10 y 20 años", "puntos": "no_demostrado" },
+          { "texto": "Más de 20 años", "puntos": "no_demostrado" }
+        ],
+        "participa_scoring": "no_demostrado"
+      },
+      {
+        "id": "p3",
+        "seccion": "no_aplica",
+        "texto": "¿Cuál ha sido el alcance de tu liderazgo?",
+        "tipo": "opcion_multiple",
+        "opciones": [
+          { "texto": "Dentro de una organización", "puntos": "no_demostrado" },
+          { "texto": "En varias empresas o proyectos", "puntos": "no_demostrado" },
+          { "texto": "En una industria", "puntos": "no_demostrado" },
+          { "texto": "En la comunidad binacional", "puntos": "no_demostrado" },
+          { "texto": "A escala nacional o internacional", "puntos": "no_demostrado" }
+        ],
+        "participa_scoring": "no_demostrado"
+      },
+      {
+        "id": "p4",
+        "seccion": "no_aplica",
+        "texto": "¿Tu trayectoria incluye una historia de transformación, adversidad o reinvención?",
+        "tipo": "opcion_multiple",
+        "opciones": [
+          { "texto": "Sí, tengo una historia así", "puntos": "no_demostrado" },
+          { "texto": "No, ha sido un crecimiento más lineal", "puntos": "no_demostrado" }
+        ],
+        "participa_scoring": "no_demostrado"
+      },
+      {
+        "id": "p5",
+        "seccion": "no_aplica",
+        "texto": "¿Qué tan medible o cuantificable es el impacto que has generado?",
+        "tipo": "escala",
+        "escala": {
+          "min": 1,
+          "max": 5,
+          "etiqueta_min": "Difícil de medir",
+          "etiqueta_max": "Totalmente cuantificable"
+        },
+        "participa_scoring": "no_demostrado"
+      },
+      {
+        "id": "p6",
+        "seccion": "no_aplica",
+        "texto": "¿Existe actualmente un acontecimiento que quieras posicionar?",
+        "tipo": "opcion_multiple",
+        "opciones": [
+          { "texto": "Aniversario", "puntos": "no_demostrado" },
+          { "texto": "Expansión", "puntos": "no_demostrado" },
+          { "texto": "Lanzamiento", "puntos": "no_demostrado" },
+          { "texto": "Reconocimiento", "puntos": "no_demostrado" },
+          { "texto": "Sucesión o legado", "puntos": "no_demostrado" },
+          { "texto": "Nueva etapa profesional", "puntos": "no_demostrado" },
+          { "texto": "Ninguno por ahora", "puntos": "no_demostrado" }
+        ],
+        "participa_scoring": "no_demostrado"
+      },
+      {
+        "id": "p7",
+        "seccion": "no_aplica",
+        "texto": "¿Qué tan diferenciadora consideras tu historia frente a otras en tu industria?",
+        "tipo": "escala",
+        "escala": {
+          "min": 1,
+          "max": 5,
+          "etiqueta_min": "Similar a otras",
+          "etiqueta_max": "Muy singular"
+        },
+        "participa_scoring": "no_demostrado"
+      },
+      {
+        "id": "p8",
+        "seccion": "no_aplica",
+        "texto": "¿Qué importancia tiene para ti fortalecer tu autoridad y reputación profesional en este momento?",
+        "tipo": "escala",
+        "escala": {
+          "min": 1,
+          "max": 5,
+          "etiqueta_min": "Poco importante",
+          "etiqueta_max": "Prioridad actual"
+        },
+        "participa_scoring": "no_demostrado"
+      },
+      {
+        "id": "p9",
+        "seccion": "no_aplica",
+        "texto": "¿Qué mensaje deseas dejar a otros empresarios?",
+        "tipo": "abierta",
+        "limite_caracteres": 400,
+        "participa_scoring": "no_aplica"
+      },
+      {
+        "id": "p10",
+        "seccion": "no_aplica",
+        "texto": "¿Quién necesita conocer tu historia?",
+        "tipo": "abierta",
+        "participa_scoring": "no_aplica"
+      },
+      {
+        "id": "p11",
+        "seccion": "no_aplica",
+        "texto": "Si tu perfil resulta seleccionado, ¿estarías dispuesto a participar en una entrevista editorial y sesión fotográfica?",
+        "tipo": "opcion_multiple",
+        "opciones": [
+          { "texto": "Sí, estoy disponible", "puntos": "no_demostrado" },
+          { "texto": "Todavía no estoy seguro", "puntos": "no_demostrado" }
+        ],
+        "participa_scoring": "no_demostrado"
+      },
+      {
+        "id": "p12",
+        "seccion": "no_aplica",
+        "texto": "¿En qué periodo te interesaría publicar?",
+        "tipo": "opcion_multiple",
+        "opciones": [
+          { "texto": "En el próximo mes", "puntos": "no_demostrado" },
+          { "texto": "En 1 a 3 meses", "puntos": "no_demostrado" },
+          { "texto": "En 3 a 6 meses", "puntos": "no_demostrado" },
+          { "texto": "Aún no lo tengo definido", "puntos": "no_demostrado" }
+        ],
+        "participa_scoring": "no_demostrado"
+      }
+    ],
+    "resultado": {
+      "tipo": "no_demostrado",
+      "contenido": "no_demostrado — el texto fuente termina en el bloque de contacto; no se incluye ninguna pantalla posterior de resultado",
+      "cta": "no_demostrado"
+    }
+  }
+}

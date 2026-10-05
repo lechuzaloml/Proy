@@ -1,0 +1,108 @@
+{
+  "cuestionario": {
+    "id": "scoreapp-referencia",
+    "cliente": "ScoreApp (referencia de producto)",
+    "estado": "no_demostrado — no se indica si es producción o desarrollo",
+    "usa_scoring": "no_demostrado — el texto fuente muestra un único bloque de resultado final, no resultados distintos según las respuestas; no hay evidencia visible de cálculo de puntaje ni de segmentación",
+    "posicion_contacto": "no_demostrado — el texto fuente no incluye un bloque de captura de datos de contacto (nombre/correo/teléfono)",
+    "secciones": [],
+    "preguntas": [
+      {
+        "id": "p1",
+        "seccion": "no_aplica",
+        "texto": "¿Cuál es su mayor necesidad de marketing o ventas en este momento?",
+        "tipo": "opcion_multiple",
+        "opciones": [
+          { "texto": "Necesito atraer más clientes potenciales y hacer crecer mi audiencia", "puntos": "no_demostrado" },
+          { "texto": "Necesito comprender y calificar mejor mis clientes potenciales", "puntos": "no_demostrado" },
+          { "texto": "Necesito recopilar comentarios o investigaciones de mi audiencia", "puntos": "no_demostrado" },
+          { "texto": "Estoy lanzando algo y necesito generar demanda temprano", "puntos": "no_demostrado" },
+          { "texto": "Estoy organizando eventos o seminarios web y necesito un registro más inteligente", "puntos": "no_demostrado" },
+          { "texto": "Necesito mejorar las consultas o aplicaciones en mi sitio web", "puntos": "no_demostrado" }
+        ],
+        "participa_scoring": "no_demostrado"
+      },
+      {
+        "id": "p2",
+        "seccion": "no_aplica",
+        "texto": "¿Cuál es la situación actual con respecto a cómo la gente se comunica con usted?",
+        "tipo": "opcion_multiple",
+        "opciones": [
+          { "texto": "Tengo un formulario de contacto básico, pero no me dice mucho", "puntos": "no_demostrado" },
+          { "texto": "No tengo un proceso formal, la gente simplemente me envía correos electrónicos o mensajes", "puntos": "no_demostrado" },
+          { "texto": "Tengo un formulario, pero es demasiado largo o difícil de completar", "puntos": "no_demostrado" },
+          { "texto": "Tengo un proceso, pero la calidad de las consultas es mala", "puntos": "no_demostrado" }
+        ],
+        "participa_scoring": "no_demostrado"
+      },
+      {
+        "id": "p3",
+        "seccion": "no_aplica",
+        "texto": "¿Qué es lo que más te frustra de los envíos que recibes?",
+        "tipo": "opcion_multiple",
+        "opciones": [
+          { "texto": "Demasiados provienen de personas que no son las adecuadas", "puntos": "no_demostrado" },
+          { "texto": "Son demasiado vagos, por lo que no tengo suficiente para continuar", "puntos": "no_demostrado" },
+          { "texto": "La gente empieza pero no termina el formulario", "puntos": "no_demostrado" },
+          { "texto": "No puedo decir quién habla en serio y quién solo está navegando", "puntos": "no_demostrado" }
+        ],
+        "participa_scoring": "no_demostrado"
+      },
+      {
+        "id": "p4",
+        "seccion": "no_aplica",
+        "texto": "En un mundo perfecto, ¿qué haría su proceso de consulta o solicitud?",
+        "tipo": "opcion_multiple",
+        "opciones": [
+          { "texto": "Filtra a las personas que no son las adecuadas", "puntos": "no_demostrado" },
+          { "texto": "Dame suficiente contexto para personalizar mi respuesta", "puntos": "no_demostrado" },
+          { "texto": "Mantener a las personas involucradas durante todo el proceso", "puntos": "no_demostrado" },
+          { "texto": "Muéstrame quién está más preparado para saber a quién priorizar", "puntos": "no_demostrado" }
+        ],
+        "participa_scoring": "no_demostrado"
+      },
+      {
+        "id": "p5",
+        "seccion": "no_aplica",
+        "texto": "¿Necesitará conectar sus clientes potenciales y datos a otras herramientas, como su CRM o plataforma de correo electrónico?",
+        "tipo": "opcion_multiple",
+        "opciones": [
+          { "texto": "Sí, necesito que mis datos se sincronicen con otras herramientas", "puntos": "no_demostrado" },
+          { "texto": "No, estoy feliz de mantener todo en ScoreApp por ahora", "puntos": "no_demostrado" }
+        ],
+        "participa_scoring": "no_demostrado"
+      },
+      {
+        "id": "p6",
+        "seccion": "no_aplica",
+        "texto": "¿Está utilizando o planea utilizar anuncios pagos para promocionar su cuadro de mando?",
+        "tipo": "opcion_multiple",
+        "opciones": [
+          { "texto": "Sí, estoy usando anuncios pagos o planeo hacerlo", "puntos": "no_demostrado" },
+          { "texto": "No, utilizaré canales orgánicos, referencias o mi audiencia existente", "puntos": "no_demostrado" }
+        ],
+        "participa_scoring": "no_demostrado"
+      },
+      {
+        "id": "p7",
+        "seccion": "no_aplica",
+        "texto": "¿Necesita funciones avanzadas como pruebas divididas, acceso en equipo y límites de respuesta más altos?",
+        "tipo": "opcion_multiple",
+        "opciones": [
+          { "texto": "Sí, necesito estas funciones ahora", "puntos": "no_demostrado" },
+          { "texto": "Probablemente, a medida que mis tarjetas de puntuación crezcan", "puntos": "no_demostrado" },
+          { "texto": "No, no necesito estas funciones en este momento", "puntos": "no_demostrado" }
+        ],
+        "participa_scoring": "no_demostrado"
+      }
+    ],
+    "resultado": {
+      "tipo": "fijo",
+      "contenido": "Necesitas algo más inteligente que un cuadro de mando de formulario. [mensaje explicando por qué un formulario básico no alcanza, con argumento de ventas hacia ScoreApp]",
+      "cta": {
+        "texto": "no_demostrado — se indica solo '(BOTON PARA ENTRAR A UNA EXPLICACION DEL COMO EMPEZAR)', sin el texto exacto del botón",
+        "accion": "no_demostrado"
+      }
+    }
+  }
+}
