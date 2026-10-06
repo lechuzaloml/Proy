@@ -3,7 +3,7 @@
   "cliente": "Test de Madurez de Marketing Digital",
   "estado": "template_demo_ficticio",
   "landingTitulo": "Test de Madurez de Marketing Digital",
-  "landingDescripcion": "Descubre qué prácticas digitales podrías fortalecer en tu negocio. Este test de demostración es ficticio y no representa un benchmark de mercado.",
+  "landingDescripcion": "Reflexiona sobre cuatro dimensiones acotadas de tu marketing digital: planificación de contenido, definición de audiencia, medición de canales y coherencia entre canales. Esta evaluación ficticia y orientativa no es un benchmark ni una evaluación integral de marketing; sus puntajes y umbrales no son métricas validadas.",
   "usa_scoring": true,
   "posicion_contacto": "final",
   "secciones": [
@@ -92,17 +92,17 @@
       {
         "segmento": "base_por_definir",
         "contenido": "Elige un objetivo y una audiencia prioritaria antes de sumar canales. Un plan sencillo puede ayudarte a enfocar tus primeras pruebas.",
-        "cta": { "texto": "Ver guía de planificación digital", "accion": "ver_guia_planificacion_digital" }
+        "cta": { "texto": "Definir un objetivo y una audiencia prioritaria", "accion": "definir_objetivo_y_audiencia_prioritaria" }
       },
       {
         "segmento": "estrategia_en_marcha",
         "contenido": "Ya hay actividad y oportunidades para conectarla mejor. Define una métrica útil por objetivo y revisa periódicamente qué acciones vale la pena ajustar.",
-        "cta": { "texto": "Explorar ideas de medición", "accion": "ver_ideas_medicion_marketing" }
+        "cta": { "texto": "Elegir una métrica para revisar periódicamente", "accion": "elegir_metrica_para_revision_periodica" }
       },
       {
         "segmento": "practicas_integradas",
         "contenido": "Parece que estrategia, canales y medición ya se relacionan. Puedes seguir experimentando con mejoras y documentar qué aprendes de cada iniciativa.",
-        "cta": { "texto": "Consultar ideas de experimentación", "accion": "ver_ideas_experimentacion" }
+        "cta": { "texto": "Documentar un aprendizaje de la próxima iniciativa", "accion": "documentar_aprendizaje_de_iniciativa" }
       }
     ]
   }

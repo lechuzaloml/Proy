@@ -1,9 +1,9 @@
 {
   "id": "demo-evaluacion-ciberseguridad",
-  "cliente": "Evaluación de Ciberseguridad",
+  "cliente": "Autoevaluación de Prácticas Básicas de Ciberseguridad",
   "estado": "template_demo_ficticio",
-  "landingTitulo": "Evaluación de Ciberseguridad",
-  "landingDescripcion": "Reflexiona sobre algunas prácticas generales de seguridad de tu organización. Esta autoevaluación ficticia es orientativa y no constituye una auditoría ni una evaluación profesional de riesgos.",
+  "landingTitulo": "Autoevaluación de Prácticas Básicas de Ciberseguridad",
+  "landingDescripcion": "Reflexiona sobre prácticas generales de acceso, autenticación multifactor, preparación del equipo y reporte de incidentes. Esta autoevaluación ficticia tiene fines educativos: no es una auditoría, evaluación profesional de riesgos ni métrica validada; los puntajes y umbrales son demostrativos.",
   "usa_scoring": true,
   "posicion_contacto": "final",
   "secciones": [
@@ -82,27 +82,27 @@
     }
   ],
   "reglas_scoring": [
-    { "puntaje_min": 0, "puntaje_max": 34, "segmento": "practicas_por_revisar" },
-    { "puntaje_min": 35, "puntaje_max": 69, "segmento": "practicas_en_desarrollo" },
-    { "puntaje_min": 70, "puntaje_max": 100, "segmento": "practicas_establecidas" }
+    { "puntaje_min": 0, "puntaje_max": 34, "segmento": "practicas_por_fortalecer" },
+    { "puntaje_min": 35, "puntaje_max": 69, "segmento": "preparacion_basica" },
+    { "puntaje_min": 70, "puntaje_max": 100, "segmento": "buenas_practicas_en_uso" }
   ],
   "resultado": {
     "tipo": "por_segmento",
     "resultados": [
       {
-        "segmento": "practicas_por_revisar",
-        "contenido": "Como siguiente paso general, pueden acordar responsables para revisar accesos y establecer un canal conocido para reportar inquietudes.",
-        "cta": { "texto": "Consultar recomendaciones generales", "accion": "ver_recomendaciones_seguridad" }
+        "segmento": "practicas_por_fortalecer",
+        "contenido": "Las respuestas sugieren que algunas prácticas básicas podrían fortalecerse. Como paso educativo, definan responsables para revisar permisos y acuerden un canal conocido para informar inquietudes.",
+        "cta": { "texto": "Acordar responsables y un canal de reporte", "accion": "acordar_responsables_y_canal_de_reporte" }
       },
       {
-        "segmento": "practicas_en_desarrollo",
-        "contenido": "Algunas prácticas ya están en marcha. Consideren documentar los procedimientos y programar revisiones periódicas adecuadas a su organización.",
-        "cta": { "texto": "Ver lista de buenas prácticas", "accion": "ver_lista_buenas_practicas" }
+        "segmento": "preparacion_basica",
+        "contenido": "Hay prácticas básicas en desarrollo. Documenten cómo reportar una inquietud y acuerden cuándo revisar permisos y las pautas compartidas con el equipo.",
+        "cta": { "texto": "Documentar el procedimiento de reporte", "accion": "documentar_procedimiento_de_reporte" }
       },
       {
-        "segmento": "practicas_establecidas",
-        "contenido": "Contar con procesos conocidos es una base positiva. Mantengan la revisión y actualización de sus prácticas con apoyo de personal calificado cuando corresponda.",
-        "cta": { "texto": "Explorar temas de revisión periódica", "accion": "ver_temas_revision_seguridad" }
+        "segmento": "buenas_practicas_en_uso",
+        "contenido": "Las respuestas indican que algunas buenas prácticas ya están implementadas. Mantengan su revisión periódica y consulten personal calificado cuando necesiten evaluar técnicamente su seguridad.",
+        "cta": { "texto": "Programar una revisión periódica de prácticas", "accion": "programar_revision_periodica_de_practicas" }
       }
     ]
   }

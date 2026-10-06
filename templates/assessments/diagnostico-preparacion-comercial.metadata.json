@@ -1,8 +1,8 @@
 {
-  "nombre": "Diagnóstico de Preparación Comercial",
+  "nombre": "Calificación de Prospectos Comerciales",
   "formato": "Assessment",
   "caso_uso": "Sales Qualification",
   "nicho": "Negocios y Finanzas",
-  "descripcion": "Autoevaluación ficticia para explorar procesos, seguimiento y prioridades comerciales.",
+  "descripcion": "Evaluación orientativa y ficticia de necesidad, prioridad, urgencia, plazo, autoridad y disposición para avanzar de un prospecto.",
   "usa_scoring": true
 }

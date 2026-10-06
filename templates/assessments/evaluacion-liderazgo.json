@@ -3,7 +3,7 @@
   "cliente": "Evaluación de Liderazgo",
   "estado": "template_demo_ficticio",
   "landingTitulo": "Evaluación de Liderazgo",
-  "landingDescripcion": "Reflexiona sobre hábitos de comunicación, delegación y desarrollo de equipo. Esta evaluación ficticia es una herramienta de reflexión, no una medición clínica ni una certificación.",
+  "landingDescripcion": "Reflexiona sobre hábitos de liderazgo, comunicación, delegación y desarrollo del equipo. Es una evaluación ficticia y orientativa, no una evaluación profesional, medición validada ni certificación; los puntajes y umbrales son demostrativos.",
   "usa_scoring": true,
   "posicion_contacto": "final",
   "secciones": [
@@ -91,18 +91,18 @@
     "resultados": [
       {
         "segmento": "habitos_iniciales",
-        "contenido": "Elige una conversación o hábito concreto para practicar esta semana. Los cambios pequeños y observables pueden servir como punto de partida.",
-        "cta": { "texto": "Ver ejercicios de reflexión", "accion": "ver_ejercicios_liderazgo" }
+        "contenido": "Como primer paso, acuerda con tu equipo una prioridad semanal y confirma qué resultado se espera. Después, revisen juntos qué quedó claro y qué necesita aclaración.",
+        "cta": { "texto": "Acordar una prioridad y expectativas para esta semana", "accion": "acordar_prioridad_y_expectativas" }
       },
       {
         "segmento": "habitos_en_practica",
-        "contenido": "Ya identificas prácticas que puedes fortalecer. Prueba convertir una de ellas en un acuerdo recurrente con tu equipo y revisen juntos cómo funciona.",
-        "cta": { "texto": "Explorar prácticas de equipo", "accion": "ver_practicas_de_equipo" }
+        "contenido": "Para fortalecer la escucha y la resolución de desacuerdos, facilita una conversación en la que cada persona comparta su perspectiva y el equipo acuerde un siguiente paso observable.",
+        "cta": { "texto": "Facilitar una conversación sobre un desacuerdo", "accion": "facilitar_conversacion_de_equipo" }
       },
       {
         "segmento": "habitos_consistentes",
-        "contenido": "La constancia es una buena base para seguir aprendiendo. Considera pedir retroalimentación específica y compartir aprendizajes con otros líderes.",
-        "cta": { "texto": "Consultar guía de retroalimentación", "accion": "ver_guia_retroalimentacion" }
+        "contenido": "Para sostener la delegación y el desarrollo del equipo, elige una decisión que otra persona pueda liderar, acuerda el margen de autonomía y programa una conversación de seguimiento.",
+        "cta": { "texto": "Delegar una decisión con seguimiento acordado", "accion": "delegar_decision_con_seguimiento" }
       }
     ]
   }

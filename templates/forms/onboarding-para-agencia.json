@@ -3,7 +3,7 @@
   "cliente": "Onboarding para Agencia",
   "estado": "template_demo_ficticio",
   "landingTitulo": "Onboarding para Agencia",
-  "landingDescripcion": "Comparte la información inicial para preparar un proyecto de marketing con una agencia ficticia. No se envían ni almacenan respuestas fuera del funcionamiento actual de demostración.",
+  "landingDescripcion": "Comparte contexto, audiencia, objetivos, entregables, materiales y criterios de éxito para mostrar cómo podría comenzar un proyecto de marketing con una agencia ficticia. Es una demostración: no constituye un onboarding operativo, no envía las respuestas ni las conserva fuera del flujo actual.",
   "usa_scoring": false,
   "posicion_contacto": "inicio",
   "secciones": [
@@ -15,7 +15,7 @@
     {
       "id": "p1",
       "seccion": "Tu organización",
-      "texto": "¿A qué se dedica tu organización y a quién ofrece sus productos o servicios?",
+      "texto": "¿A qué se dedica tu organización, qué productos o servicios ofrece y a qué audiencia quiere llegar?",
       "tipo": "abierta",
       "limite_caracteres": 700,
       "participa_scoring": false
@@ -36,7 +36,7 @@
     {
       "id": "p3",
       "seccion": "Proyecto y objetivos",
-      "texto": "¿Cuál es el principal resultado que te gustaría lograr con este proyecto?",
+      "texto": "¿Cuál es el principal objetivo que quieres alcanzar con el proyecto?",
       "tipo": "abierta",
       "limite_caracteres": 700,
       "participa_scoring": false
@@ -44,7 +44,7 @@
     {
       "id": "p4",
       "seccion": "Proyecto y objetivos",
-      "texto": "¿Qué servicios te interesa explorar?",
+      "texto": "¿Qué entregables o tipos de trabajo te interesa explorar para este proyecto?",
       "tipo": "opcion_multiple",
       "opciones": [
         { "texto": "Estrategia de marca y posicionamiento" },
@@ -58,7 +58,7 @@
     {
       "id": "p5",
       "seccion": "Marca y coordinación",
-      "texto": "¿Qué atributos o tono deberían reflejar las comunicaciones de tu marca?",
+      "texto": "¿Qué materiales existentes podrían servir para el proyecto (por ejemplo, sitio web, guías de marca, contenido o datos de campañas)?",
       "tipo": "abierta",
       "limite_caracteres": 700,
       "participa_scoring": false
@@ -66,15 +66,15 @@
     {
       "id": "p6",
       "seccion": "Marca y coordinación",
-      "texto": "¿Quiénes participarán en la coordinación y aprobación del proyecto?",
+      "texto": "¿Qué marcas, campañas o referencias te gustan y qué te gustaría tomar de ellas?",
       "tipo": "abierta",
-      "limite_caracteres": 500,
+      "limite_caracteres": 700,
       "participa_scoring": false
     },
     {
       "id": "p7",
       "seccion": "Marca y coordinación",
-      "texto": "¿Qué fecha o periodo te gustaría considerar para iniciar?",
+      "texto": "¿Cómo medirías el éxito del proyecto y qué periodo te gustaría considerar para iniciar?",
       "tipo": "abierta",
       "limite_caracteres": 300,
       "participa_scoring": false
@@ -82,7 +82,7 @@
   ],
   "resultado": {
     "tipo": "fijo",
-    "contenido": "Gracias por completar este formulario de demostración. La información queda disponible únicamente en el flujo actual de la aplicación; esta plantilla no incluye persistencia ni envío a una agencia.",
-    "cta": { "texto": "Revisar el resumen del proyecto", "accion": "ver_resumen_proyecto" }
+    "contenido": "Gracias por completar este formulario demostrativo. Compartiste información inicial sobre tu organización, audiencia, objetivos, entregables, materiales, referencias y criterios de éxito. Esta plantilla no crea un onboarding operativo, no genera un resumen ni envía o conserva respuestas fuera del flujo actual.",
+    "cta": { "texto": "Definir el siguiente paso del proyecto", "accion": "definir_siguiente_paso_del_proyecto" }
   }
 }

@@ -1,8 +1,8 @@
 {
-  "nombre": "Diagnóstico de Salud Financiera",
+  "nombre": "Encuesta de Hábitos e Intereses Financieros",
   "formato": "Survey",
   "caso_uso": "Research & Feedback",
   "nicho": "Finanzas",
-  "descripcion": "Encuesta ficticia para recopilar hábitos, objetivos y temas de interés financiero.",
+  "descripcion": "Encuesta ficticia sin scoring para conocer hábitos de organización, objetivos e intereses de aprendizaje financiero; no es un diagnóstico ni ofrece asesoría.",
   "usa_scoring": false
 }

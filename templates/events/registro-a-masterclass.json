@@ -1,52 +1,53 @@
 {
   "id": "demo-registro-masterclass",
-  "cliente": "Registro a Masterclass",
+  "cliente": "Registro de Interés — Masterclass",
   "estado": "template_demo_ficticio",
-  "landingTitulo": "Registro a Masterclass",
-  "landingDescripcion": "Registra tu interés en una masterclass ficticia sobre cómo convertir una idea de negocio en un plan de acción. Esta demostración no confirma una reserva ni envía recordatorios.",
+  "landingTitulo": "Registro de Interés — Masterclass",
+  "landingDescripcion": "Comparte tu interés, experiencia, objetivo y modalidad preferida para una masterclass ficticia sobre cómo convertir una idea de negocio en un plan de acción. Es solo una demostración: no crea una inscripción, reserva ni envía confirmaciones o recordatorios.",
   "usa_scoring": false,
   "posicion_contacto": "inicio",
   "secciones": [
-    "Sobre tu interés",
-    "Preparación para la sesión"
+    "Interés y objetivo",
+    "Perfil y modalidad"
   ],
   "preguntas": [
     {
       "id": "p1",
-      "seccion": "Sobre tu interés",
-      "texto": "¿Qué describe mejor tu relación actual con el tema de la masterclass?",
+      "seccion": "Interés y objetivo",
+      "texto": "¿Qué te interesa aprender sobre cómo convertir una idea de negocio en un plan de acción?",
       "tipo": "opcion_multiple",
       "opciones": [
-        { "texto": "Estoy explorando una idea" },
-        { "texto": "Ya inicié un proyecto" },
-        { "texto": "Tengo un negocio en marcha" },
-        { "texto": "Acompaño a otras personas emprendedoras" }
+        { "texto": "Cómo aclarar y estructurar una idea" },
+        { "texto": "Cómo definir próximos pasos" },
+        { "texto": "Cómo explorar si una idea responde a una necesidad" },
+        { "texto": "Cómo organizar un plan de acción" }
       ],
       "participa_scoring": false
     },
     {
       "id": "p2",
-      "seccion": "Sobre tu interés",
-      "texto": "¿Qué tema te gustaría que se abordara durante la sesión?",
+      "seccion": "Interés y objetivo",
+      "texto": "¿Qué objetivo te gustaría alcanzar al participar en una sesión sobre este tema?",
       "tipo": "abierta",
       "limite_caracteres": 500,
       "participa_scoring": false
     },
     {
       "id": "p3",
-      "seccion": "Preparación para la sesión",
-      "texto": "¿Qué formato te resulta más accesible para participar?",
+      "seccion": "Perfil y modalidad",
+      "texto": "¿Cuál describe mejor tu perfil actual?",
       "tipo": "opcion_multiple",
       "opciones": [
-        { "texto": "En vivo en línea" },
-        { "texto": "En persona" },
-        { "texto": "Me es indiferente" }
+        { "texto": "Estoy explorando una idea" },
+        { "texto": "Ya inicié un proyecto" },
+        { "texto": "Tengo un negocio en marcha" },
+        { "texto": "Acompaño a personas emprendedoras" }
       ],
       "participa_scoring": false
     },
     {
       "id": "p4",
-      "seccion": "Preparación para la sesión",
+      "seccion": "Perfil y modalidad",
       "texto": "¿Qué tan familiarizado estás con la creación de un plan de acción para un negocio?",
       "tipo": "escala",
       "escala": {
@@ -59,16 +60,20 @@
     },
     {
       "id": "p5",
-      "seccion": "Preparación para la sesión",
-      "texto": "¿Qué te gustaría poder llevarte de esta masterclass?",
-      "tipo": "abierta",
-      "limite_caracteres": 500,
+      "seccion": "Perfil y modalidad",
+      "texto": "¿Qué modalidad preferirías para una sesión de este tipo?",
+      "tipo": "opcion_multiple",
+      "opciones": [
+        { "texto": "En vivo en línea" },
+        { "texto": "En persona" },
+        { "texto": "Me es indiferente" }
+      ],
       "participa_scoring": false
     }
   ],
   "resultado": {
     "tipo": "fijo",
-    "contenido": "Gracias por registrar tu interés en esta masterclass ficticia. Esta demostración no crea una inscripción real ni enviará confirmaciones o recordatorios.",
-    "cta": { "texto": "Consultar el temario de ejemplo", "accion": "ver_temario_masterclass_demo" }
+    "contenido": "Gracias por compartir tu interés, perfil, experiencia, objetivo y modalidad preferida. Este registro es solo una demostración y no confirma una inscripción ni una reserva.",
+    "cta": { "texto": "Definir el objetivo de aprendizaje para una sesión", "accion": "definir_objetivo_de_aprendizaje" }
   }
 }

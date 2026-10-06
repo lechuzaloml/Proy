@@ -1,20 +1,20 @@
 {
-  "id": "demo-diagnostico-salud-financiera",
-  "cliente": "Diagnóstico de Salud Financiera",
+  "id": "demo-encuesta-habitos-intereses-financieros",
+  "cliente": "Encuesta de Hábitos e Intereses Financieros",
   "estado": "template_demo_ficticio",
-  "landingTitulo": "Diagnóstico de Salud Financiera",
-  "landingDescripcion": "Comparte cómo organizas tus finanzas y qué temas te gustaría revisar. Esta encuesta ficticia es informativa, no ofrece asesoría financiera ni recomendaciones personalizadas.",
+  "landingTitulo": "Encuesta de Hábitos e Intereses Financieros",
+  "landingDescripcion": "Comparte algunos hábitos de organización financiera, objetivos e intereses de aprendizaje. Es una encuesta ficticia para recopilar perspectivas; no es un diagnóstico integral, no ofrece recomendaciones personalizadas ni asesoría financiera profesional.",
   "usa_scoring": false,
   "posicion_contacto": "final",
   "secciones": [
-    "Organización financiera",
+    "Hábitos de organización",
     "Hábitos y objetivos",
     "Comentarios"
   ],
   "preguntas": [
     {
       "id": "p1",
-      "seccion": "Organización financiera",
+      "seccion": "Hábitos de organización",
       "texto": "¿Cómo organizas actualmente tus ingresos y gastos habituales?",
       "tipo": "opcion_multiple",
       "opciones": [
@@ -27,7 +27,7 @@
     },
     {
       "id": "p2",
-      "seccion": "Organización financiera",
+      "seccion": "Hábitos de organización",
       "texto": "¿Qué tan fácil te resulta identificar tus gastos recurrentes?",
       "tipo": "escala",
       "escala": {
@@ -84,7 +84,7 @@
   ],
   "resultado": {
     "tipo": "fijo",
-    "contenido": "Gracias por compartir tu perspectiva. Tus respuestas ayudan a orientar esta demostración de encuesta; para decisiones financieras personales, consulta a un profesional calificado.",
-    "cta": { "texto": "Revisar temas de educación financiera", "accion": "ver_recursos_educacion_financiera" }
+    "contenido": "Gracias por compartir tus respuestas. Esta encuesta recoge cómo organizas tus finanzas, qué objetivo priorizas y qué temas te interesa aprender. No genera un diagnóstico ni recomendaciones financieras; para asesoría sobre tu situación personal, consulta a un profesional calificado.",
+    "cta": { "texto": "Elegir un tema financiero para explorar", "accion": "elegir_tema_financiero_para_explorar" }
   }
 }

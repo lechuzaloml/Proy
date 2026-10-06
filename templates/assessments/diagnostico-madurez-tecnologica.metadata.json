@@ -1,8 +1,8 @@
 {
-  "nombre": "Diagnóstico de Madurez Tecnológica",
+  "nombre": "Evaluación de Madurez de Prácticas Digitales",
   "formato": "Assessment",
   "caso_uso": "Lead Generation",
   "nicho": "Tecnología",
-  "descripcion": "Autoevaluación ficticia sobre procesos, herramientas, datos y capacidades digitales.",
+  "descripcion": "Evaluación ficticia y orientativa de selección e integración de herramientas, permisos y adopción de cambios; no es una evaluación integral de infraestructura.",
   "usa_scoring": true
 }

@@ -1,20 +1,20 @@
 {
-  "id": "demo-diagnostico-madurez-tecnologica",
-  "cliente": "Diagnóstico de Madurez Tecnológica",
+  "id": "demo-evaluacion-madurez-practicas-digitales",
+  "cliente": "Evaluación de Madurez de Prácticas Digitales",
   "estado": "template_demo_ficticio",
-  "landingTitulo": "Diagnóstico de Madurez Tecnológica",
-  "landingDescripcion": "Revisa cómo se gestionan las herramientas, los procesos y la información de tu organización. Contenido ficticio con fines demostrativos; no es una auditoría técnica.",
+  "landingTitulo": "Evaluación de Madurez de Prácticas Digitales",
+  "landingDescripcion": "Reflexiona sobre cuatro prácticas digitales de tu organización: selección e integración de herramientas, gestión de permisos y acompañamiento ante cambios. Es una evaluación ficticia y orientativa; no es una evaluación integral de infraestructura tecnológica ni una auditoría, y sus puntajes y umbrales no son métricas validadas.",
   "usa_scoring": true,
   "posicion_contacto": "final",
   "secciones": [
-    "Herramientas y procesos",
-    "Datos y capacidades",
+    "Herramientas y permisos",
+    "Adopción de cambios",
     "Siguientes pasos"
   ],
   "preguntas": [
     {
       "id": "p1",
-      "seccion": "Herramientas y procesos",
+      "seccion": "Herramientas y permisos",
       "texto": "¿Cómo se eligen e incorporan nuevas herramientas digitales en tu organización?",
       "tipo": "opcion_multiple",
       "opciones": [
@@ -26,7 +26,7 @@
     },
     {
       "id": "p2",
-      "seccion": "Herramientas y procesos",
+      "seccion": "Herramientas y permisos",
       "texto": "¿Qué tan integradas están las herramientas que utiliza el equipo en sus tareas frecuentes?",
       "tipo": "escala",
       "escala": {
@@ -40,7 +40,7 @@
     },
     {
       "id": "p3",
-      "seccion": "Datos y capacidades",
+      "seccion": "Herramientas y permisos",
       "texto": "¿Cómo se definen los permisos para consultar información de trabajo?",
       "tipo": "opcion_multiple",
       "opciones": [
@@ -52,7 +52,7 @@
     },
     {
       "id": "p4",
-      "seccion": "Datos y capacidades",
+      "seccion": "Adopción de cambios",
       "texto": "¿Qué tan preparada está tu organización para capacitar al equipo cuando cambia una herramienta o proceso?",
       "tipo": "escala",
       "escala": {
@@ -91,18 +91,18 @@
     "resultados": [
       {
         "segmento": "practicas_por_ordenar",
-        "contenido": "Empieza por identificar un proceso prioritario y documentar cómo se realiza hoy, quién participa y qué información necesita.",
-        "cta": { "texto": "Ver una guía para mapear procesos", "accion": "ver_guia_mapeo_procesos" }
+        "contenido": "Una práctica inicial útil es elegir una herramienta prioritaria y aclarar qué proceso apoya, quién la administra y qué permisos necesita el equipo.",
+        "cta": { "texto": "Elegir una práctica digital para revisar", "accion": "elegir_practica_digital_para_revisar" }
       },
       {
         "segmento": "practicas_en_evolucion",
-        "contenido": "Hay prácticas que pueden alinearse entre equipos. Definir responsables y revisar integraciones y permisos puede ayudar a reducir trabajo duplicado.",
-        "cta": { "texto": "Explorar una lista de revisión", "accion": "ver_lista_revision_tecnologia" }
+        "contenido": "Algunas prácticas ya están en marcha. Acordar responsables para revisar integraciones y permisos puede ayudar a que los equipos trabajen con criterios más consistentes.",
+        "cta": { "texto": "Acordar responsables para revisar herramientas y permisos", "accion": "acordar_revision_de_herramientas_y_permisos" }
       },
       {
         "segmento": "practicas_integradas",
-        "contenido": "Parece que la tecnología se aborda con procesos compartidos. Una revisión periódica de adopción, acceso y necesidades puede ayudar a sostener esa base.",
-        "cta": { "texto": "Consultar ideas de mejora continua", "accion": "ver_mejora_continua_tecnologica" }
+        "contenido": "Las prácticas consultadas parecen integrarse en criterios compartidos. Mantén revisiones periódicas de herramientas, permisos y necesidades de capacitación; esta orientación no evalúa infraestructura ni seguridad técnica.",
+        "cta": { "texto": "Programar una revisión periódica de prácticas digitales", "accion": "programar_revision_de_practicas_digitales" }
       }
     ]
   }

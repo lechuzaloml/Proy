@@ -3,6 +3,6 @@
   "formato": "Form",
   "caso_uso": "Client Onboarding",
   "nicho": "Marketing",
-  "descripcion": "Formulario ficticio para recopilar contexto, objetivos y coordinación inicial de un proyecto.",
+  "descripcion": "Formulario ficticio de demostración para recopilar audiencia, objetivos, entregables, materiales, referencias y criterios de éxito; no es onboarding operativo.",
   "usa_scoring": false
 }

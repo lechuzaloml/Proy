@@ -1,8 +1,8 @@
 {
-  "nombre": "Evaluación de Ciberseguridad",
+  "nombre": "Autoevaluación de Prácticas Básicas de Ciberseguridad",
   "formato": "Assessment",
   "caso_uso": "Lead Generation",
   "nicho": "Tecnología/Ciberseguridad",
-  "descripcion": "Autoevaluación ficticia y orientativa de prácticas generales de acceso, preparación y reporte.",
+  "descripcion": "Autoevaluación ficticia y educativa de prácticas generales de acceso, autenticación, preparación del equipo y reporte; no es auditoría ni evaluación profesional de riesgos.",
   "usa_scoring": true
 }

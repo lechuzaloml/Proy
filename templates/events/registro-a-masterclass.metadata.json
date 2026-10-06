@@ -1,8 +1,8 @@
 {
-  "nombre": "Registro a Masterclass",
+  "nombre": "Registro de Interés — Masterclass",
   "formato": "Event Registration",
   "caso_uso": "Events & Webinars",
   "nicho": "Negocios",
-  "descripcion": "Registro ficticio de interés para una masterclass, sin confirmaciones ni gestión de evento.",
+  "descripcion": "Registro ficticio de interés para recopilar perfil, experiencia, objetivo y modalidad preferida; no crea una inscripción ni reserva.",
   "usa_scoring": false
 }

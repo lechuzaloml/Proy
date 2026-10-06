@@ -1,108 +1,124 @@
 {
   "id": "demo-diagnostico-preparacion-comercial",
-  "cliente": "Diagnóstico de Preparación Comercial",
+  "cliente": "Calificación de Prospectos Comerciales",
   "estado": "template_demo_ficticio",
-  "landingTitulo": "Diagnóstico de Preparación Comercial",
-  "landingDescripcion": "Explora qué tan preparado está tu negocio para convertir oportunidades en ventas. Esta autoevaluación es una demostración ficticia y no sustituye una consultoría.",
+  "landingTitulo": "Calificación de Prospectos Comerciales",
+  "landingDescripcion": "Explora si un prospecto parece listo para avanzar con una conversación comercial a partir de su necesidad, prioridad, urgencia, plazo, rol y disposición. Es una demostración ficticia: los puntajes y umbrales son orientativos, no validados, y no sustituyen la calificación profesional.",
   "usa_scoring": true,
   "posicion_contacto": "final",
   "secciones": [
-    "Tu proceso comercial",
-    "Oportunidades y seguimiento",
-    "Prioridades"
+    "Necesidad y prioridad",
+    "Momento de compra",
+    "Decisión y capacidad para avanzar"
   ],
   "preguntas": [
     {
       "id": "p1",
-      "seccion": "Tu proceso comercial",
-      "texto": "¿Cómo describirías el proceso que sigue tu equipo desde el primer contacto hasta el cierre?",
+      "seccion": "Necesidad y prioridad",
+      "texto": "¿Qué tan directamente se relaciona la solución que buscas con un problema actual de tu negocio?",
       "tipo": "opcion_multiple",
       "opciones": [
-        { "texto": "Cada persona lo gestiona a su manera", "puntos": 0 },
-        { "texto": "Tenemos algunos pasos definidos, pero no siempre se siguen", "puntos": 12 },
-        { "texto": "Está documentado y el equipo lo aplica de forma consistente", "puntos": 25 }
+        { "texto": "Estoy explorando opciones, pero aún no tengo un problema concreto definido", "puntos": 0 },
+        { "texto": "Tengo un problema identificado y estoy comparando alternativas", "puntos": 10 },
+        { "texto": "Tengo una necesidad concreta que busco resolver", "puntos": 20 }
       ],
       "participa_scoring": true
     },
     {
       "id": "p2",
-      "seccion": "Tu proceso comercial",
-      "texto": "¿Qué tan claramente está definido el perfil de cliente al que quieren vender?",
+      "seccion": "Necesidad y prioridad",
+      "texto": "¿Qué prioridad tiene resolver esta necesidad frente a otras iniciativas actuales?",
       "tipo": "escala",
       "escala": {
         "min": 1,
         "max": 5,
-        "etiqueta_min": "Todavía no está definido",
-        "etiqueta_max": "Está validado y compartido por el equipo"
+        "etiqueta_min": "Es una prioridad futura",
+        "etiqueta_max": "Es una prioridad inmediata"
       },
       "participa_scoring": true,
-      "puntos_por_valor": { "1": 0, "2": 6, "3": 12, "4": 18, "5": 25 }
+      "puntos_por_valor": { "1": 0, "2": 5, "3": 10, "4": 15, "5": 20 }
     },
     {
       "id": "p3",
-      "seccion": "Oportunidades y seguimiento",
-      "texto": "¿Dónde registra actualmente el equipo las oportunidades y sus siguientes pasos?",
+      "seccion": "Momento de compra",
+      "texto": "¿En qué horizonte te gustaría tomar una decisión sobre cómo resolver esta necesidad?",
       "tipo": "opcion_multiple",
       "opciones": [
-        { "texto": "En mensajes, notas o archivos separados", "puntos": 0 },
-        { "texto": "En una hoja compartida que se actualiza ocasionalmente", "puntos": 12 },
-        { "texto": "En un proceso común con responsables y seguimiento periódico", "puntos": 25 }
+        { "texto": "Aún no tengo un plazo definido", "puntos": 0 },
+        { "texto": "En los próximos tres a seis meses", "puntos": 10 },
+        { "texto": "En los próximos tres meses", "puntos": 20 }
       ],
       "participa_scoring": true
     },
     {
       "id": "p4",
-      "seccion": "Oportunidades y seguimiento",
-      "texto": "¿Qué tan regularmente revisan por qué se ganan o se pierden oportunidades?",
+      "seccion": "Momento de compra",
+      "texto": "¿Qué tan urgente es atender esta necesidad?",
       "tipo": "escala",
       "escala": {
         "min": 1,
         "max": 5,
-        "etiqueta_min": "No lo revisamos",
-        "etiqueta_max": "Lo revisamos con datos y acciones"
+        "etiqueta_min": "Puede esperar",
+        "etiqueta_max": "Necesito atenderla pronto"
       },
       "participa_scoring": true,
-      "puntos_por_valor": { "1": 0, "2": 6, "3": 12, "4": 18, "5": 25 }
+      "puntos_por_valor": { "1": 0, "2": 5, "3": 10, "4": 15, "5": 20 }
     },
     {
       "id": "p5",
-      "seccion": "Prioridades",
-      "texto": "¿Cuál es el principal obstáculo que hoy dificulta avanzar una oportunidad comercial?",
-      "tipo": "abierta",
-      "limite_caracteres": 500,
-      "participa_scoring": false
+      "seccion": "Decisión y capacidad para avanzar",
+      "texto": "¿Cuál describe mejor tu participación en la decisión de compra?",
+      "tipo": "opcion_multiple",
+      "opciones": [
+        { "texto": "Estoy investigando y compartiré opciones con quienes deciden", "puntos": 0 },
+        { "texto": "Participo en la evaluación junto con otras personas", "puntos": 10 },
+        { "texto": "Tomo la decisión o lidero el proceso de decisión", "puntos": 20 }
+      ],
+      "participa_scoring": true
     },
     {
       "id": "p6",
-      "seccion": "Prioridades",
-      "texto": "¿Qué cambio te gustaría conseguir en los próximos tres meses?",
+      "seccion": "Decisión y capacidad para avanzar",
+      "texto": "¿Qué tan viable es para ti destinar recursos y tiempo para avanzar si encuentras una opción adecuada?",
+      "tipo": "opcion_multiple",
+      "opciones": [
+        { "texto": "Todavía necesito entender opciones y recursos necesarios", "puntos": 0 },
+        { "texto": "Puedo gestionar recursos y coordinar los siguientes pasos", "puntos": 10 },
+        { "texto": "Cuento con disposición y recursos para avanzar", "puntos": 20 }
+      ],
+      "participa_scoring": true
+    },
+    {
+      "id": "p7",
+      "seccion": "Decisión y capacidad para avanzar",
+      "texto": "¿Qué factor tendría mayor peso para decidir si avanzas con una solución?",
       "tipo": "abierta",
       "limite_caracteres": 500,
       "participa_scoring": false
     }
   ],
   "reglas_scoring": [
-    { "puntaje_min": 0, "puntaje_max": 34, "segmento": "proceso_por_construir" },
-    { "puntaje_min": 35, "puntaje_max": 69, "segmento": "proceso_en_desarrollo" },
-    { "puntaje_min": 70, "puntaje_max": 100, "segmento": "proceso_consolidado" }
+    { "puntaje_min": 0, "puntaje_max": 39, "segmento": "exploracion_inicial" },
+    { "puntaje_min": 40, "puntaje_max": 79, "segmento": "evaluacion_activa" },
+    { "puntaje_min": 80, "puntaje_max": 120, "segmento": "listo_para_siguiente_paso" }
   ],
   "resultado": {
     "tipo": "por_segmento",
     "resultados": [
       {
-        "segmento": "proceso_por_construir",
-        "contenido": "Un primer paso útil puede ser acordar etapas sencillas para las oportunidades y definir quién dará seguimiento a cada una.",
-        "cta": { "texto": "Explorar una guía para ordenar ventas", "accion": "ver_guia_proceso_comercial" }
+        "segmento": "exploracion_inicial",
+        "contenido": "La necesidad, el plazo o los recursos todavía requieren claridad. El siguiente paso comercial es entender mejor el problema y compartir información útil antes de proponer una solución.",
+        "cta": { "texto": "Aclarar la necesidad y los criterios de decisión", "accion": "aclarar_necesidad_y_criterios" }
       },
       {
-        "segmento": "proceso_en_desarrollo",
-        "contenido": "Ya hay prácticas que pueden fortalecerse. Documentar los pasos comunes y revisar oportunidades con regularidad puede ayudar a darles continuidad.",
-        "cta": { "texto": "Revisar próximos pasos", "accion": "ver_recomendaciones_comerciales" }
+        "segmento": "evaluacion_activa",
+        "contenido": "Hay una necesidad identificada y algunos elementos de decisión en marcha. Conviene confirmar el plazo, las personas involucradas y qué condiciones permitirían avanzar.",
+        "cta": { "texto": "Confirmar plazo y participantes de la decisión", "accion": "confirmar_plazo_y_decisores" }
       },
       {
-        "segmento": "proceso_consolidado",
-        "contenido": "Parece que ya cuentan con una base organizada. Consideren revisar periódicamente los datos del proceso para detectar dónde mejorar la experiencia de compra.",
-        "cta": { "texto": "Ver ideas de optimización", "accion": "ver_ideas_optimizacion_comercial" }
+        "segmento": "listo_para_siguiente_paso",
+        "contenido": "La necesidad es prioritaria y hay disposición para tomar una decisión. El siguiente paso comercial es acordar una conversación de alcance para revisar encaje, recursos y calendario.",
+        "cta": { "texto": "Acordar una conversación de alcance", "accion": "acordar_conversacion_de_alcance" }
       }
     ]
   }
