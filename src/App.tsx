@@ -1,7 +1,11 @@
 import { useState } from "react";
+import BibliotecaTemplates, {
+  type CasoReferencia,
+} from "./components/BibliotecaTemplates";
 import Landing from "./components/Landing";
 import RenderizadorCuestionario from "./components/RenderizadorCuestionario";
 import PantallaResultado from "./components/PantallaResultado";
+import { catalogoTemplates } from "./templates/catalogo";
 import casoNuevo from "../spec/Ejemplos/caso-nuevo.json";
 import serEmpresario from "../spec/Ejemplos/ser-empresario-config.json";
 import merkatics from "../spec/Ejemplos/merkatics-config.json";
@@ -9,62 +13,91 @@ import type { ResultadoCalculado } from "./logic/calcularResultado";
 import type { Lead } from "./types/model";
 import { validarCuestionario } from "./validation/validarCuestionario";
 
-const configuraciones: Record<string, unknown> = {
-  "caso-nuevo": casoNuevo,
-  "ser-empresario": serEmpresario,
-  merkatics,
-};
+const casosReferencia: CasoReferencia[] = [
+  {
+    id: "ser-empresario",
+    nombre: "Ser Empresario",
+    descripcion: "Caso de referencia existente.",
+    configuracion: serEmpresario,
+  },
+  {
+    id: "merkatics",
+    nombre: "Merkatics",
+    descripcion: "Caso de referencia existente.",
+    configuracion: merkatics,
+  },
+  {
+    id: "caso-nuevo",
+    nombre: "Caso nuevo",
+    descripcion: "Caso de prueba existente, ficticio.",
+    configuracion: casoNuevo,
+  },
+];
 
 export default function App() {
-  const [casoSeleccionado, setCasoSeleccionado] = useState("caso-nuevo");
+  const [seleccion, setSeleccion] = useState<{
+    id: string;
+    nombre: string;
+    configuracion: unknown;
+  } | null>(null);
   const [landingCompletada, setLandingCompletada] = useState(false);
   const [envio, setEnvio] = useState<{
     lead: Lead;
     calculo: ResultadoCalculado;
   } | null>(null);
   const calculo = envio?.calculo ?? null;
-  const resultadoValidacion = validarCuestionario(
-    configuraciones[casoSeleccionado],
-  );
+  const resultadoValidacion = seleccion
+    ? validarCuestionario(seleccion.configuracion)
+    : null;
 
-  const selectorCasos = (
-    <div
-      style={{
-        alignItems: "center",
-        display: "flex",
-        gap: "0.75rem",
-        margin: "1rem auto",
-        maxWidth: "760px",
-        padding: "0 1rem",
-      }}
-    >
-      <label htmlFor="selector-caso">Elegir cuestionario</label>
-      <select
-        id="selector-caso"
-        onChange={(evento) => {
-          setCasoSeleccionado(evento.target.value);
-          setLandingCompletada(false);
-          setEnvio(null);
-        }}
-        style={{ padding: "0.5rem" }}
-        value={casoSeleccionado}
+  function seleccionarCuestionario(
+    id: string,
+    nombre: string,
+    configuracion: unknown,
+  ) {
+    setSeleccion({ id, nombre, configuracion });
+    setLandingCompletada(false);
+    setEnvio(null);
+  }
+
+  function regresarBiblioteca() {
+    setSeleccion(null);
+    setLandingCompletada(false);
+    setEnvio(null);
+  }
+
+  if (!seleccion) {
+    return (
+      <BibliotecaTemplates
+        casosReferencia={casosReferencia}
+        onSeleccionar={seleccionarCuestionario}
+        templates={catalogoTemplates}
+      />
+    );
+  }
+
+  const navegacion = (
+    <nav aria-label="Navegación del cuestionario" className="flow-navigation">
+      <button
+        className="secondary-button"
+        onClick={regresarBiblioteca}
+        type="button"
       >
-        <option value="caso-nuevo">Caso nuevo</option>
-        <option value="ser-empresario">Ser Empresario</option>
-        <option value="merkatics">Merkatics</option>
-      </select>
-    </div>
+        Volver a la biblioteca
+      </button>
+      <span>{seleccion.nombre}</span>
+    </nav>
   );
 
-  if (!resultadoValidacion.valido) {
+  if (!resultadoValidacion?.valido) {
     return (
       <>
-        {selectorCasos}
+        {navegacion}
         <main className="validation-errors">
           <h1>No se pudo cargar el cuestionario</h1>
           <p>Corrige los siguientes errores de validación:</p>
           <ul>
-            {resultadoValidacion.errores.map((error, indice) => (
+            {resultadoValidacion?.errores.map((error, indice) => (
               <li key={indice}>{error}</li>
             ))}
           </ul>
@@ -81,7 +114,7 @@ export default function App() {
 
     return (
       <>
-        {selectorCasos}
+        {navegacion}
         <main className="validation-errors" role="alert">
           <h1>No se pudo determinar el resultado</h1>
           <p>{mensaje}</p>
@@ -93,7 +126,7 @@ export default function App() {
   if (calculo?.estado === "ok") {
     return (
       <>
-        {selectorCasos}
+        {navegacion}
         <PantallaResultado calculo={calculo} />
       </>
     );
@@ -102,7 +135,7 @@ export default function App() {
   if (!landingCompletada) {
     return (
       <>
-        {selectorCasos}
+        {navegacion}
         <Landing
           descripcion={
             resultadoValidacion.data.landingDescripcion ??
@@ -120,9 +153,9 @@ export default function App() {
 
   return (
     <>
-      {selectorCasos}
+      {navegacion}
       <RenderizadorCuestionario
-        key={casoSeleccionado}
+        key={seleccion.id}
         cuestionario={resultadoValidacion.data}
         onEnvio={(lead, resultado) => setEnvio({ lead, calculo: resultado })}
       />
