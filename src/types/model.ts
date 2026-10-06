@@ -78,6 +78,8 @@ interface CuestionarioBase {
   posicion_contacto: "inicio" | "final";
   secciones?: Seccion[];
   preguntas: Pregunta[];
+  landingTitulo?: string;
+  landingDescripcion?: string;
 }
 
 export type Cuestionario = CuestionarioBase &
@@ -92,3 +94,11 @@ export type Cuestionario = CuestionarioBase &
         resultado: ResultadoFijo;
       }
   );
+
+export interface Lead {
+  cuestionarioId: string;
+  nombre: string;
+  correo: string;
+  telefono: string;
+  respuestas: Record<string, unknown>;
+}

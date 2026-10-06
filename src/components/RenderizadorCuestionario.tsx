@@ -1,5 +1,8 @@
 import { useState } from "react";
-import type { Cuestionario, Pregunta } from "../types/model";
+import type { Cuestionario, Lead, Pregunta } from "../types/model";
+import FormularioContacto, {
+  type DatosContacto,
+} from "./FormularioContacto";
 import {
   calcularResultado,
   type ResultadoCalculado,
@@ -9,7 +12,7 @@ import {
 
 interface RenderizadorCuestionarioProps {
   cuestionario: Cuestionario;
-  onResultado: (calculo: ResultadoCalculado) => void;
+  onEnvio: (lead: Lead, calculo: ResultadoCalculado) => void;
 }
 
 interface EntradaPregunta {
@@ -19,16 +22,47 @@ interface EntradaPregunta {
 
 export default function RenderizadorCuestionario({
   cuestionario,
-  onResultado,
+  onEnvio,
 }: RenderizadorCuestionarioProps) {
   const [respuestas, setRespuestas] = useState<RespuestasCuestionario>({});
+  const [datosContacto, setDatosContacto] = useState<DatosContacto | null>(null);
+  const [mostrarPreguntas, setMostrarPreguntas] = useState(
+    cuestionario.posicion_contacto !== "inicio",
+  );
+
+  function finalizar(datos: DatosContacto) {
+    const lead: Lead = {
+      cuestionarioId: cuestionario.id,
+      ...datos,
+      respuestas: Object.fromEntries(
+        Object.entries(respuestas).map(([indice, respuesta]) => {
+          const pregunta = cuestionario.preguntas[Number(indice)];
+          return [pregunta?.id ?? indice, respuesta];
+        }),
+      ),
+    };
+    onEnvio(lead, calcularResultado(cuestionario, respuestas));
+  }
 
   function actualizarRespuesta(indice: number, respuesta: Respuesta) {
     setRespuestas((actuales) => ({ ...actuales, [indice]: respuesta }));
   }
 
   function enviarRespuestas() {
-    onResultado(calcularResultado(cuestionario, respuestas));
+    if (cuestionario.posicion_contacto === "inicio" && datosContacto) {
+      finalizar(datosContacto);
+      return;
+    }
+    setMostrarPreguntas(false);
+  }
+
+  function completarContacto(datos: DatosContacto) {
+    setDatosContacto(datos);
+    if (cuestionario.posicion_contacto === "inicio") {
+      setMostrarPreguntas(true);
+      return;
+    }
+    finalizar(datos);
   }
 
   const entradas = cuestionario.preguntas.map((pregunta, indice) => ({
@@ -137,62 +171,82 @@ export default function RenderizadorCuestionario({
         <p className="eyebrow">Cuestionario</p>
         <h1>{cuestionario.cliente}</h1>
       </header>
-      {secciones.length === 0 ? (
-        <div className="question-list">{entradas.map(renderPregunta)}</div>
-      ) : (
+      {!mostrarPreguntas && (
+        <FormularioContacto onCompletar={completarContacto} />
+      )}
+      {mostrarPreguntas && (
         <>
-          {secciones.map((seccion) => (
-            <section className="question-section" key={seccion}>
-              <h2>{seccion}</h2>
-              <div className="question-list">
-                {entradas
-                  .filter(({ pregunta }) => pregunta.seccion === seccion)
-                  .map(renderPregunta)}
-              </div>
-            </section>
-          ))}
-          {entradas.some(
-            ({ pregunta }) =>
-              pregunta.seccion !== undefined &&
-              !secciones.includes(pregunta.seccion),
-          ) && (
-            <section className="question-section">
-              {[
-                ...new Set(
-                  entradas
-                    .map(({ pregunta }) => pregunta.seccion)
-                    .filter(
-                      (seccion): seccion is string =>
-                        seccion !== undefined && !secciones.includes(seccion),
-                    ),
-                ),
-              ].map((seccion) => (
-                <div key={seccion}>
+          {secciones.length === 0 ? (
+            <div className="question-list">{entradas.map(renderPregunta)}</div>
+          ) : (
+            <>
+              {secciones.map((seccion) => (
+                <section className="question-section" key={seccion}>
                   <h2>{seccion}</h2>
                   <div className="question-list">
                     {entradas
                       .filter(({ pregunta }) => pregunta.seccion === seccion)
                       .map(renderPregunta)}
                   </div>
-                </div>
+                </section>
               ))}
-            </section>
+              {entradas.some(
+                ({ pregunta }) =>
+                  pregunta.seccion !== undefined &&
+                  !secciones.includes(pregunta.seccion),
+              ) && (
+                <section className="question-section">
+                  {[
+                    ...new Set(
+                      entradas
+                        .map(({ pregunta }) => pregunta.seccion)
+                        .filter(
+                          (seccion): seccion is string =>
+                            seccion !== undefined &&
+                            !secciones.includes(seccion),
+                        ),
+                    ),
+                  ].map((seccion) => (
+                    <div key={seccion}>
+                      <h2>{seccion}</h2>
+                      <div className="question-list">
+                        {entradas
+                          .filter(
+                            ({ pregunta }) => pregunta.seccion === seccion,
+                          )
+                          .map(renderPregunta)}
+                      </div>
+                    </div>
+                  ))}
+                </section>
+              )}
+              {entradas.some(
+                ({ pregunta }) => pregunta.seccion === undefined,
+              ) && (
+                <section className="question-section">
+                  <h2>Sin sección</h2>
+                  <div className="question-list">
+                    {entradas
+                      .filter(
+                        ({ pregunta }) => pregunta.seccion === undefined,
+                      )
+                      .map(renderPregunta)}
+                  </div>
+                </section>
+              )}
+            </>
           )}
-          {entradas.some(({ pregunta }) => pregunta.seccion === undefined) && (
-            <section className="question-section">
-              <h2>Sin sección</h2>
-              <div className="question-list">
-                {entradas
-                  .filter(({ pregunta }) => pregunta.seccion === undefined)
-                  .map(renderPregunta)}
-              </div>
-            </section>
-          )}
+          <button
+            className="submit-button"
+            onClick={enviarRespuestas}
+            type="button"
+          >
+            {cuestionario.posicion_contacto === "final"
+              ? "Continuar"
+              : "Enviar"}
+          </button>
         </>
       )}
-      <button className="submit-button" onClick={enviarRespuestas} type="button">
-        Enviar
-      </button>
     </main>
   );
 }

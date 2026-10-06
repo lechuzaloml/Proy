@@ -1,14 +1,21 @@
 import { useState } from "react";
+import Landing from "./components/Landing";
 import RenderizadorCuestionario from "./components/RenderizadorCuestionario";
 import PantallaResultado from "./components/PantallaResultado";
 import casoNuevo from "../spec/Ejemplos/caso-nuevo.json";
 import type { ResultadoCalculado } from "./logic/calcularResultado";
+import type { Lead } from "./types/model";
 import { validarCuestionario } from "./validation/validarCuestionario";
 
 const resultadoValidacion = validarCuestionario(casoNuevo);
 
 export default function App() {
-  const [calculo, setCalculo] = useState<ResultadoCalculado | null>(null);
+  const [landingCompletada, setLandingCompletada] = useState(false);
+  const [envio, setEnvio] = useState<{
+    lead: Lead;
+    calculo: ResultadoCalculado;
+  } | null>(null);
+  const calculo = envio?.calculo ?? null;
 
   if (!resultadoValidacion.valido) {
     return (
@@ -42,10 +49,26 @@ export default function App() {
     return <PantallaResultado calculo={calculo} />;
   }
 
+  if (!landingCompletada) {
+    return (
+      <Landing
+        descripcion={
+          resultadoValidacion.data.landingDescripcion ??
+          "Tus respuestas nos ayudarán a darte una recomendación personalizada."
+        }
+        onComenzar={() => setLandingCompletada(true)}
+        titulo={
+          resultadoValidacion.data.landingTitulo ??
+          "Responde este cuestionario"
+        }
+      />
+    );
+  }
+
   return (
     <RenderizadorCuestionario
       cuestionario={resultadoValidacion.data}
-      onResultado={setCalculo}
+      onEnvio={(lead, resultado) => setEnvio({ lead, calculo: resultado })}
     />
   );
 }
