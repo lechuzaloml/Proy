@@ -1,0 +1,8 @@
+{
+  "nombre": "Evaluación de Ciberseguridad",
+  "formato": "Assessment",
+  "caso_uso": "Lead Generation",
+  "nicho": "Tecnología/Ciberseguridad",
+  "descripcion": "Autoevaluación ficticia y orientativa de prácticas generales de acceso, preparación y reporte.",
+  "usa_scoring": true
+}

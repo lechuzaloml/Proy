@@ -1,0 +1,8 @@
+{
+  "nombre": "Diagnóstico de Preparación Comercial",
+  "formato": "Assessment",
+  "caso_uso": "Sales Qualification",
+  "nicho": "Negocios y Finanzas",
+  "descripcion": "Autoevaluación ficticia para explorar procesos, seguimiento y prioridades comerciales.",
+  "usa_scoring": true
+}

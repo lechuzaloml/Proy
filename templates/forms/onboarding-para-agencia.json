@@ -1,0 +1,88 @@
+{
+  "id": "demo-onboarding-para-agencia",
+  "cliente": "Onboarding para Agencia",
+  "estado": "template_demo_ficticio",
+  "landingTitulo": "Onboarding para Agencia",
+  "landingDescripcion": "Comparte la información inicial para preparar un proyecto de marketing con una agencia ficticia. No se envían ni almacenan respuestas fuera del funcionamiento actual de demostración.",
+  "usa_scoring": false,
+  "posicion_contacto": "inicio",
+  "secciones": [
+    "Tu organización",
+    "Proyecto y objetivos",
+    "Marca y coordinación"
+  ],
+  "preguntas": [
+    {
+      "id": "p1",
+      "seccion": "Tu organización",
+      "texto": "¿A qué se dedica tu organización y a quién ofrece sus productos o servicios?",
+      "tipo": "abierta",
+      "limite_caracteres": 700,
+      "participa_scoring": false
+    },
+    {
+      "id": "p2",
+      "seccion": "Tu organización",
+      "texto": "¿En qué etapa se encuentra actualmente el proyecto?",
+      "tipo": "opcion_multiple",
+      "opciones": [
+        { "texto": "Estamos definiendo el alcance" },
+        { "texto": "Estamos preparando materiales" },
+        { "texto": "El proyecto ya está en marcha" },
+        { "texto": "Buscamos revisar una iniciativa existente" }
+      ],
+      "participa_scoring": false
+    },
+    {
+      "id": "p3",
+      "seccion": "Proyecto y objetivos",
+      "texto": "¿Cuál es el principal resultado que te gustaría lograr con este proyecto?",
+      "tipo": "abierta",
+      "limite_caracteres": 700,
+      "participa_scoring": false
+    },
+    {
+      "id": "p4",
+      "seccion": "Proyecto y objetivos",
+      "texto": "¿Qué servicios te interesa explorar?",
+      "tipo": "opcion_multiple",
+      "opciones": [
+        { "texto": "Estrategia de marca y posicionamiento" },
+        { "texto": "Contenido y redes sociales" },
+        { "texto": "Campañas digitales" },
+        { "texto": "Sitio web y experiencia digital" },
+        { "texto": "Aún no lo hemos definido" }
+      ],
+      "participa_scoring": false
+    },
+    {
+      "id": "p5",
+      "seccion": "Marca y coordinación",
+      "texto": "¿Qué atributos o tono deberían reflejar las comunicaciones de tu marca?",
+      "tipo": "abierta",
+      "limite_caracteres": 700,
+      "participa_scoring": false
+    },
+    {
+      "id": "p6",
+      "seccion": "Marca y coordinación",
+      "texto": "¿Quiénes participarán en la coordinación y aprobación del proyecto?",
+      "tipo": "abierta",
+      "limite_caracteres": 500,
+      "participa_scoring": false
+    },
+    {
+      "id": "p7",
+      "seccion": "Marca y coordinación",
+      "texto": "¿Qué fecha o periodo te gustaría considerar para iniciar?",
+      "tipo": "abierta",
+      "limite_caracteres": 300,
+      "participa_scoring": false
+    }
+  ],
+  "resultado": {
+    "tipo": "fijo",
+    "contenido": "Gracias por completar este formulario de demostración. La información queda disponible únicamente en el flujo actual de la aplicación; esta plantilla no incluye persistencia ni envío a una agencia.",
+    "cta": { "texto": "Revisar el resumen del proyecto", "accion": "ver_resumen_proyecto" }
+  }
+}

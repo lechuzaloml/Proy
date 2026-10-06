@@ -1,0 +1,109 @@
+{
+  "id": "demo-evaluacion-liderazgo",
+  "cliente": "Evaluación de Liderazgo",
+  "estado": "template_demo_ficticio",
+  "landingTitulo": "Evaluación de Liderazgo",
+  "landingDescripcion": "Reflexiona sobre hábitos de comunicación, delegación y desarrollo de equipo. Esta evaluación ficticia es una herramienta de reflexión, no una medición clínica ni una certificación.",
+  "usa_scoring": true,
+  "posicion_contacto": "final",
+  "secciones": [
+    "Comunicación y dirección",
+    "Desarrollo del equipo",
+    "Reflexión personal"
+  ],
+  "preguntas": [
+    {
+      "id": "p1",
+      "seccion": "Comunicación y dirección",
+      "texto": "¿Con qué frecuencia compartes prioridades y expectativas claras con tu equipo?",
+      "tipo": "escala",
+      "escala": {
+        "min": 1,
+        "max": 5,
+        "etiqueta_min": "Rara vez",
+        "etiqueta_max": "De forma constante"
+      },
+      "participa_scoring": true,
+      "puntos_por_valor": { "1": 0, "2": 6, "3": 12, "4": 18, "5": 25 }
+    },
+    {
+      "id": "p2",
+      "seccion": "Comunicación y dirección",
+      "texto": "Cuando surge un desacuerdo, ¿qué sueles hacer primero?",
+      "tipo": "opcion_multiple",
+      "opciones": [
+        { "texto": "Posponer la conversación mientras se resuelve solo", "puntos": 0 },
+        { "texto": "Compartir mi perspectiva y escuchar la otra parte", "puntos": 12 },
+        { "texto": "Facilitar una conversación para acordar próximos pasos", "puntos": 25 }
+      ],
+      "participa_scoring": true
+    },
+    {
+      "id": "p3",
+      "seccion": "Desarrollo del equipo",
+      "texto": "¿Qué tan habitualmente delegas decisiones junto con la responsabilidad correspondiente?",
+      "tipo": "escala",
+      "escala": {
+        "min": 1,
+        "max": 5,
+        "etiqueta_min": "Con poca frecuencia",
+        "etiqueta_max": "Es una práctica habitual"
+      },
+      "participa_scoring": true,
+      "puntos_por_valor": { "1": 0, "2": 6, "3": 12, "4": 18, "5": 25 }
+    },
+    {
+      "id": "p4",
+      "seccion": "Desarrollo del equipo",
+      "texto": "¿Cómo acompañas el crecimiento profesional de las personas de tu equipo?",
+      "tipo": "opcion_multiple",
+      "opciones": [
+        { "texto": "No tenemos espacios definidos para hablar de desarrollo", "puntos": 0 },
+        { "texto": "Conversamos sobre ello cuando surge la ocasión", "puntos": 12 },
+        { "texto": "Tenemos conversaciones periódicas y acordamos acciones", "puntos": 25 }
+      ],
+      "participa_scoring": true
+    },
+    {
+      "id": "p5",
+      "seccion": "Reflexión personal",
+      "texto": "¿Qué situación de liderazgo te gustaría manejar mejor durante los próximos meses?",
+      "tipo": "abierta",
+      "limite_caracteres": 500,
+      "participa_scoring": false
+    },
+    {
+      "id": "p6",
+      "seccion": "Reflexión personal",
+      "texto": "¿Qué fortaleza personal te gustaría poner más al servicio de tu equipo?",
+      "tipo": "abierta",
+      "limite_caracteres": 500,
+      "participa_scoring": false
+    }
+  ],
+  "reglas_scoring": [
+    { "puntaje_min": 0, "puntaje_max": 34, "segmento": "habitos_iniciales" },
+    { "puntaje_min": 35, "puntaje_max": 69, "segmento": "habitos_en_practica" },
+    { "puntaje_min": 70, "puntaje_max": 100, "segmento": "habitos_consistentes" }
+  ],
+  "resultado": {
+    "tipo": "por_segmento",
+    "resultados": [
+      {
+        "segmento": "habitos_iniciales",
+        "contenido": "Elige una conversación o hábito concreto para practicar esta semana. Los cambios pequeños y observables pueden servir como punto de partida.",
+        "cta": { "texto": "Ver ejercicios de reflexión", "accion": "ver_ejercicios_liderazgo" }
+      },
+      {
+        "segmento": "habitos_en_practica",
+        "contenido": "Ya identificas prácticas que puedes fortalecer. Prueba convertir una de ellas en un acuerdo recurrente con tu equipo y revisen juntos cómo funciona.",
+        "cta": { "texto": "Explorar prácticas de equipo", "accion": "ver_practicas_de_equipo" }
+      },
+      {
+        "segmento": "habitos_consistentes",
+        "contenido": "La constancia es una buena base para seguir aprendiendo. Considera pedir retroalimentación específica y compartir aprendizajes con otros líderes.",
+        "cta": { "texto": "Consultar guía de retroalimentación", "accion": "ver_guia_retroalimentacion" }
+      }
+    ]
+  }
+}

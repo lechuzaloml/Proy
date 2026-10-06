@@ -1,0 +1,109 @@
+{
+  "id": "demo-diagnostico-preparacion-comercial",
+  "cliente": "Diagnóstico de Preparación Comercial",
+  "estado": "template_demo_ficticio",
+  "landingTitulo": "Diagnóstico de Preparación Comercial",
+  "landingDescripcion": "Explora qué tan preparado está tu negocio para convertir oportunidades en ventas. Esta autoevaluación es una demostración ficticia y no sustituye una consultoría.",
+  "usa_scoring": true,
+  "posicion_contacto": "final",
+  "secciones": [
+    "Tu proceso comercial",
+    "Oportunidades y seguimiento",
+    "Prioridades"
+  ],
+  "preguntas": [
+    {
+      "id": "p1",
+      "seccion": "Tu proceso comercial",
+      "texto": "¿Cómo describirías el proceso que sigue tu equipo desde el primer contacto hasta el cierre?",
+      "tipo": "opcion_multiple",
+      "opciones": [
+        { "texto": "Cada persona lo gestiona a su manera", "puntos": 0 },
+        { "texto": "Tenemos algunos pasos definidos, pero no siempre se siguen", "puntos": 12 },
+        { "texto": "Está documentado y el equipo lo aplica de forma consistente", "puntos": 25 }
+      ],
+      "participa_scoring": true
+    },
+    {
+      "id": "p2",
+      "seccion": "Tu proceso comercial",
+      "texto": "¿Qué tan claramente está definido el perfil de cliente al que quieren vender?",
+      "tipo": "escala",
+      "escala": {
+        "min": 1,
+        "max": 5,
+        "etiqueta_min": "Todavía no está definido",
+        "etiqueta_max": "Está validado y compartido por el equipo"
+      },
+      "participa_scoring": true,
+      "puntos_por_valor": { "1": 0, "2": 6, "3": 12, "4": 18, "5": 25 }
+    },
+    {
+      "id": "p3",
+      "seccion": "Oportunidades y seguimiento",
+      "texto": "¿Dónde registra actualmente el equipo las oportunidades y sus siguientes pasos?",
+      "tipo": "opcion_multiple",
+      "opciones": [
+        { "texto": "En mensajes, notas o archivos separados", "puntos": 0 },
+        { "texto": "En una hoja compartida que se actualiza ocasionalmente", "puntos": 12 },
+        { "texto": "En un proceso común con responsables y seguimiento periódico", "puntos": 25 }
+      ],
+      "participa_scoring": true
+    },
+    {
+      "id": "p4",
+      "seccion": "Oportunidades y seguimiento",
+      "texto": "¿Qué tan regularmente revisan por qué se ganan o se pierden oportunidades?",
+      "tipo": "escala",
+      "escala": {
+        "min": 1,
+        "max": 5,
+        "etiqueta_min": "No lo revisamos",
+        "etiqueta_max": "Lo revisamos con datos y acciones"
+      },
+      "participa_scoring": true,
+      "puntos_por_valor": { "1": 0, "2": 6, "3": 12, "4": 18, "5": 25 }
+    },
+    {
+      "id": "p5",
+      "seccion": "Prioridades",
+      "texto": "¿Cuál es el principal obstáculo que hoy dificulta avanzar una oportunidad comercial?",
+      "tipo": "abierta",
+      "limite_caracteres": 500,
+      "participa_scoring": false
+    },
+    {
+      "id": "p6",
+      "seccion": "Prioridades",
+      "texto": "¿Qué cambio te gustaría conseguir en los próximos tres meses?",
+      "tipo": "abierta",
+      "limite_caracteres": 500,
+      "participa_scoring": false
+    }
+  ],
+  "reglas_scoring": [
+    { "puntaje_min": 0, "puntaje_max": 34, "segmento": "proceso_por_construir" },
+    { "puntaje_min": 35, "puntaje_max": 69, "segmento": "proceso_en_desarrollo" },
+    { "puntaje_min": 70, "puntaje_max": 100, "segmento": "proceso_consolidado" }
+  ],
+  "resultado": {
+    "tipo": "por_segmento",
+    "resultados": [
+      {
+        "segmento": "proceso_por_construir",
+        "contenido": "Un primer paso útil puede ser acordar etapas sencillas para las oportunidades y definir quién dará seguimiento a cada una.",
+        "cta": { "texto": "Explorar una guía para ordenar ventas", "accion": "ver_guia_proceso_comercial" }
+      },
+      {
+        "segmento": "proceso_en_desarrollo",
+        "contenido": "Ya hay prácticas que pueden fortalecerse. Documentar los pasos comunes y revisar oportunidades con regularidad puede ayudar a darles continuidad.",
+        "cta": { "texto": "Revisar próximos pasos", "accion": "ver_recomendaciones_comerciales" }
+      },
+      {
+        "segmento": "proceso_consolidado",
+        "contenido": "Parece que ya cuentan con una base organizada. Consideren revisar periódicamente los datos del proceso para detectar dónde mejorar la experiencia de compra.",
+        "cta": { "texto": "Ver ideas de optimización", "accion": "ver_ideas_optimizacion_comercial" }
+      }
+    ]
+  }
+}

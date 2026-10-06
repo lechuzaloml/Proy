@@ -1,0 +1,90 @@
+{
+  "id": "demo-diagnostico-salud-financiera",
+  "cliente": "Diagnóstico de Salud Financiera",
+  "estado": "template_demo_ficticio",
+  "landingTitulo": "Diagnóstico de Salud Financiera",
+  "landingDescripcion": "Comparte cómo organizas tus finanzas y qué temas te gustaría revisar. Esta encuesta ficticia es informativa, no ofrece asesoría financiera ni recomendaciones personalizadas.",
+  "usa_scoring": false,
+  "posicion_contacto": "final",
+  "secciones": [
+    "Organización financiera",
+    "Hábitos y objetivos",
+    "Comentarios"
+  ],
+  "preguntas": [
+    {
+      "id": "p1",
+      "seccion": "Organización financiera",
+      "texto": "¿Cómo organizas actualmente tus ingresos y gastos habituales?",
+      "tipo": "opcion_multiple",
+      "opciones": [
+        { "texto": "Los reviso de manera ocasional" },
+        { "texto": "Uso una lista o herramienta sencilla" },
+        { "texto": "Llevo un registro y lo reviso periódicamente" },
+        { "texto": "Todavía estoy buscando un método que me funcione" }
+      ],
+      "participa_scoring": false
+    },
+    {
+      "id": "p2",
+      "seccion": "Organización financiera",
+      "texto": "¿Qué tan fácil te resulta identificar tus gastos recurrentes?",
+      "tipo": "escala",
+      "escala": {
+        "min": 1,
+        "max": 5,
+        "etiqueta_min": "Me resulta difícil",
+        "etiqueta_max": "Los tengo bien identificados"
+      },
+      "participa_scoring": false
+    },
+    {
+      "id": "p3",
+      "seccion": "Hábitos y objetivos",
+      "texto": "¿Qué objetivo financiero te interesa priorizar actualmente?",
+      "tipo": "opcion_multiple",
+      "opciones": [
+        { "texto": "Organizar mis gastos" },
+        { "texto": "Ahorrar para una meta" },
+        { "texto": "Reducir o planificar deudas" },
+        { "texto": "Prepararme para un gasto importante" },
+        { "texto": "Otro objetivo" }
+      ],
+      "participa_scoring": false
+    },
+    {
+      "id": "p4",
+      "seccion": "Hábitos y objetivos",
+      "texto": "¿Con qué frecuencia apartas tiempo para revisar tus finanzas personales o familiares?",
+      "tipo": "opcion_multiple",
+      "opciones": [
+        { "texto": "Cada semana" },
+        { "texto": "Una vez al mes" },
+        { "texto": "Solo cuando surge una necesidad" },
+        { "texto": "No tengo una rutina por ahora" }
+      ],
+      "participa_scoring": false
+    },
+    {
+      "id": "p5",
+      "seccion": "Comentarios",
+      "texto": "¿Qué tema financiero te gustaría aprender o conversar con más detalle?",
+      "tipo": "abierta",
+      "limite_caracteres": 600,
+      "participa_scoring": false
+    },
+    {
+      "id": "p6",
+      "seccion": "Comentarios",
+      "texto": "¿Hay algo más que quieras compartir sobre tus hábitos u objetivos financieros?",
+      "tipo": "abierta",
+      "limite_caracteres": 600,
+      "participa_scoring": false
+    }
+  ],
+  "resultado": {
+    "tipo": "fijo",
+    "contenido": "Gracias por compartir tu perspectiva. Tus respuestas ayudan a orientar esta demostración de encuesta; para decisiones financieras personales, consulta a un profesional calificado.",
+    "cta": { "texto": "Revisar temas de educación financiera", "accion": "ver_recursos_educacion_financiera" }
+  }
+}

@@ -1,0 +1,109 @@
+{
+  "id": "demo-diagnostico-madurez-tecnologica",
+  "cliente": "Diagnóstico de Madurez Tecnológica",
+  "estado": "template_demo_ficticio",
+  "landingTitulo": "Diagnóstico de Madurez Tecnológica",
+  "landingDescripcion": "Revisa cómo se gestionan las herramientas, los procesos y la información de tu organización. Contenido ficticio con fines demostrativos; no es una auditoría técnica.",
+  "usa_scoring": true,
+  "posicion_contacto": "final",
+  "secciones": [
+    "Herramientas y procesos",
+    "Datos y capacidades",
+    "Siguientes pasos"
+  ],
+  "preguntas": [
+    {
+      "id": "p1",
+      "seccion": "Herramientas y procesos",
+      "texto": "¿Cómo se eligen e incorporan nuevas herramientas digitales en tu organización?",
+      "tipo": "opcion_multiple",
+      "opciones": [
+        { "texto": "Cada área decide por separado según su necesidad inmediata", "puntos": 0 },
+        { "texto": "Se consultan algunas áreas antes de decidir", "puntos": 12 },
+        { "texto": "Se evalúan necesidades, responsables y compatibilidad antes de adoptarlas", "puntos": 25 }
+      ],
+      "participa_scoring": true
+    },
+    {
+      "id": "p2",
+      "seccion": "Herramientas y procesos",
+      "texto": "¿Qué tan integradas están las herramientas que utiliza el equipo en sus tareas frecuentes?",
+      "tipo": "escala",
+      "escala": {
+        "min": 1,
+        "max": 5,
+        "etiqueta_min": "Trabajan de forma aislada",
+        "etiqueta_max": "Se conectan según procesos definidos"
+      },
+      "participa_scoring": true,
+      "puntos_por_valor": { "1": 0, "2": 6, "3": 12, "4": 18, "5": 25 }
+    },
+    {
+      "id": "p3",
+      "seccion": "Datos y capacidades",
+      "texto": "¿Cómo se definen los permisos para consultar información de trabajo?",
+      "tipo": "opcion_multiple",
+      "opciones": [
+        { "texto": "No hay criterios compartidos para asignar permisos", "puntos": 0 },
+        { "texto": "Se revisan algunos accesos, aunque no siempre con una frecuencia definida", "puntos": 12 },
+        { "texto": "Los permisos responden a roles y se revisan periódicamente", "puntos": 25 }
+      ],
+      "participa_scoring": true
+    },
+    {
+      "id": "p4",
+      "seccion": "Datos y capacidades",
+      "texto": "¿Qué tan preparada está tu organización para capacitar al equipo cuando cambia una herramienta o proceso?",
+      "tipo": "escala",
+      "escala": {
+        "min": 1,
+        "max": 5,
+        "etiqueta_min": "No hay un plan definido",
+        "etiqueta_max": "Hay acompañamiento y recursos disponibles"
+      },
+      "participa_scoring": true,
+      "puntos_por_valor": { "1": 0, "2": 6, "3": 12, "4": 18, "5": 25 }
+    },
+    {
+      "id": "p5",
+      "seccion": "Siguientes pasos",
+      "texto": "¿Qué proceso de tu organización te gustaría mejorar primero con apoyo tecnológico?",
+      "tipo": "abierta",
+      "limite_caracteres": 500,
+      "participa_scoring": false
+    },
+    {
+      "id": "p6",
+      "seccion": "Siguientes pasos",
+      "texto": "¿Qué cambio reciente ha sido más difícil de adoptar para el equipo?",
+      "tipo": "abierta",
+      "limite_caracteres": 500,
+      "participa_scoring": false
+    }
+  ],
+  "reglas_scoring": [
+    { "puntaje_min": 0, "puntaje_max": 34, "segmento": "practicas_por_ordenar" },
+    { "puntaje_min": 35, "puntaje_max": 69, "segmento": "practicas_en_evolucion" },
+    { "puntaje_min": 70, "puntaje_max": 100, "segmento": "practicas_integradas" }
+  ],
+  "resultado": {
+    "tipo": "por_segmento",
+    "resultados": [
+      {
+        "segmento": "practicas_por_ordenar",
+        "contenido": "Empieza por identificar un proceso prioritario y documentar cómo se realiza hoy, quién participa y qué información necesita.",
+        "cta": { "texto": "Ver una guía para mapear procesos", "accion": "ver_guia_mapeo_procesos" }
+      },
+      {
+        "segmento": "practicas_en_evolucion",
+        "contenido": "Hay prácticas que pueden alinearse entre equipos. Definir responsables y revisar integraciones y permisos puede ayudar a reducir trabajo duplicado.",
+        "cta": { "texto": "Explorar una lista de revisión", "accion": "ver_lista_revision_tecnologia" }
+      },
+      {
+        "segmento": "practicas_integradas",
+        "contenido": "Parece que la tecnología se aborda con procesos compartidos. Una revisión periódica de adopción, acceso y necesidades puede ayudar a sostener esa base.",
+        "cta": { "texto": "Consultar ideas de mejora continua", "accion": "ver_mejora_continua_tecnologica" }
+      }
+    ]
+  }
+}

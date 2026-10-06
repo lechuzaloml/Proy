@@ -1,0 +1,109 @@
+{
+  "id": "demo-test-madurez-marketing-digital",
+  "cliente": "Test de Madurez de Marketing Digital",
+  "estado": "template_demo_ficticio",
+  "landingTitulo": "Test de Madurez de Marketing Digital",
+  "landingDescripcion": "Descubre qué prácticas digitales podrías fortalecer en tu negocio. Este test de demostración es ficticio y no representa un benchmark de mercado.",
+  "usa_scoring": true,
+  "posicion_contacto": "final",
+  "secciones": [
+    "Estrategia y contenido",
+    "Canales y medición",
+    "Siguiente paso"
+  ],
+  "preguntas": [
+    {
+      "id": "p1",
+      "seccion": "Estrategia y contenido",
+      "texto": "¿Cómo planificas los temas y objetivos de tu contenido digital?",
+      "tipo": "opcion_multiple",
+      "opciones": [
+        { "texto": "Publicamos cuando surge una idea", "puntos": 0 },
+        { "texto": "Tenemos temas frecuentes, pero poca planificación", "puntos": 12 },
+        { "texto": "Planificamos contenido según objetivos y audiencia", "puntos": 25 }
+      ],
+      "participa_scoring": true
+    },
+    {
+      "id": "p2",
+      "seccion": "Estrategia y contenido",
+      "texto": "¿Qué tan claramente está definida la audiencia de tus principales canales digitales?",
+      "tipo": "escala",
+      "escala": {
+        "min": 1,
+        "max": 5,
+        "etiqueta_min": "Aún no la hemos definido",
+        "etiqueta_max": "La usamos para orientar nuestras decisiones"
+      },
+      "participa_scoring": true,
+      "puntos_por_valor": { "1": 0, "2": 6, "3": 12, "4": 18, "5": 25 }
+    },
+    {
+      "id": "p3",
+      "seccion": "Canales y medición",
+      "texto": "¿Cómo evalúas qué canales digitales están contribuyendo a tus objetivos?",
+      "tipo": "opcion_multiple",
+      "opciones": [
+        { "texto": "No lo medimos todavía", "puntos": 0 },
+        { "texto": "Revisamos algunas métricas de vez en cuando", "puntos": 12 },
+        { "texto": "Revisamos métricas relevantes y las usamos para ajustar acciones", "puntos": 25 }
+      ],
+      "participa_scoring": true
+    },
+    {
+      "id": "p4",
+      "seccion": "Canales y medición",
+      "texto": "¿Qué tan constante es la experiencia de tu marca entre tus principales canales?",
+      "tipo": "escala",
+      "escala": {
+        "min": 1,
+        "max": 5,
+        "etiqueta_min": "Cada canal funciona por separado",
+        "etiqueta_max": "El mensaje y la experiencia son coherentes"
+      },
+      "participa_scoring": true,
+      "puntos_por_valor": { "1": 0, "2": 6, "3": 12, "4": 18, "5": 25 }
+    },
+    {
+      "id": "p5",
+      "seccion": "Siguiente paso",
+      "texto": "¿Qué canal o actividad de marketing te gustaría mejorar primero?",
+      "tipo": "abierta",
+      "limite_caracteres": 500,
+      "participa_scoring": false
+    },
+    {
+      "id": "p6",
+      "seccion": "Siguiente paso",
+      "texto": "¿Qué objetivo te gustaría alcanzar con tu marketing digital durante los próximos meses?",
+      "tipo": "abierta",
+      "limite_caracteres": 500,
+      "participa_scoring": false
+    }
+  ],
+  "reglas_scoring": [
+    { "puntaje_min": 0, "puntaje_max": 34, "segmento": "base_por_definir" },
+    { "puntaje_min": 35, "puntaje_max": 69, "segmento": "estrategia_en_marcha" },
+    { "puntaje_min": 70, "puntaje_max": 100, "segmento": "practicas_integradas" }
+  ],
+  "resultado": {
+    "tipo": "por_segmento",
+    "resultados": [
+      {
+        "segmento": "base_por_definir",
+        "contenido": "Elige un objetivo y una audiencia prioritaria antes de sumar canales. Un plan sencillo puede ayudarte a enfocar tus primeras pruebas.",
+        "cta": { "texto": "Ver guía de planificación digital", "accion": "ver_guia_planificacion_digital" }
+      },
+      {
+        "segmento": "estrategia_en_marcha",
+        "contenido": "Ya hay actividad y oportunidades para conectarla mejor. Define una métrica útil por objetivo y revisa periódicamente qué acciones vale la pena ajustar.",
+        "cta": { "texto": "Explorar ideas de medición", "accion": "ver_ideas_medicion_marketing" }
+      },
+      {
+        "segmento": "practicas_integradas",
+        "contenido": "Parece que estrategia, canales y medición ya se relacionan. Puedes seguir experimentando con mejoras y documentar qué aprendes de cada iniciativa.",
+        "cta": { "texto": "Consultar ideas de experimentación", "accion": "ver_ideas_experimentacion" }
+      }
+    ]
+  }
+}

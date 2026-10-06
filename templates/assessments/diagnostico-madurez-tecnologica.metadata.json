@@ -1,0 +1,8 @@
+{
+  "nombre": "Diagnóstico de Madurez Tecnológica",
+  "formato": "Assessment",
+  "caso_uso": "Lead Generation",
+  "nicho": "Tecnología",
+  "descripcion": "Autoevaluación ficticia sobre procesos, herramientas, datos y capacidades digitales.",
+  "usa_scoring": true
+}

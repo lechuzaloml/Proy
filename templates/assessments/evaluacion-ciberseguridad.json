@@ -1,0 +1,109 @@
+{
+  "id": "demo-evaluacion-ciberseguridad",
+  "cliente": "Evaluación de Ciberseguridad",
+  "estado": "template_demo_ficticio",
+  "landingTitulo": "Evaluación de Ciberseguridad",
+  "landingDescripcion": "Reflexiona sobre algunas prácticas generales de seguridad de tu organización. Esta autoevaluación ficticia es orientativa y no constituye una auditoría ni una evaluación profesional de riesgos.",
+  "usa_scoring": true,
+  "posicion_contacto": "final",
+  "secciones": [
+    "Acceso y protección",
+    "Preparación del equipo",
+    "Prioridades de seguridad"
+  ],
+  "preguntas": [
+    {
+      "id": "p1",
+      "seccion": "Acceso y protección",
+      "texto": "¿Cómo se gestionan las cuentas y los permisos de las herramientas de trabajo?",
+      "tipo": "opcion_multiple",
+      "opciones": [
+        { "texto": "No tenemos un proceso compartido para revisarlos", "puntos": 0 },
+        { "texto": "Se administran, pero las revisiones no tienen una frecuencia fija", "puntos": 12 },
+        { "texto": "Hay responsables y revisiones periódicas de permisos", "puntos": 25 }
+      ],
+      "participa_scoring": true
+    },
+    {
+      "id": "p2",
+      "seccion": "Acceso y protección",
+      "texto": "¿Qué tan extendido está el uso de autenticación multifactor en las cuentas de trabajo?",
+      "tipo": "escala",
+      "escala": {
+        "min": 1,
+        "max": 5,
+        "etiqueta_min": "No lo hemos revisado",
+        "etiqueta_max": "Está habilitada según nuestras políticas"
+      },
+      "participa_scoring": true,
+      "puntos_por_valor": { "1": 0, "2": 6, "3": 12, "4": 18, "5": 25 }
+    },
+    {
+      "id": "p3",
+      "seccion": "Preparación del equipo",
+      "texto": "¿Cómo se prepara al equipo para reconocer y reportar mensajes o solicitudes sospechosas?",
+      "tipo": "opcion_multiple",
+      "opciones": [
+        { "texto": "No hemos establecido pautas comunes", "puntos": 0 },
+        { "texto": "Compartimos recomendaciones ocasionalmente", "puntos": 12 },
+        { "texto": "Tenemos orientación periódica y un canal claro para reportar", "puntos": 25 }
+      ],
+      "participa_scoring": true
+    },
+    {
+      "id": "p4",
+      "seccion": "Preparación del equipo",
+      "texto": "¿Qué tan claro está el procedimiento para informar un posible incidente?",
+      "tipo": "escala",
+      "escala": {
+        "min": 1,
+        "max": 5,
+        "etiqueta_min": "No está definido",
+        "etiqueta_max": "Está documentado y el equipo lo conoce"
+      },
+      "participa_scoring": true,
+      "puntos_por_valor": { "1": 0, "2": 6, "3": 12, "4": 18, "5": 25 }
+    },
+    {
+      "id": "p5",
+      "seccion": "Prioridades de seguridad",
+      "texto": "¿Qué práctica de seguridad te gustaría revisar primero en tu organización?",
+      "tipo": "abierta",
+      "limite_caracteres": 500,
+      "participa_scoring": false
+    },
+    {
+      "id": "p6",
+      "seccion": "Prioridades de seguridad",
+      "texto": "¿Qué recursos o acompañamiento ayudarían a tu equipo a mejorar sus prácticas?",
+      "tipo": "abierta",
+      "limite_caracteres": 500,
+      "participa_scoring": false
+    }
+  ],
+  "reglas_scoring": [
+    { "puntaje_min": 0, "puntaje_max": 34, "segmento": "practicas_por_revisar" },
+    { "puntaje_min": 35, "puntaje_max": 69, "segmento": "practicas_en_desarrollo" },
+    { "puntaje_min": 70, "puntaje_max": 100, "segmento": "practicas_establecidas" }
+  ],
+  "resultado": {
+    "tipo": "por_segmento",
+    "resultados": [
+      {
+        "segmento": "practicas_por_revisar",
+        "contenido": "Como siguiente paso general, pueden acordar responsables para revisar accesos y establecer un canal conocido para reportar inquietudes.",
+        "cta": { "texto": "Consultar recomendaciones generales", "accion": "ver_recomendaciones_seguridad" }
+      },
+      {
+        "segmento": "practicas_en_desarrollo",
+        "contenido": "Algunas prácticas ya están en marcha. Consideren documentar los procedimientos y programar revisiones periódicas adecuadas a su organización.",
+        "cta": { "texto": "Ver lista de buenas prácticas", "accion": "ver_lista_buenas_practicas" }
+      },
+      {
+        "segmento": "practicas_establecidas",
+        "contenido": "Contar con procesos conocidos es una base positiva. Mantengan la revisión y actualización de sus prácticas con apoyo de personal calificado cuando corresponda.",
+        "cta": { "texto": "Explorar temas de revisión periódica", "accion": "ver_temas_revision_seguridad" }
+      }
+    ]
+  }
+}

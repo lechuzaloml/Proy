@@ -1,0 +1,8 @@
+{
+  "nombre": "Onboarding para Agencia",
+  "formato": "Form",
+  "caso_uso": "Client Onboarding",
+  "nicho": "Marketing",
+  "descripcion": "Formulario ficticio para recopilar contexto, objetivos y coordinación inicial de un proyecto.",
+  "usa_scoring": false
+}

@@ -1,0 +1,74 @@
+{
+  "id": "demo-registro-masterclass",
+  "cliente": "Registro a Masterclass",
+  "estado": "template_demo_ficticio",
+  "landingTitulo": "Registro a Masterclass",
+  "landingDescripcion": "Registra tu interés en una masterclass ficticia sobre cómo convertir una idea de negocio en un plan de acción. Esta demostración no confirma una reserva ni envía recordatorios.",
+  "usa_scoring": false,
+  "posicion_contacto": "inicio",
+  "secciones": [
+    "Sobre tu interés",
+    "Preparación para la sesión"
+  ],
+  "preguntas": [
+    {
+      "id": "p1",
+      "seccion": "Sobre tu interés",
+      "texto": "¿Qué describe mejor tu relación actual con el tema de la masterclass?",
+      "tipo": "opcion_multiple",
+      "opciones": [
+        { "texto": "Estoy explorando una idea" },
+        { "texto": "Ya inicié un proyecto" },
+        { "texto": "Tengo un negocio en marcha" },
+        { "texto": "Acompaño a otras personas emprendedoras" }
+      ],
+      "participa_scoring": false
+    },
+    {
+      "id": "p2",
+      "seccion": "Sobre tu interés",
+      "texto": "¿Qué tema te gustaría que se abordara durante la sesión?",
+      "tipo": "abierta",
+      "limite_caracteres": 500,
+      "participa_scoring": false
+    },
+    {
+      "id": "p3",
+      "seccion": "Preparación para la sesión",
+      "texto": "¿Qué formato te resulta más accesible para participar?",
+      "tipo": "opcion_multiple",
+      "opciones": [
+        { "texto": "En vivo en línea" },
+        { "texto": "En persona" },
+        { "texto": "Me es indiferente" }
+      ],
+      "participa_scoring": false
+    },
+    {
+      "id": "p4",
+      "seccion": "Preparación para la sesión",
+      "texto": "¿Qué tan familiarizado estás con la creación de un plan de acción para un negocio?",
+      "tipo": "escala",
+      "escala": {
+        "min": 1,
+        "max": 5,
+        "etiqueta_min": "Es un tema nuevo para mí",
+        "etiqueta_max": "Ya he creado varios planes"
+      },
+      "participa_scoring": false
+    },
+    {
+      "id": "p5",
+      "seccion": "Preparación para la sesión",
+      "texto": "¿Qué te gustaría poder llevarte de esta masterclass?",
+      "tipo": "abierta",
+      "limite_caracteres": 500,
+      "participa_scoring": false
+    }
+  ],
+  "resultado": {
+    "tipo": "fijo",
+    "contenido": "Gracias por registrar tu interés en esta masterclass ficticia. Esta demostración no crea una inscripción real ni enviará confirmaciones o recordatorios.",
+    "cta": { "texto": "Consultar el temario de ejemplo", "accion": "ver_temario_masterclass_demo" }
+  }
+}

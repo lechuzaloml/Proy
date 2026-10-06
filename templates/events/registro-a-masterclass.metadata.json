@@ -1,0 +1,8 @@
+{
+  "nombre": "Registro a Masterclass",
+  "formato": "Event Registration",
+  "caso_uso": "Events & Webinars",
+  "nicho": "Negocios",
+  "descripcion": "Registro ficticio de interés para una masterclass, sin confirmaciones ni gestión de evento.",
+  "usa_scoring": false
+}
