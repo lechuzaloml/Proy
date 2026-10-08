@@ -5,7 +5,10 @@ import BibliotecaTemplates, {
 import Landing from "./components/Landing";
 import RenderizadorCuestionario from "./components/RenderizadorCuestionario";
 import PantallaResultado from "./components/PantallaResultado";
+import PantallaRecomendacion from "./components/PantallaRecomendacion";
 import { catalogoTemplates } from "./templates/catalogo";
+import { recomendaciones } from "./config/recomendaciones";
+import diagnosticoInicial from "../templates/assessments/diagnostico-inicial.json";
 import casoNuevo from "../spec/Ejemplos/caso-nuevo.json";
 import serEmpresario from "../spec/Ejemplos/ser-empresario-config.json";
 import merkatics from "../spec/Ejemplos/merkatics-config.json";
@@ -40,7 +43,7 @@ export default function App() {
     nombre: string;
     configuracion: unknown;
   } | null>(null);
-  const [landingCompletada, setLandingCompletada] = useState(false);
+  const [bienvenidaCompletada, setBienvenidaCompletada] = useState(false);
   const [envio, setEnvio] = useState<{
     lead: Lead;
     calculo: ResultadoCalculado;
@@ -56,14 +59,27 @@ export default function App() {
     configuracion: unknown,
   ) {
     setSeleccion({ id, nombre, configuracion });
-    setLandingCompletada(false);
     setEnvio(null);
   }
 
   function regresarBiblioteca() {
     setSeleccion(null);
-    setLandingCompletada(false);
     setEnvio(null);
+  }
+
+  if (!bienvenidaCompletada) {
+    return (
+      <Landing
+        onComenzar={() => {
+          seleccionarCuestionario(
+            "diagnostico-inicial",
+            "Diagnóstico inicial de crecimiento",
+            diagnosticoInicial,
+          );
+          setBienvenidaCompletada(true);
+        }}
+      />
+    );
   }
 
   if (!seleccion) {
@@ -124,29 +140,55 @@ export default function App() {
   }
 
   if (calculo?.estado === "ok") {
+    if (seleccion.id === "diagnostico-inicial") {
+      const recomendacion =
+        calculo.tipo === "segmentado"
+          ? recomendaciones[calculo.segmento]
+          : undefined;
+      const template = recomendacion
+        ? catalogoTemplates.find(
+            ({ id }) => id === recomendacion.templateRecomendadoId,
+          )
+        : undefined;
+
+      if (!recomendacion || !template) {
+        return (
+          <>
+            {navegacion}
+            <main className="validation-errors" role="alert">
+              <h1>No se pudo cargar la recomendación</h1>
+              <p>
+                No hay un plan o template configurado para el resultado
+                calculado.
+              </p>
+            </main>
+          </>
+        );
+      }
+
+      return (
+        <>
+          {navegacion}
+          <PantallaRecomendacion
+            contenido={calculo.resultado.contenido}
+            onVerTemplate={() =>
+              seleccionarCuestionario(
+                template.id,
+                template.metadata.nombre,
+                template.configuracion,
+              )
+            }
+            plan={recomendacion.plan}
+            template={template.metadata}
+          />
+        </>
+      );
+    }
+
     return (
       <>
         {navegacion}
         <PantallaResultado calculo={calculo} />
-      </>
-    );
-  }
-
-  if (!landingCompletada) {
-    return (
-      <>
-        {navegacion}
-        <Landing
-          descripcion={
-            resultadoValidacion.data.landingDescripcion ??
-            "Tus respuestas nos ayudarán a darte una recomendación personalizada."
-          }
-          onComenzar={() => setLandingCompletada(true)}
-          titulo={
-            resultadoValidacion.data.landingTitulo ??
-            "Responde este cuestionario"
-          }
-        />
       </>
     );
   }

@@ -1,0 +1,148 @@
+{
+  "id": "clear-ia-diagnostico-inicial",
+  "cliente": "Diagnóstico inicial de crecimiento",
+  "estado": "activo",
+  "usa_scoring": true,
+  "posicion_contacto": "inicio",
+  "secciones": [
+    "Tu negocio",
+    "Captación y calificación de prospectos",
+    "Seguimiento y medición"
+  ],
+  "preguntas": [
+    {
+      "id": "tipo-negocio",
+      "seccion": "Tu negocio",
+      "texto": "¿Qué tipo de negocio describes mejor?",
+      "tipo": "opcion_multiple",
+      "opciones": [
+        { "texto": "Servicios profesionales o consultoría" },
+        { "texto": "Comercio o venta de productos" },
+        { "texto": "Empresa de servicios B2B" },
+        { "texto": "Empresa de servicios B2C" },
+        { "texto": "Otro tipo de negocio" }
+      ],
+      "participa_scoring": false
+    },
+    {
+      "id": "captacion-leads",
+      "seccion": "Captación y calificación de prospectos",
+      "texto": "¿Cómo genera actualmente nuevas oportunidades comerciales tu negocio?",
+      "tipo": "opcion_multiple",
+      "opciones": [
+        { "texto": "No tenemos una actividad de captación definida", "puntos": 0 },
+        { "texto": "Llegan principalmente por recomendaciones", "puntos": 1 },
+        { "texto": "Probamos acciones de captación de forma ocasional", "puntos": 2 },
+        { "texto": "Usamos canales definidos con cierta regularidad", "puntos": 3 },
+        { "texto": "Tenemos un proceso constante y medimos sus resultados", "puntos": 4 }
+      ],
+      "participa_scoring": true
+    },
+    {
+      "id": "calificacion-prospectos",
+      "seccion": "Captación y calificación de prospectos",
+      "texto": "¿Qué tan consistente es la forma en que evalúan si un prospecto encaja con su oferta?",
+      "tipo": "escala",
+      "escala": {
+        "min": 1,
+        "max": 5,
+        "etiqueta_min": "No tenemos criterios definidos",
+        "etiqueta_max": "Aplicamos criterios claros y consistentes"
+      },
+      "participa_scoring": true,
+      "puntos_por_valor": {
+        "1": 0,
+        "2": 1,
+        "3": 2,
+        "4": 3,
+        "5": 4
+      }
+    },
+    {
+      "id": "criterios-prioridad",
+      "seccion": "Captación y calificación de prospectos",
+      "texto": "¿Cómo priorizan a los prospectos que requieren seguimiento comercial?",
+      "tipo": "opcion_multiple",
+      "opciones": [
+        { "texto": "No tenemos criterios comunes para priorizarlos", "puntos": 0 },
+        { "texto": "Cada persona decide según su experiencia", "puntos": 2 },
+        { "texto": "Usamos criterios acordados, como necesidad y momento de compra", "puntos": 4 }
+      ],
+      "participa_scoring": true
+    },
+    {
+      "id": "medicion-conversion",
+      "seccion": "Seguimiento y medición",
+      "texto": "¿Qué tan claro tienen cuántos prospectos avanzan de una etapa comercial a la siguiente?",
+      "tipo": "escala",
+      "escala": {
+        "min": 1,
+        "max": 5,
+        "etiqueta_min": "No damos seguimiento a ese avance",
+        "etiqueta_max": "Lo medimos periódicamente"
+      },
+      "participa_scoring": true,
+      "puntos_por_valor": {
+        "1": 0,
+        "2": 1,
+        "3": 2,
+        "4": 3,
+        "5": 4
+      }
+    },
+    {
+      "id": "seguimiento-prospectos",
+      "seccion": "Seguimiento y medición",
+      "texto": "¿Qué describe mejor el seguimiento que dan a los prospectos interesados?",
+      "tipo": "opcion_multiple",
+      "opciones": [
+        { "texto": "No hay un proceso establecido", "puntos": 0 },
+        { "texto": "El seguimiento depende de cada persona", "puntos": 2 },
+        { "texto": "Tenemos responsables y próximos pasos definidos", "puntos": 4 }
+      ],
+      "participa_scoring": true
+    },
+    {
+      "id": "prioridad-crecimiento",
+      "seccion": "Tu negocio",
+      "texto": "¿Qué aspecto de la captación o el seguimiento comercial te gustaría mejorar primero?",
+      "tipo": "abierta",
+      "limite_caracteres": 500,
+      "participa_scoring": false
+    }
+  ],
+  "reglas_scoring": [
+    { "puntaje_min": 0, "puntaje_max": 6, "segmento": "proceso_por_construir" },
+    { "puntaje_min": 7, "puntaje_max": 13, "segmento": "proceso_en_consolidacion" },
+    { "puntaje_min": 14, "puntaje_max": 20, "segmento": "proceso_preparado_para_crecer" }
+  ],
+  "resultado": {
+    "tipo": "por_segmento",
+    "resultados": [
+      {
+        "segmento": "proceso_por_construir",
+        "contenido": "El diagnóstico muestra una oportunidad para establecer bases más claras en captación y seguimiento. Definir cómo identificar prospectos prioritarios y acordar próximos pasos puede ayudar a dar mayor consistencia al proceso comercial.",
+        "cta": {
+          "texto": "Suscríbete al plan Pro",
+          "accion": "Invitación informativa al plan Pro; no ejecuta navegación ni pagos."
+        }
+      },
+      {
+        "segmento": "proceso_en_consolidacion",
+        "contenido": "Tu negocio ya cuenta con algunos elementos para atraer y atender prospectos, aunque todavía hay espacio para hacerlos más consistentes. Alinear criterios de calificación y revisar el avance entre etapas puede ayudar a identificar oportunidades de mejora.",
+        "cta": {
+          "texto": "Suscríbete al plan Pro",
+          "accion": "Invitación informativa al plan Pro; no ejecuta navegación ni pagos."
+        }
+      },
+      {
+        "segmento": "proceso_preparado_para_crecer",
+        "contenido": "Tu proceso comercial muestra prácticas estructuradas de captación, calificación y seguimiento. El siguiente paso es mantener la medición y buscar oportunidades para optimizar el avance de prospectos entre etapas.",
+        "cta": {
+          "texto": "Suscríbete al plan Pro",
+          "accion": "Invitación informativa al plan Pro; no ejecuta navegación ni pagos."
+        }
+      }
+    ]
+  }
+}

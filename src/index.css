@@ -36,28 +36,40 @@ textarea {
 
 .landing-card {
   width: 100%;
-  padding: clamp(1.5rem, 5vw, 3rem);
-  border: 1px solid #dfe4ed;
-  border-radius: 0.75rem;
-  background: #fff;
-  box-shadow: 0 2px 8px rgb(23 32 51 / 4%);
+  max-width: 760px;
+  padding: clamp(1.5rem, 5vw, 3rem) 0;
+  text-align: center;
+}
+
+.landing-card .eyebrow {
+  margin-bottom: 1.25rem;
+  color: #3849bd;
 }
 
 .landing-card h1 {
-  margin: 0;
-  font-size: clamp(1.75rem, 5vw, 2.5rem);
-  line-height: 1.2;
+  max-width: 700px;
+  margin: 0 auto;
+  font-size: clamp(2.1rem, 6vw, 3.75rem);
+  letter-spacing: -0.035em;
+  line-height: 1.1;
 }
 
-.landing-card > p:not(.eyebrow) {
-  margin: 1rem 0 0;
+.landing-description {
+  max-width: 620px;
+  margin: 1.5rem auto 0;
   color: #58647a;
-  font-size: 1.05rem;
+  font-size: clamp(1rem, 2.4vw, 1.125rem);
   line-height: 1.6;
 }
 
 .landing-card .submit-button {
-  margin: 1.5rem 0 0;
+  margin: 2rem auto 0;
+}
+
+.landing-duration {
+  margin: 1rem 0 0;
+  color: #68758a;
+  font-size: 0.9rem;
 }
 
 .questionnaire-header {
@@ -256,6 +268,132 @@ textarea {
   color: #58647a;
 }
 
+.recommendation-layout {
+  display: grid;
+  width: min(100% - 2rem, 1120px);
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  align-items: start;
+  gap: 1.25rem;
+  margin: 2rem auto 3rem;
+}
+
+.recommendation-copy,
+.recommendation-plan,
+.recommended-template {
+  border: 1px solid #dfe4ed;
+  border-radius: 0.75rem;
+  background: #fff;
+  box-shadow: 0 2px 8px rgb(23 32 51 / 4%);
+}
+
+.recommendation-copy,
+.recommendation-plan {
+  padding: clamp(1.5rem, 4vw, 2.25rem);
+}
+
+.recommendation-copy > .eyebrow,
+.recommendation-plan > .eyebrow,
+.recommended-template > .eyebrow {
+  color: #3849bd;
+}
+
+.recommendation-copy h1 {
+  margin: 0;
+  font-size: clamp(1.8rem, 4vw, 2.5rem);
+  line-height: 1.15;
+}
+
+.recommendation-reason,
+.recommended-template > p:not(.eyebrow) {
+  color: #58647a;
+  line-height: 1.65;
+}
+
+.recommendation-reason {
+  margin: 1rem 0 0;
+  font-size: 1.05rem;
+}
+
+.recommended-template {
+  margin-top: 2rem;
+  padding: 1.25rem;
+  box-shadow: none;
+}
+
+.recommended-template h2 {
+  margin: 0;
+  font-size: 1.25rem;
+  line-height: 1.35;
+}
+
+.recommended-template > p:not(.eyebrow) {
+  margin: 0.75rem 0 1rem;
+}
+
+.recommendation-plan h2 {
+  margin: 0;
+  font-size: clamp(1.5rem, 3vw, 2rem);
+  line-height: 1.2;
+}
+
+.plan-price {
+  margin: 0.8rem 0 0;
+  font-size: clamp(1.4rem, 3vw, 1.8rem);
+  font-weight: 700;
+}
+
+.plan-price-note {
+  margin: 0.4rem 0 0;
+  color: #68758a;
+  font-size: 0.9rem;
+  line-height: 1.5;
+}
+
+.plan-benefits {
+  display: grid;
+  gap: 0.75rem;
+  margin: 2rem 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.plan-benefit {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 0.9rem 0;
+  border-bottom: 1px solid #e8ebf1;
+  line-height: 1.5;
+}
+
+.benefit-status {
+  flex: 0 0 auto;
+  font-size: 0.8rem;
+  font-weight: 700;
+}
+
+.benefit-status-disponible {
+  color: #267448;
+}
+
+.benefit-status-proximamente {
+  color: #68758a;
+}
+
+.plan-submit {
+  margin: 2rem 0 0;
+  width: 100%;
+  text-align: center;
+  text-decoration: none;
+}
+
+.plan-payment-notice {
+  margin: 1rem 0 0;
+  color: #58647a;
+  text-align: center;
+}
+
 .sr-only {
   position: absolute;
   width: 1px;
@@ -411,6 +549,17 @@ textarea {
   margin: 1rem auto 0;
   color: #58647a;
   font-size: 0.9rem;
+}
+
+@media (max-width: 760px) {
+  .recommendation-layout {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .plan-benefit {
+    flex-direction: column;
+    gap: 0.35rem;
+  }
 }
 
 @media (max-width: 520px) {
