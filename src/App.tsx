@@ -6,6 +6,7 @@ import Landing from "./components/Landing";
 import RenderizadorCuestionario from "./components/RenderizadorCuestionario";
 import PantallaResultado from "./components/PantallaResultado";
 import PantallaRecomendacion from "./components/PantallaRecomendacion";
+import PantallaPlanes from "./components/PantallaPlanes";
 import { catalogoTemplates } from "./templates/catalogo";
 import { recomendaciones } from "./config/recomendaciones";
 import diagnosticoInicial from "../templates/assessments/diagnostico-inicial.json";
@@ -44,6 +45,7 @@ export default function App() {
     configuracion: unknown;
   } | null>(null);
   const [bienvenidaCompletada, setBienvenidaCompletada] = useState(false);
+  const [mostrarPlanes, setMostrarPlanes] = useState(false);
   const [envio, setEnvio] = useState<{
     lead: Lead;
     calculo: ResultadoCalculado;
@@ -60,11 +62,20 @@ export default function App() {
   ) {
     setSeleccion({ id, nombre, configuracion });
     setEnvio(null);
+    setMostrarPlanes(false);
   }
 
   function regresarBiblioteca() {
     setSeleccion(null);
     setEnvio(null);
+    setMostrarPlanes(false);
+  }
+
+  function regresarInicio() {
+    setSeleccion(null);
+    setEnvio(null);
+    setMostrarPlanes(false);
+    setBienvenidaCompletada(false);
   }
 
   if (!bienvenidaCompletada) {
@@ -94,13 +105,32 @@ export default function App() {
 
   const navegacion = (
     <nav aria-label="Navegación del cuestionario" className="flow-navigation">
-      <button
-        className="secondary-button"
-        onClick={regresarBiblioteca}
-        type="button"
-      >
-        Volver a la biblioteca
-      </button>
+      {calculo?.estado === "ok" && (
+        <button
+          className="secondary-button"
+          onClick={regresarInicio}
+          type="button"
+        >
+          Ir al inicio
+        </button>
+      )}
+      {mostrarPlanes ? (
+        <button
+          className="secondary-button"
+          onClick={() => setMostrarPlanes(false)}
+          type="button"
+        >
+          Volver a recomendación
+        </button>
+      ) : (
+        <button
+          className="secondary-button"
+          onClick={regresarBiblioteca}
+          type="button"
+        >
+          Volver a la biblioteca
+        </button>
+      )}
       <span>{seleccion.nombre}</span>
     </nav>
   );
@@ -166,6 +196,18 @@ export default function App() {
         );
       }
 
+      if (mostrarPlanes) {
+        return (
+          <>
+            {navegacion}
+            <PantallaPlanes
+              planRecomendadoNombre={recomendacion.plan.nombre}
+              planes={Object.values(recomendaciones).map(({ plan }) => plan)}
+            />
+          </>
+        );
+      }
+
       return (
         <>
           {navegacion}
@@ -178,7 +220,7 @@ export default function App() {
                 template.configuracion,
               )
             }
-            plan={recomendacion.plan}
+            onVerPlanes={() => setMostrarPlanes(true)}
             template={template.metadata}
           />
         </>
@@ -200,6 +242,10 @@ export default function App() {
         key={seleccion.id}
         cuestionario={resultadoValidacion.data}
         onEnvio={(lead, resultado) => setEnvio({ lead, calculo: resultado })}
+        onRegresarInicio={
+          seleccion.id === "diagnostico-inicial" ? regresarInicio : undefined
+        }
+        unaPreguntaPorVista
       />
     </>
   );

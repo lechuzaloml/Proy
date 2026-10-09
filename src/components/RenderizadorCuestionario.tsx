@@ -13,6 +13,8 @@ import {
 interface RenderizadorCuestionarioProps {
   cuestionario: Cuestionario;
   onEnvio: (lead: Lead, calculo: ResultadoCalculado) => void;
+  onRegresarInicio?: () => void;
+  unaPreguntaPorVista?: boolean;
 }
 
 interface EntradaPregunta {
@@ -23,9 +25,12 @@ interface EntradaPregunta {
 export default function RenderizadorCuestionario({
   cuestionario,
   onEnvio,
+  onRegresarInicio,
+  unaPreguntaPorVista = false,
 }: RenderizadorCuestionarioProps) {
   const [respuestas, setRespuestas] = useState<RespuestasCuestionario>({});
   const [datosContacto, setDatosContacto] = useState<DatosContacto | null>(null);
+  const [indicePreguntaActual, setIndicePreguntaActual] = useState(0);
   const [mostrarPreguntas, setMostrarPreguntas] = useState(
     cuestionario.posicion_contacto !== "inicio",
   );
@@ -46,6 +51,22 @@ export default function RenderizadorCuestionario({
 
   function actualizarRespuesta(indice: number, respuesta: Respuesta) {
     setRespuestas((actuales) => ({ ...actuales, [indice]: respuesta }));
+  }
+
+  function preguntaRespondida(indice: number): boolean {
+    const pregunta = entradas[indice]?.pregunta;
+    const respuesta = respuestas[indice];
+
+    if (!pregunta) {
+      return false;
+    }
+    if (!respuesta) {
+      return false;
+    }
+    if (respuesta.tipo === "abierta") {
+      return respuesta.valor.trim().length > 0;
+    }
+    return true;
   }
 
   function enviarRespuestas() {
@@ -69,6 +90,7 @@ export default function RenderizadorCuestionario({
     pregunta,
     indice,
   }));
+  const entradaActual = entradas[indicePreguntaActual];
 
   function renderPregunta({ pregunta, indice }: EntradaPregunta) {
     const idPregunta = `pregunta-${indice}`;
@@ -109,6 +131,12 @@ export default function RenderizadorCuestionario({
               id={idPregunta}
               max={pregunta.escala.max}
               min={pregunta.escala.min}
+              onClick={(evento) =>
+                actualizarRespuesta(indice, {
+                  tipo: "escala",
+                  valor: Number(evento.currentTarget.value),
+                })
+              }
               onChange={(evento) =>
                 actualizarRespuesta(indice, {
                   tipo: "escala",
@@ -172,11 +200,79 @@ export default function RenderizadorCuestionario({
         <h1>{cuestionario.cliente}</h1>
       </header>
       {!mostrarPreguntas && (
-        <FormularioContacto onCompletar={completarContacto} />
+        <div className="contact-form-view">
+          {cuestionario.posicion_contacto === "inicio" &&
+            onRegresarInicio && (
+              <button
+                className="secondary-button"
+                onClick={onRegresarInicio}
+                type="button"
+              >
+                Ir al inicio
+              </button>
+            )}
+          <FormularioContacto onCompletar={completarContacto} />
+        </div>
       )}
       {mostrarPreguntas && (
         <>
-          {secciones.length === 0 ? (
+          {unaPreguntaPorVista && entradaActual ? (
+            <>
+              <progress
+                aria-label="Progreso del cuestionario"
+                className="question-progress-bar"
+                max={entradas.length}
+                value={indicePreguntaActual + 1}
+              />
+              <p aria-live="polite" className="question-progress">
+                Pregunta {indicePreguntaActual + 1} de {entradas.length}
+              </p>
+              <section className="question-section">
+                {entradaActual.pregunta.seccion && (
+                  <h2>{entradaActual.pregunta.seccion}</h2>
+                )}
+                <div className="question-list">
+                  {renderPregunta(entradaActual)}
+                </div>
+              </section>
+              <div className="question-step-navigation">
+                {indicePreguntaActual > 0 && (
+                  <button
+                    className="secondary-button"
+                    onClick={() =>
+                      setIndicePreguntaActual((indice) => indice - 1)
+                    }
+                    type="button"
+                  >
+                    Anterior
+                  </button>
+                )}
+                {indicePreguntaActual < entradas.length - 1 ? (
+                  <button
+                    className="submit-button"
+                    disabled={!preguntaRespondida(indicePreguntaActual)}
+                    onClick={() =>
+                      setIndicePreguntaActual((indice) => indice + 1)
+                    }
+                    type="button"
+                  >
+                    Siguiente
+                  </button>
+                ) : (
+                  <button
+                    className="submit-button"
+                    disabled={!preguntaRespondida(indicePreguntaActual)}
+                    onClick={enviarRespuestas}
+                    type="button"
+                  >
+                    {cuestionario.posicion_contacto === "final"
+                      ? "Continuar"
+                      : "Ver resultado"}
+                  </button>
+                )}
+              </div>
+            </>
+          ) : secciones.length === 0 ? (
             <div className="question-list">{entradas.map(renderPregunta)}</div>
           ) : (
             <>
@@ -236,15 +332,17 @@ export default function RenderizadorCuestionario({
               )}
             </>
           )}
-          <button
-            className="submit-button"
-            onClick={enviarRespuestas}
-            type="button"
-          >
-            {cuestionario.posicion_contacto === "final"
-              ? "Continuar"
-              : "Enviar"}
-          </button>
+          {!unaPreguntaPorVista && (
+            <button
+              className="submit-button"
+              onClick={enviarRespuestas}
+              type="button"
+            >
+              {cuestionario.posicion_contacto === "final"
+                ? "Continuar"
+                : "Enviar"}
+            </button>
+          )}
         </>
       )}
     </main>
