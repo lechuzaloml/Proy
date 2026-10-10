@@ -10,10 +10,25 @@ import {
   type RespuestasCuestionario,
 } from "../logic/calcularResultado";
 
+export interface EstadoFlujoCuestionario {
+  respuestas: RespuestasCuestionario;
+  datosContacto: DatosContacto | null;
+  indicePreguntaActual: number;
+  mostrarPreguntas: boolean;
+}
+
 interface RenderizadorCuestionarioProps {
   cuestionario: Cuestionario;
-  onEnvio: (lead: Lead, calculo: ResultadoCalculado) => void;
-  onRegresarInicio?: () => void;
+  onEnvio: (
+    lead: Lead,
+    calculo: ResultadoCalculado,
+    respuestas: RespuestasCuestionario,
+  ) => void;
+  estadoInicial?: EstadoFlujoCuestionario | null;
+  onEstadoChange?: (
+    estado: EstadoFlujoCuestionario,
+    modoHistorial?: "reemplazar" | "avanzar" | "retroceder",
+  ) => void;
   unaPreguntaPorVista?: boolean;
 }
 
@@ -25,15 +40,40 @@ interface EntradaPregunta {
 export default function RenderizadorCuestionario({
   cuestionario,
   onEnvio,
-  onRegresarInicio,
+  estadoInicial,
+  onEstadoChange,
   unaPreguntaPorVista = false,
 }: RenderizadorCuestionarioProps) {
-  const [respuestas, setRespuestas] = useState<RespuestasCuestionario>({});
-  const [datosContacto, setDatosContacto] = useState<DatosContacto | null>(null);
-  const [indicePreguntaActual, setIndicePreguntaActual] = useState(0);
-  const [mostrarPreguntas, setMostrarPreguntas] = useState(
-    cuestionario.posicion_contacto !== "inicio",
+  const [respuestas, setRespuestas] = useState<RespuestasCuestionario>(
+    () => estadoInicial?.respuestas ?? {},
   );
+  const [datosContacto, setDatosContacto] = useState<DatosContacto | null>(
+    () => estadoInicial?.datosContacto ?? null,
+  );
+  const [indicePreguntaActual, setIndicePreguntaActual] = useState(
+    () => estadoInicial?.indicePreguntaActual ?? 0,
+  );
+  const [mostrarPreguntas, setMostrarPreguntas] = useState(
+    () =>
+      estadoInicial?.mostrarPreguntas ??
+      cuestionario.posicion_contacto !== "inicio",
+  );
+
+  function publicarEstado(
+    siguiente: Partial<EstadoFlujoCuestionario>,
+    modoHistorial: "reemplazar" | "avanzar" | "retroceder" = "reemplazar",
+  ) {
+    onEstadoChange?.(
+      {
+        respuestas,
+        datosContacto,
+        indicePreguntaActual,
+        mostrarPreguntas,
+        ...siguiente,
+      },
+      modoHistorial,
+    );
+  }
 
   function finalizar(datos: DatosContacto) {
     const lead: Lead = {
@@ -46,11 +86,31 @@ export default function RenderizadorCuestionario({
         }),
       ),
     };
-    onEnvio(lead, calcularResultado(cuestionario, respuestas));
+    onEnvio(lead, calcularResultado(cuestionario, respuestas), respuestas);
   }
 
   function actualizarRespuesta(indice: number, respuesta: Respuesta) {
-    setRespuestas((actuales) => ({ ...actuales, [indice]: respuesta }));
+    const siguientesRespuestas = { ...respuestas, [indice]: respuesta };
+    setRespuestas(siguientesRespuestas);
+    publicarEstado({ respuestas: siguientesRespuestas });
+  }
+
+  function actualizarDatosContacto(datos: DatosContacto) {
+    setDatosContacto(datos);
+    publicarEstado({ datosContacto: datos });
+  }
+
+  function cambiarPregunta(indice: number) {
+    if (indice < indicePreguntaActual && onEstadoChange) {
+      publicarEstado({ indicePreguntaActual: indice }, "retroceder");
+      return;
+    }
+
+    setIndicePreguntaActual(indice);
+    publicarEstado(
+      { indicePreguntaActual: indice },
+      indice > indicePreguntaActual ? "avanzar" : "reemplazar",
+    );
   }
 
   function preguntaRespondida(indice: number): boolean {
@@ -75,12 +135,20 @@ export default function RenderizadorCuestionario({
       return;
     }
     setMostrarPreguntas(false);
+    publicarEstado({ mostrarPreguntas: false }, "avanzar");
   }
 
   function completarContacto(datos: DatosContacto) {
     setDatosContacto(datos);
     if (cuestionario.posicion_contacto === "inicio") {
       setMostrarPreguntas(true);
+      publicarEstado(
+        {
+          datosContacto: datos,
+          mostrarPreguntas: true,
+        },
+        "avanzar",
+      );
       return;
     }
     finalizar(datos);
@@ -201,17 +269,11 @@ export default function RenderizadorCuestionario({
       </header>
       {!mostrarPreguntas && (
         <div className="contact-form-view">
-          {cuestionario.posicion_contacto === "inicio" &&
-            onRegresarInicio && (
-              <button
-                className="secondary-button"
-                onClick={onRegresarInicio}
-                type="button"
-              >
-                Ir al inicio
-              </button>
-            )}
-          <FormularioContacto onCompletar={completarContacto} />
+          <FormularioContacto
+            datosIniciales={datosContacto ?? undefined}
+            onCambio={actualizarDatosContacto}
+            onCompletar={completarContacto}
+          />
         </div>
       )}
       {mostrarPreguntas && (
@@ -239,9 +301,7 @@ export default function RenderizadorCuestionario({
                 {indicePreguntaActual > 0 && (
                   <button
                     className="secondary-button"
-                    onClick={() =>
-                      setIndicePreguntaActual((indice) => indice - 1)
-                    }
+                    onClick={() => cambiarPregunta(indicePreguntaActual - 1)}
                     type="button"
                   >
                     Anterior
@@ -251,9 +311,7 @@ export default function RenderizadorCuestionario({
                   <button
                     className="submit-button"
                     disabled={!preguntaRespondida(indicePreguntaActual)}
-                    onClick={() =>
-                      setIndicePreguntaActual((indice) => indice + 1)
-                    }
+                    onClick={() => cambiarPregunta(indicePreguntaActual + 1)}
                     type="button"
                   >
                     Siguiente

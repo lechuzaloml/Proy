@@ -4,19 +4,33 @@ import type { Lead } from "../types/model";
 export type DatosContacto = Pick<Lead, "nombre" | "correo" | "telefono">;
 
 interface FormularioContactoProps {
+  datosIniciales?: DatosContacto;
+  onCambio?: (datos: DatosContacto) => void;
   onCompletar: (datos: DatosContacto) => void;
 }
 
+const DATOS_VACIOS: DatosContacto = {
+  nombre: "",
+  correo: "",
+  telefono: "",
+};
+
 export default function FormularioContacto({
+  datosIniciales,
+  onCambio,
   onCompletar,
 }: FormularioContactoProps) {
-  const [nombre, setNombre] = useState("");
-  const [correo, setCorreo] = useState("");
-  const [telefono, setTelefono] = useState("");
+  const [datos, setDatos] = useState(datosIniciales ?? DATOS_VACIOS);
+
+  function actualizarDato(campo: keyof DatosContacto, valor: string) {
+    const siguientesDatos = { ...datos, [campo]: valor };
+    setDatos(siguientesDatos);
+    onCambio?.(siguientesDatos);
+  }
 
   function enviar(evento: FormEvent<HTMLFormElement>) {
     evento.preventDefault();
-    onCompletar({ nombre, correo, telefono });
+    onCompletar(datos);
   }
 
   return (
@@ -26,30 +40,30 @@ export default function FormularioContacto({
         Nombre
         <input
           autoComplete="name"
-          onChange={(evento) => setNombre(evento.target.value)}
+          onChange={(evento) => actualizarDato("nombre", evento.target.value)}
           required
           type="text"
-          value={nombre}
+          value={datos.nombre}
         />
       </label>
       <label>
         Correo electrónico
         <input
           autoComplete="email"
-          onChange={(evento) => setCorreo(evento.target.value)}
+          onChange={(evento) => actualizarDato("correo", evento.target.value)}
           required
           type="email"
-          value={correo}
+          value={datos.correo}
         />
       </label>
       <label>
         Teléfono / WhatsApp
         <input
           autoComplete="tel"
-          onChange={(evento) => setTelefono(evento.target.value)}
+          onChange={(evento) => actualizarDato("telefono", evento.target.value)}
           required
           type="tel"
-          value={telefono}
+          value={datos.telefono}
         />
       </label>
       <button className="submit-button" type="submit">

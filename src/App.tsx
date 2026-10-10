@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import BibliotecaTemplates, {
   type CasoReferencia,
 } from "./components/BibliotecaTemplates";
@@ -13,9 +13,59 @@ import diagnosticoInicial from "../templates/assessments/diagnostico-inicial.jso
 import casoNuevo from "../spec/Ejemplos/caso-nuevo.json";
 import serEmpresario from "../spec/Ejemplos/ser-empresario-config.json";
 import merkatics from "../spec/Ejemplos/merkatics-config.json";
-import type { ResultadoCalculado } from "./logic/calcularResultado";
+import type {
+  RespuestasCuestionario,
+  ResultadoCalculado,
+} from "./logic/calcularResultado";
 import type { Lead } from "./types/model";
 import { validarCuestionario } from "./validation/validarCuestionario";
+import type { EstadoFlujoCuestionario } from "./components/RenderizadorCuestionario";
+
+interface SeleccionCuestionario {
+  id: string;
+  nombre: string;
+  configuracion: unknown;
+}
+
+interface EstadoAplicacion {
+  historialId: number;
+  bienvenidaCompletada: boolean;
+  seleccion: SeleccionCuestionario | null;
+  mostrarPlanes: boolean;
+  envio: {
+    lead: Lead;
+    calculo: ResultadoCalculado;
+    respuestas: RespuestasCuestionario;
+  } | null;
+  estadoCuestionario: EstadoFlujoCuestionario | null;
+}
+
+interface EntradaHistorialAplicacion {
+  clearIaNavigation?: EstadoAplicacion;
+}
+
+const CLAVE_HISTORIAL = "clearIaNavigation";
+
+function obtenerEstadoInicial(): EstadoAplicacion {
+  const entrada = window.history.state as EntradaHistorialAplicacion | null;
+  if (entrada?.[CLAVE_HISTORIAL]) {
+    return entrada[CLAVE_HISTORIAL];
+  }
+
+  const inicial: EstadoAplicacion = {
+    historialId: 0,
+    bienvenidaCompletada: false,
+    seleccion: null,
+    mostrarPlanes: false,
+    envio: null,
+    estadoCuestionario: null,
+  };
+  window.history.replaceState(
+    { ...(window.history.state ?? {}), [CLAVE_HISTORIAL]: inicial },
+    "",
+  );
+  return inicial;
+}
 
 const casosReferencia: CasoReferencia[] = [
   {
@@ -39,58 +89,118 @@ const casosReferencia: CasoReferencia[] = [
 ];
 
 export default function App() {
-  const [seleccion, setSeleccion] = useState<{
-    id: string;
-    nombre: string;
-    configuracion: unknown;
-  } | null>(null);
-  const [bienvenidaCompletada, setBienvenidaCompletada] = useState(false);
-  const [mostrarPlanes, setMostrarPlanes] = useState(false);
-  const [envio, setEnvio] = useState<{
-    lead: Lead;
-    calculo: ResultadoCalculado;
-  } | null>(null);
+  const [estadoApp, setEstadoApp] = useState(obtenerEstadoInicial);
+  const estadoAppRef = useRef(estadoApp);
+  const { seleccion, bienvenidaCompletada, mostrarPlanes, envio } = estadoApp;
   const calculo = envio?.calculo ?? null;
   const resultadoValidacion = seleccion
     ? validarCuestionario(seleccion.configuracion)
     : null;
+
+  useEffect(() => {
+    function restaurarDesdeHistorial(evento: PopStateEvent) {
+      const entrada = evento.state as EntradaHistorialAplicacion | null;
+      const siguiente = entrada?.[CLAVE_HISTORIAL];
+      if (siguiente) {
+        estadoAppRef.current = siguiente;
+        setEstadoApp(siguiente);
+      }
+    }
+
+    window.addEventListener("popstate", restaurarDesdeHistorial);
+    return () => window.removeEventListener("popstate", restaurarDesdeHistorial);
+  }, []);
+
+  function navegar(siguiente: EstadoAplicacion) {
+    siguiente = {
+      ...siguiente,
+      historialId: estadoAppRef.current.historialId + 1,
+    };
+    window.history.pushState(
+      { ...(window.history.state ?? {}), [CLAVE_HISTORIAL]: siguiente },
+      "",
+    );
+    estadoAppRef.current = siguiente;
+    setEstadoApp(siguiente);
+  }
+
+  function actualizarEstadoCuestionario(
+    estadoCuestionario: EstadoFlujoCuestionario,
+    modoHistorial: "reemplazar" | "avanzar" | "retroceder" = "reemplazar",
+  ) {
+    if (modoHistorial === "retroceder") {
+      window.history.back();
+      return;
+    }
+
+    const actual = estadoAppRef.current;
+    if (!actual.seleccion || actual.envio) {
+      return;
+    }
+
+    const siguiente = {
+      ...actual,
+      historialId: actual.historialId + (modoHistorial === "avanzar" ? 1 : 0),
+      estadoCuestionario,
+    };
+    if (modoHistorial === "avanzar") {
+      window.history.pushState(
+        { ...(window.history.state ?? {}), [CLAVE_HISTORIAL]: siguiente },
+        "",
+      );
+    } else {
+      window.history.replaceState(
+        { ...(window.history.state ?? {}), [CLAVE_HISTORIAL]: siguiente },
+        "",
+      );
+    }
+    estadoAppRef.current = siguiente;
+    setEstadoApp(siguiente);
+  }
 
   function seleccionarCuestionario(
     id: string,
     nombre: string,
     configuracion: unknown,
   ) {
-    setSeleccion({ id, nombre, configuracion });
-    setEnvio(null);
-    setMostrarPlanes(false);
+    navegar({
+      ...estadoAppRef.current,
+      bienvenidaCompletada: true,
+      seleccion: { id, nombre, configuracion },
+      envio: null,
+      mostrarPlanes: false,
+      estadoCuestionario: null,
+    });
   }
 
   function regresarBiblioteca() {
-    setSeleccion(null);
-    setEnvio(null);
-    setMostrarPlanes(false);
+    navegar({
+      ...estadoAppRef.current,
+      seleccion: null,
+      envio: null,
+      mostrarPlanes: false,
+      estadoCuestionario: null,
+    });
   }
 
-  function regresarInicio() {
-    setSeleccion(null);
-    setEnvio(null);
-    setMostrarPlanes(false);
-    setBienvenidaCompletada(false);
+  function abrirDiagnostico() {
+    navegar({
+      ...estadoAppRef.current,
+      bienvenidaCompletada: true,
+      seleccion: {
+        id: "diagnostico-inicial",
+        nombre: "Diagnóstico inicial de crecimiento",
+        configuracion: diagnosticoInicial,
+      },
+      envio: null,
+      mostrarPlanes: false,
+      estadoCuestionario: null,
+      historialId: estadoAppRef.current.historialId,
+    });
   }
 
   if (!bienvenidaCompletada) {
-    return (
-      <Landing
-        onComenzar={() => {
-          seleccionarCuestionario(
-            "diagnostico-inicial",
-            "Diagnóstico inicial de crecimiento",
-            diagnosticoInicial,
-          );
-          setBienvenidaCompletada(true);
-        }}
-      />
-    );
+    return <Landing onComenzar={abrirDiagnostico} />;
   }
 
   if (!seleccion) {
@@ -105,10 +215,19 @@ export default function App() {
 
   const navegacion = (
     <nav aria-label="Navegación del cuestionario" className="flow-navigation">
-      {calculo?.estado === "ok" && (
+      {calculo?.estado === "ok" && seleccion.id !== "diagnostico-inicial" && (
         <button
           className="secondary-button"
-          onClick={regresarInicio}
+          onClick={() =>
+            navegar({
+              ...estadoAppRef.current,
+              bienvenidaCompletada: false,
+              seleccion: null,
+              envio: null,
+              mostrarPlanes: false,
+              estadoCuestionario: null,
+            })
+          }
           type="button"
         >
           Ir al inicio
@@ -117,7 +236,7 @@ export default function App() {
       {mostrarPlanes ? (
         <button
           className="secondary-button"
-          onClick={() => setMostrarPlanes(false)}
+          onClick={() => window.history.back()}
           type="button"
         >
           Volver a recomendación
@@ -169,7 +288,7 @@ export default function App() {
     );
   }
 
-  if (calculo?.estado === "ok") {
+  if (calculo?.estado === "ok" && envio) {
     if (seleccion.id === "diagnostico-inicial") {
       const recomendacion =
         calculo.tipo === "segmentado"
@@ -220,7 +339,9 @@ export default function App() {
                 template.configuracion,
               )
             }
-            onVerPlanes={() => setMostrarPlanes(true)}
+            onVerPlanes={() =>
+              navegar({ ...estadoAppRef.current, mostrarPlanes: true })
+            }
             template={template.metadata}
           />
         </>
@@ -230,7 +351,11 @@ export default function App() {
     return (
       <>
         {navegacion}
-        <PantallaResultado calculo={calculo} />
+        <PantallaResultado
+          calculo={calculo}
+          cuestionario={resultadoValidacion.data}
+          respuestas={envio.respuestas}
+        />
       </>
     );
   }
@@ -239,12 +364,16 @@ export default function App() {
     <>
       {navegacion}
       <RenderizadorCuestionario
-        key={seleccion.id}
+        key={`${seleccion.id}-${estadoApp.historialId}`}
         cuestionario={resultadoValidacion.data}
-        onEnvio={(lead, resultado) => setEnvio({ lead, calculo: resultado })}
-        onRegresarInicio={
-          seleccion.id === "diagnostico-inicial" ? regresarInicio : undefined
+        estadoInicial={estadoApp.estadoCuestionario}
+        onEnvio={(lead, resultado, respuestas) =>
+          navegar({
+            ...estadoAppRef.current,
+            envio: { lead, calculo: resultado, respuestas },
+          })
         }
+        onEstadoChange={actualizarEstadoCuestionario}
         unaPreguntaPorVista
       />
     </>
