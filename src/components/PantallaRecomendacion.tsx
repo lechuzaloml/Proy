@@ -4,6 +4,7 @@ import OfertaPremium from "./OfertaPremium";
 
 interface PantallaRecomendacionProps {
   contenido: string;
+  errorPersonalizacion: string | null;
   template: MetadataTemplate;
   onVerTemplate: () => void;
   onVerPlanes: () => void;
@@ -11,6 +12,7 @@ interface PantallaRecomendacionProps {
 
 export default function PantallaRecomendacion({
   contenido,
+  errorPersonalizacion,
   template,
   onVerTemplate,
   onVerPlanes,
@@ -36,6 +38,12 @@ export default function PantallaRecomendacion({
 
         <div className="recommendation-reason">
           <h2>Por qué encaja</h2>
+          {errorPersonalizacion && (
+            <p role="status">
+              No se pudo personalizar esta recomendación; mostramos el texto
+              base. Detalle: {errorPersonalizacion}
+            </p>
+          )}
           <p>{contenido}</p>
         </div>
 

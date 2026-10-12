@@ -9,6 +9,8 @@ interface PantallaResultadoProps {
   calculo: Extract<ResultadoCalculado, { estado: "ok" }>;
   cuestionario: Cuestionario;
   respuestas: RespuestasCuestionario;
+  contenidoPersonalizado: string | null;
+  errorPersonalizacion: string | null;
 }
 
 const CENTRO = 160;
@@ -18,6 +20,8 @@ export default function PantallaResultado({
   calculo,
   cuestionario,
   respuestas,
+  contenidoPersonalizado,
+  errorPersonalizacion,
 }: PantallaResultadoProps) {
   const dimensiones = calcularPerfilSecciones(cuestionario, respuestas);
   const puntos = dimensiones.map((dimension, indice) => {
@@ -32,8 +36,14 @@ export default function PantallaResultado({
   return (
     <main className="questionnaire result-screen">
       <p className="eyebrow">Resultado</p>
+      {errorPersonalizacion && (
+        <p className="validation-errors" role="status">
+          No se pudo generar la versión personalizada. Se muestra el resultado
+          base. Detalle: {errorPersonalizacion}
+        </p>
+      )}
       <article className="question-card">
-        <p>{calculo.resultado.contenido}</p>
+        <p>{contenidoPersonalizado ?? calculo.resultado.contenido}</p>
         {calculo.resultado.cta && (
           <div className="result-cta">
             <h2>{calculo.resultado.cta.texto}</h2>

@@ -7,6 +7,7 @@ interface FormularioContactoProps {
   datosIniciales?: DatosContacto;
   onCambio?: (datos: DatosContacto) => void;
   onCompletar: (datos: DatosContacto) => void;
+  deshabilitado?: boolean;
 }
 
 const DATOS_VACIOS: DatosContacto = {
@@ -19,6 +20,7 @@ export default function FormularioContacto({
   datosIniciales,
   onCambio,
   onCompletar,
+  deshabilitado = false,
 }: FormularioContactoProps) {
   const [datos, setDatos] = useState(datosIniciales ?? DATOS_VACIOS);
 
@@ -40,6 +42,7 @@ export default function FormularioContacto({
         Nombre
         <input
           autoComplete="name"
+          disabled={deshabilitado}
           onChange={(evento) => actualizarDato("nombre", evento.target.value)}
           required
           type="text"
@@ -50,6 +53,7 @@ export default function FormularioContacto({
         Correo electrónico
         <input
           autoComplete="email"
+          disabled={deshabilitado}
           onChange={(evento) => actualizarDato("correo", evento.target.value)}
           required
           type="email"
@@ -60,14 +64,15 @@ export default function FormularioContacto({
         Teléfono / WhatsApp
         <input
           autoComplete="tel"
+          disabled={deshabilitado}
           onChange={(evento) => actualizarDato("telefono", evento.target.value)}
           required
           type="tel"
           value={datos.telefono}
         />
       </label>
-      <button className="submit-button" type="submit">
-        Continuar
+      <button className="submit-button" disabled={deshabilitado} type="submit">
+        {deshabilitado ? "Generando resultado…" : "Continuar"}
       </button>
     </form>
   );

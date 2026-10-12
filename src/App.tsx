@@ -36,6 +36,8 @@ interface EstadoAplicacion {
     lead: Lead;
     calculo: ResultadoCalculado;
     respuestas: RespuestasCuestionario;
+    contenidoPersonalizado: string | null;
+    errorPersonalizacion: string | null;
   } | null;
   estadoCuestionario: EstadoFlujoCuestionario | null;
 }
@@ -215,7 +217,7 @@ export default function App() {
 
   const navegacion = (
     <nav aria-label="Navegación del cuestionario" className="flow-navigation">
-      {calculo?.estado === "ok" && seleccion.id !== "diagnostico-inicial" && (
+      {calculo?.estado === "ok" && (
         <button
           className="secondary-button"
           onClick={() =>
@@ -331,7 +333,10 @@ export default function App() {
         <>
           {navegacion}
           <PantallaRecomendacion
-            contenido={calculo.resultado.contenido}
+            contenido={
+              envio.contenidoPersonalizado ?? calculo.resultado.contenido
+            }
+            errorPersonalizacion={envio.errorPersonalizacion}
             onVerTemplate={() =>
               seleccionarCuestionario(
                 template.id,
@@ -355,6 +360,8 @@ export default function App() {
           calculo={calculo}
           cuestionario={resultadoValidacion.data}
           respuestas={envio.respuestas}
+          contenidoPersonalizado={envio.contenidoPersonalizado}
+          errorPersonalizacion={envio.errorPersonalizacion}
         />
       </>
     );
@@ -367,10 +374,22 @@ export default function App() {
         key={`${seleccion.id}-${estadoApp.historialId}`}
         cuestionario={resultadoValidacion.data}
         estadoInicial={estadoApp.estadoCuestionario}
-        onEnvio={(lead, resultado, respuestas) =>
+        onEnvio={(
+          lead,
+          resultado,
+          respuestas,
+          contenidoPersonalizado,
+          errorPersonalizacion,
+        ) =>
           navegar({
             ...estadoAppRef.current,
-            envio: { lead, calculo: resultado, respuestas },
+            envio: {
+              lead,
+              calculo: resultado,
+              respuestas,
+              contenidoPersonalizado,
+              errorPersonalizacion,
+            },
           })
         }
         onEstadoChange={actualizarEstadoCuestionario}

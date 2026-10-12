@@ -9,6 +9,8 @@ import {
   type Respuesta,
   type RespuestasCuestionario,
 } from "../logic/calcularResultado";
+import { personalizarResultado } from "../logic/personalizarResultado";
+import type { RespuestaParaPersonalizacion } from "../logic/personalizarResultado";
 
 export interface EstadoFlujoCuestionario {
   respuestas: RespuestasCuestionario;
@@ -23,6 +25,8 @@ interface RenderizadorCuestionarioProps {
     lead: Lead,
     calculo: ResultadoCalculado,
     respuestas: RespuestasCuestionario,
+    contenidoPersonalizado: string | null,
+    errorPersonalizacion: string | null,
   ) => void;
   estadoInicial?: EstadoFlujoCuestionario | null;
   onEstadoChange?: (
@@ -58,6 +62,7 @@ export default function RenderizadorCuestionario({
       estadoInicial?.mostrarPreguntas ??
       cuestionario.posicion_contacto !== "inicio",
   );
+  const [generandoResultado, setGenerandoResultado] = useState(false);
 
   function publicarEstado(
     siguiente: Partial<EstadoFlujoCuestionario>,
@@ -75,7 +80,7 @@ export default function RenderizadorCuestionario({
     );
   }
 
-  function finalizar(datos: DatosContacto) {
+  async function finalizar(datos: DatosContacto) {
     const lead: Lead = {
       cuestionarioId: cuestionario.id,
       ...datos,
@@ -86,7 +91,76 @@ export default function RenderizadorCuestionario({
         }),
       ),
     };
-    onEnvio(lead, calcularResultado(cuestionario, respuestas), respuestas);
+    const calculo = calcularResultado(cuestionario, respuestas);
+    if (calculo.estado !== "ok") {
+      onEnvio(lead, calculo, respuestas, null, null);
+      return;
+    }
+
+    setGenerandoResultado(true);
+    let contenidoPersonalizado: string | null = null;
+    let errorPersonalizacion: string | null = null;
+
+    try {
+      const respuestasLegibles = cuestionario.preguntas.flatMap(
+        (pregunta, indice): RespuestaParaPersonalizacion[] => {
+          const respuesta = respuestas[indice];
+          if (!respuesta) {
+            return [];
+          }
+
+          let valor: string;
+          if (
+            pregunta.tipo === "opcion_multiple" &&
+            respuesta.tipo === "opcion_multiple"
+          ) {
+            const opcion = pregunta.opciones[respuesta.indiceOpcion];
+            if (!opcion) {
+              return [];
+            }
+            valor = opcion.texto;
+          } else if (
+            pregunta.tipo === "escala" &&
+            respuesta.tipo === "escala"
+          ) {
+            valor = String(respuesta.valor);
+          } else if (
+            pregunta.tipo === "abierta" &&
+            respuesta.tipo === "abierta"
+          ) {
+            valor = respuesta.valor.trim();
+          } else {
+            return [];
+          }
+
+          return valor
+            ? [{ pregunta: pregunta.texto, respuesta: valor }]
+            : [];
+        },
+      );
+      const solicitud = {
+        nombreCuestionario: cuestionario.cliente,
+        resultadoBase: calculo.resultado.contenido,
+        respuestas: respuestasLegibles,
+        ...(calculo.tipo === "segmentado"
+          ? { segmento: calculo.segmento }
+          : {}),
+      };
+      contenidoPersonalizado = await personalizarResultado(solicitud);
+    } catch (error) {
+      errorPersonalizacion =
+        error instanceof Error
+          ? error.message
+          : "No se pudo personalizar el resultado con Gemini.";
+    }
+
+    onEnvio(
+      lead,
+      calculo,
+      respuestas,
+      contenidoPersonalizado,
+      errorPersonalizacion,
+    );
   }
 
   function actualizarRespuesta(indice: number, respuesta: Respuesta) {
@@ -263,6 +337,11 @@ export default function RenderizadorCuestionario({
 
   return (
     <main className="questionnaire">
+      {generandoResultado && (
+        <p aria-live="polite" className="eyebrow">
+          Preparando tu resultado personalizado…
+        </p>
+      )}
       <header className="questionnaire-header">
         <p className="eyebrow">Cuestionario</p>
         <h1>{cuestionario.cliente}</h1>
@@ -271,6 +350,7 @@ export default function RenderizadorCuestionario({
         <div className="contact-form-view">
           <FormularioContacto
             datosIniciales={datosContacto ?? undefined}
+            deshabilitado={generandoResultado}
             onCambio={actualizarDatosContacto}
             onCompletar={completarContacto}
           />
@@ -302,6 +382,7 @@ export default function RenderizadorCuestionario({
                   <button
                     className="secondary-button"
                     onClick={() => cambiarPregunta(indicePreguntaActual - 1)}
+                    disabled={generandoResultado}
                     type="button"
                   >
                     Anterior
@@ -310,7 +391,10 @@ export default function RenderizadorCuestionario({
                 {indicePreguntaActual < entradas.length - 1 ? (
                   <button
                     className="submit-button"
-                    disabled={!preguntaRespondida(indicePreguntaActual)}
+                    disabled={
+                      generandoResultado ||
+                      !preguntaRespondida(indicePreguntaActual)
+                    }
                     onClick={() => cambiarPregunta(indicePreguntaActual + 1)}
                     type="button"
                   >
@@ -319,11 +403,16 @@ export default function RenderizadorCuestionario({
                 ) : (
                   <button
                     className="submit-button"
-                    disabled={!preguntaRespondida(indicePreguntaActual)}
+                    disabled={
+                      generandoResultado ||
+                      !preguntaRespondida(indicePreguntaActual)
+                    }
                     onClick={enviarRespuestas}
                     type="button"
                   >
-                    {cuestionario.posicion_contacto === "final"
+                    {generandoResultado
+                      ? "Generando resultado…"
+                      : cuestionario.posicion_contacto === "final"
                       ? "Continuar"
                       : "Ver resultado"}
                   </button>
