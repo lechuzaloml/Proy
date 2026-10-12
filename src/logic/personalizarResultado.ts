@@ -19,6 +19,13 @@ export async function personalizarResultado(
     body: JSON.stringify(solicitud),
   });
 
+  const tipoContenido = respuesta.headers.get("content-type") ?? "";
+  if (!tipoContenido.includes("application/json")) {
+    throw new Error(
+      `El endpoint de personalización respondió con HTTP ${respuesta.status} y no devolvió JSON. Verifica que Vercel haya publicado la función /api/personalizar.`,
+    );
+  }
+
   const datos: unknown = await respuesta.json();
   if (!respuesta.ok) {
     const mensaje =

@@ -15,9 +15,12 @@ export default function PantallaPlanes({
   return (
     <main className="plans-page">
       <header className="landing-brand">
-        <span aria-hidden="true" className="landing-brand-mark">
-          C
-        </span>
+        <img
+          alt=""
+          aria-hidden="true"
+          className="landing-brand-mark"
+          src="/clear-ia-logo.png"
+        />
         <span>CLEAR-IA</span>
       </header>
 

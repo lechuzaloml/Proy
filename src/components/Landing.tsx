@@ -27,9 +27,12 @@ export default function Landing({ onComenzar }: LandingProps) {
   return (
     <main className="landing-page">
       <header className="landing-brand">
-        <span className="landing-brand-mark" aria-hidden="true">
-          C
-        </span>
+        <img
+          alt=""
+          aria-hidden="true"
+          className="landing-brand-mark"
+          src="/clear-ia-logo.png"
+        />
         <span>CLEAR-IA</span>
       </header>
       <section aria-labelledby="landing-title" className="landing-hero">

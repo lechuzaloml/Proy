@@ -32,3 +32,12 @@ Para compilar, ejecuta `npm run build`. Para servir la compilación, ejecuta
 `npm start` después de compilar. Antes de publicar el endpoint en internet,
 configura controles de uso para evitar que terceros consuman la cuota de tu
 clave.
+
+## Publicar en Vercel
+
+Configura `Proy` como directorio raíz del proyecto en Vercel, usa `npm run
+build` como comando de compilación y `dist` como directorio de salida. Agrega
+`GEMINI_API_KEY` en **Settings > Environment Variables** para cada entorno que
+vayas a usar (Production, Preview o Development); no la agregues con prefijo
+`VITE_`. La función `api/personalizar.ts` expone el endpoint que usa la
+aplicación y lee esta variable en el servidor.
