@@ -236,32 +236,50 @@ export default function RenderizadorCuestionario({
 
   function renderPregunta({ pregunta, indice }: EntradaPregunta) {
     const idPregunta = `pregunta-${indice}`;
+    const esOpcionDoble =
+      pregunta.tipo === "opcion_multiple" && pregunta.opciones.length === 2;
 
     return (
       <article className="question-card" key={indice}>
         <h3 id={idPregunta}>{pregunta.texto}</h3>
         {pregunta.tipo === "opcion_multiple" && (
-          <fieldset aria-labelledby={idPregunta} className="option-list">
-            {pregunta.opciones.map((opcion, indiceOpcion) => (
-              <label className="option" key={indiceOpcion}>
-                <input
-                  checked={
-                    respuestas[indice]?.tipo === "opcion_multiple" &&
-                    respuestas[indice].indiceOpcion === indiceOpcion
-                  }
-                  name={`respuesta-${indice}`}
-                  onChange={() =>
-                    actualizarRespuesta(indice, {
-                      tipo: "opcion_multiple",
-                      indiceOpcion,
-                    })
-                  }
-                  type="radio"
-                  value={opcion.texto}
-                />
-                <span>{opcion.texto}</span>
-              </label>
-            ))}
+          <fieldset
+            aria-labelledby={idPregunta}
+            className={
+              esOpcionDoble
+                ? "option-list option-list-binary"
+                : "option-list"
+            }
+          >
+            {pregunta.opciones.map((opcion, indiceOpcion) => {
+              const respuesta = respuestas[indice];
+              const seleccionada =
+                respuesta?.tipo === "opcion_multiple" &&
+                respuesta.indiceOpcion === indiceOpcion;
+
+              return (
+                <label
+                  className={`option${
+                    esOpcionDoble && seleccionada ? " option-selected" : ""
+                  }`}
+                  key={indiceOpcion}
+                >
+                  <input
+                    checked={seleccionada}
+                    name={`respuesta-${indice}`}
+                    onChange={() =>
+                      actualizarRespuesta(indice, {
+                        tipo: "opcion_multiple",
+                        indiceOpcion,
+                      })
+                    }
+                    type="radio"
+                    value={opcion.texto}
+                  />
+                  <span>{opcion.texto}</span>
+                </label>
+              );
+            })}
           </fieldset>
         )}
         {pregunta.tipo === "escala" && (

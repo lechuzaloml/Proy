@@ -1,5 +1,6 @@
 import type { MetadataTemplate } from "../templates/catalogo";
 import CalculadoraImpacto from "./CalculadoraImpacto";
+import OfertaAcompanamiento from "./OfertaAcompanamiento";
 import OfertaPremium from "./OfertaPremium";
 
 interface PantallaRecomendacionProps {
@@ -37,14 +38,21 @@ export default function PantallaRecomendacion({
         </button>
 
         <div className="recommendation-reason">
-          <h2>Por qué encaja</h2>
-          {errorPersonalizacion && (
-            <p role="status">
-              No se pudo personalizar esta recomendación; mostramos el texto
-              base. Detalle: {errorPersonalizacion}
-            </p>
-          )}
-          <p>{contenido}</p>
+          <img
+            alt="Asistente de Clear-IA"
+            className="recommendation-assistant-mark"
+            src="/clear-ia-assistant.png"
+          />
+          <div className="recommendation-reason-copy">
+            <h2>Por qué encaja</h2>
+            {errorPersonalizacion && (
+              <p role="status">
+                No se pudo personalizar esta recomendación; mostramos el texto
+                base. Detalle: {errorPersonalizacion}
+              </p>
+            )}
+            <p>{contenido}</p>
+          </div>
         </div>
 
         <button
@@ -56,6 +64,7 @@ export default function PantallaRecomendacion({
         </button>
       </section>
       <CalculadoraImpacto />
+      <OfertaAcompanamiento />
       <OfertaPremium />
     </main>
   );

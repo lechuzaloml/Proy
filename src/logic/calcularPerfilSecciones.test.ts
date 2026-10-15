@@ -109,7 +109,7 @@ describe("calcularPerfilSecciones", () => {
     const perfil = calcularPerfilSecciones(obtenerCuestionario(onboardingAgencia), {
       0: { tipo: "abierta", valor: "Descripción de la organización" },
       2: { tipo: "abierta", valor: "Aumentar las ventas" },
-      3: { tipo: "opcion_multiple", indiceOpcion: 1 },
+      3: { tipo: "abierta", valor: "Campañas digitales" },
     });
 
     expect(perfil).toEqual([

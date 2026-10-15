@@ -38,6 +38,12 @@ export default function OfertaPremium() {
           Recursos para ofrecer cuestionarios de diagnóstico, comprender las
           respuestas y conocer mejor a tus prospectos.
         </p>
+        <p className="premium-service-note">
+          Premium es la suscripción a Clear-IA. El acompañamiento comercial
+          presentado arriba es una propuesta independiente y no forma parte de
+          la suscripción. Las funciones marcadas como próximamente aún no están
+          disponibles.
+        </p>
       </header>
 
       <div className="landing-premium-grid">

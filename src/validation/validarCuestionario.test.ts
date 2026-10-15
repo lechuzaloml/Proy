@@ -1,5 +1,8 @@
 import { describe, expect, it } from "vitest";
 import casoNuevo from "../../spec/Ejemplos/caso-nuevo.json";
+import onboardingAgencia from "../../templates/forms/onboarding-para-agencia.json";
+import preparacionComercial from "../../templates/assessments/diagnostico-preparacion-comercial.json";
+import marketingDigital from "../../templates/quizzes/test-madurez-marketing-digital.json";
 import type { Cuestionario } from "../types/model";
 import { validarCuestionario } from "./validarCuestionario";
 
@@ -37,6 +40,38 @@ function erroresDe(data: unknown, textoEsperado: string): void {
 }
 
 describe("validarCuestionario", () => {
+  it.each([
+    [onboardingAgencia, "abierta"],
+    [marketingDigital, "opcion_multiple"],
+    [preparacionComercial, "opcion_multiple"],
+  ])("acepta el template recomendado con un único tipo de pregunta", (template, tipo) => {
+    const resultado = validarCuestionario(template);
+
+    expect(resultado.valido).toBe(true);
+    if (resultado.valido) {
+      expect(
+        new Set(resultado.data.preguntas.map((pregunta) => pregunta.tipo)),
+      ).toEqual(new Set([tipo]));
+    }
+  });
+
+  it("presenta el cuestionario de marketing como preguntas Sí/No", () => {
+    const resultado = validarCuestionario(marketingDigital);
+
+    expect(resultado.valido).toBe(true);
+    if (resultado.valido) {
+      for (const pregunta of resultado.data.preguntas) {
+        expect(pregunta.tipo).toBe("opcion_multiple");
+        if (pregunta.tipo === "opcion_multiple") {
+          expect(pregunta.opciones.map((opcion) => opcion.texto)).toEqual([
+            "Sí",
+            "No",
+          ]);
+        }
+      }
+    }
+  });
+
   it("acepta el caso nuevo y devuelve un Cuestionario", () => {
     const resultado = validarCuestionario(fixture);
 

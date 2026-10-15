@@ -1,9 +1,9 @@
 {
   "id": "demo-diagnostico-preparacion-comercial",
-  "cliente": "Calificación de Prospectos Comerciales",
+  "cliente": "Preparación para una Conversación Comercial",
   "estado": "template_demo_ficticio",
-  "landingTitulo": "Calificación de Prospectos Comerciales",
-  "landingDescripcion": "Explora si un prospecto parece listo para avanzar con una conversación comercial a partir de su necesidad, prioridad, urgencia, plazo, rol y disposición. Es una demostración ficticia: los puntajes y umbrales son orientativos, no validados, y no sustituyen la calificación profesional.",
+  "landingTitulo": "Preparación para una Conversación Comercial",
+  "landingDescripcion": "Comparte información sobre la necesidad, los tiempos y las condiciones que rodean una posible decisión. Todas las preguntas usan opciones de respuesta única para preparar una conversación comercial pertinente. Esta demostración es orientativa y no sustituye la calificación profesional.",
   "usa_scoring": true,
   "posicion_contacto": "final",
   "secciones": [
@@ -28,15 +28,13 @@
       "id": "p2",
       "seccion": "Necesidad y prioridad",
       "texto": "¿Qué prioridad tiene resolver esta necesidad frente a otras iniciativas actuales?",
-      "tipo": "escala",
-      "escala": {
-        "min": 1,
-        "max": 5,
-        "etiqueta_min": "Es una prioridad futura",
-        "etiqueta_max": "Es una prioridad inmediata"
-      },
-      "participa_scoring": true,
-      "puntos_por_valor": { "1": 0, "2": 5, "3": 10, "4": 15, "5": 20 }
+      "tipo": "opcion_multiple",
+      "opciones": [
+        { "texto": "Es una prioridad futura", "puntos": 0 },
+        { "texto": "Es una prioridad importante, pero no inmediata", "puntos": 10 },
+        { "texto": "Es una prioridad inmediata", "puntos": 20 }
+      ],
+      "participa_scoring": true
     },
     {
       "id": "p3",
@@ -53,16 +51,14 @@
     {
       "id": "p4",
       "seccion": "Momento de compra",
-      "texto": "¿Qué tan urgente es atender esta necesidad?",
-      "tipo": "escala",
-      "escala": {
-        "min": 1,
-        "max": 5,
-        "etiqueta_min": "Puede esperar",
-        "etiqueta_max": "Necesito atenderla pronto"
-      },
-      "participa_scoring": true,
-      "puntos_por_valor": { "1": 0, "2": 5, "3": 10, "4": 15, "5": 20 }
+      "texto": "¿En qué plazo sería importante atender esta necesidad?",
+      "tipo": "opcion_multiple",
+      "opciones": [
+        { "texto": "Todavía no hay un plazo definido", "puntos": 0 },
+        { "texto": "En los próximos tres a seis meses", "puntos": 10 },
+        { "texto": "En los próximos tres meses", "puntos": 20 }
+      ],
+      "participa_scoring": true
     },
     {
       "id": "p5",
@@ -92,8 +88,13 @@
       "id": "p7",
       "seccion": "Decisión y capacidad para avanzar",
       "texto": "¿Qué factor tendría mayor peso para decidir si avanzas con una solución?",
-      "tipo": "abierta",
-      "limite_caracteres": 500,
+      "tipo": "opcion_multiple",
+      "opciones": [
+        { "texto": "El ajuste de la solución a la necesidad", "puntos": 0 },
+        { "texto": "El plazo y la forma de implementación", "puntos": 0 },
+        { "texto": "La inversión y los recursos requeridos", "puntos": 0 },
+        { "texto": "La evidencia de resultados esperados", "puntos": 0 }
+      ],
       "participa_scoring": false
     }
   ],

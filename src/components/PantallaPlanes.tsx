@@ -19,7 +19,7 @@ export default function PantallaPlanes({
           alt=""
           aria-hidden="true"
           className="landing-brand-mark"
-          src="/clear-ia-logo.png"
+          src="/merkatic-brand-mark.png"
         />
         <span>CLEAR-IA</span>
       </header>
@@ -74,6 +74,17 @@ export default function PantallaPlanes({
                     <span
                       className={`benefit-status benefit-status-${beneficio.estado}`}
                     >
+                      {beneficio.estado === "disponible" && (
+                        <svg
+                          aria-hidden="true"
+                          className="benefit-status-icon"
+                          fill="none"
+                          viewBox="0 0 24 24"
+                          xmlns="http://www.w3.org/2000/svg"
+                        >
+                          <path d="m5 12 4.5 4.5L19 7" />
+                        </svg>
+                      )}
                       {beneficio.estado === "disponible"
                         ? "Disponible"
                         : "Próximamente"}

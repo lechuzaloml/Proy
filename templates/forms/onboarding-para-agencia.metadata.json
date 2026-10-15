@@ -1,8 +1,8 @@
 {
-  "nombre": "Onboarding para Agencia",
-  "formato": "Form",
-  "caso_uso": "Client Onboarding",
+  "nombre": "Descubrimiento de Proyecto de Marketing",
+  "formato": "Cuestionario de respuesta abierta",
+  "caso_uso": "Descubrimiento comercial",
   "nicho": "Marketing",
-  "descripcion": "Formulario ficticio de demostración para recopilar audiencia, objetivos, entregables, materiales, referencias y criterios de éxito; no es onboarding operativo.",
+  "descripcion": "Cuestionario consultivo para conocer contexto, objetivos y alcance esperado de un proyecto de marketing. Todas sus preguntas son abiertas; es una demostración, no un onboarding operativo.",
   "usa_scoring": false
 }

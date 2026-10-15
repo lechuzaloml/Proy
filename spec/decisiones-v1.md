@@ -19,3 +19,6 @@ sin modificar sus diez reglas.
    mostrar), pero nunca se muestran al usuario final que responde el
    cuestionario — evita que alguien ajuste sus respuestas a propósito para
    obtener un segmento más favorable.
+6. **Figura por categoría:** la Decisión 5 se mantiene para el diagnóstico
+   inicial. En el resultado de los templates se muestra la figura con el valor
+   por categoría; el nombre del segmento sigue oculto.

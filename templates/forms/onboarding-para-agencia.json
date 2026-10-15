@@ -1,9 +1,9 @@
 {
   "id": "demo-onboarding-para-agencia",
-  "cliente": "Onboarding para Agencia",
+  "cliente": "Descubrimiento de Proyecto de Marketing",
   "estado": "template_demo_ficticio",
-  "landingTitulo": "Onboarding para Agencia",
-  "landingDescripcion": "Comparte contexto, audiencia, objetivos, entregables, materiales y criterios de éxito para mostrar cómo podría comenzar un proyecto de marketing con una agencia ficticia. Es una demostración: no constituye un onboarding operativo, no envía las respuestas ni las conserva fuera del flujo actual.",
+  "landingTitulo": "Descubrimiento de Proyecto de Marketing",
+  "landingDescripcion": "Describe el contexto de tu organización, el proyecto de marketing que quieres desarrollar y los resultados que buscas. Todas las preguntas son abiertas para facilitar una conversación consultiva. Esta demostración no es un onboarding operativo y no envía ni conserva respuestas fuera del flujo actual.",
   "usa_scoring": false,
   "posicion_contacto": "inicio",
   "secciones": [
@@ -23,14 +23,9 @@
     {
       "id": "p2",
       "seccion": "Tu organización",
-      "texto": "¿En qué etapa se encuentra actualmente el proyecto?",
-      "tipo": "opcion_multiple",
-      "opciones": [
-        { "texto": "Estamos definiendo el alcance" },
-        { "texto": "Estamos preparando materiales" },
-        { "texto": "El proyecto ya está en marcha" },
-        { "texto": "Buscamos revisar una iniciativa existente" }
-      ],
+      "texto": "¿En qué etapa se encuentra actualmente el proyecto y qué avances han logrado hasta ahora?",
+      "tipo": "abierta",
+      "limite_caracteres": 700,
       "participa_scoring": false
     },
     {
@@ -44,15 +39,9 @@
     {
       "id": "p4",
       "seccion": "Proyecto y objetivos",
-      "texto": "¿Qué entregables o tipos de trabajo te interesa explorar para este proyecto?",
-      "tipo": "opcion_multiple",
-      "opciones": [
-        { "texto": "Estrategia de marca y posicionamiento" },
-        { "texto": "Contenido y redes sociales" },
-        { "texto": "Campañas digitales" },
-        { "texto": "Sitio web y experiencia digital" },
-        { "texto": "Aún no lo hemos definido" }
-      ],
+      "texto": "¿Qué entregables o tipos de trabajo te interesa explorar y por qué son importantes para el proyecto?",
+      "tipo": "abierta",
+      "limite_caracteres": 700,
       "participa_scoring": false
     },
     {

@@ -9,6 +9,7 @@ Contrato Funcional v1.1
 8. Una pregunta de escala define mínimo, máximo y, opcionalmente, etiquetas de texto para sus extremos.
 9. Si el cuestionario tiene scoring activado, define reglas que convierten el puntaje total en un segmento, y cada segmento puede tener un resultado asociado. Si el scoring está desactivado, el resultado es fijo.
 10. El resultado puede incluir opcionalmente un CTA compuesto por texto y acción.
+11. Los cuestionarios comerciales recomendados después del diagnóstico usan un único tipo de respuesta por cuestionario, elegido según su objetivo. El diagnóstico inicial puede conservar preguntas de distintos tipos.
 Regla de construcción
 
 Ningún dato observado se inventa. Cuando una característica del caso real no puede demostrarse con la fuente disponible, se marca como no_demostrado. Los valores ficticios solo pueden aparecer en el caso nuevo diseñado explícitamente para probar una capacidad del contrato.

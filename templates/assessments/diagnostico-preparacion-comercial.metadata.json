@@ -1,8 +1,8 @@
 {
-  "nombre": "Calificación de Prospectos Comerciales",
-  "formato": "Assessment",
+  "nombre": "Preparación para una Conversación Comercial",
+  "formato": "Cuestionario de opción única",
   "caso_uso": "Sales Qualification",
   "nicho": "Negocios y Finanzas",
-  "descripcion": "Evaluación orientativa y ficticia de necesidad, prioridad, urgencia, plazo, autoridad y disposición para avanzar de un prospecto.",
+  "descripcion": "Cuestionario orientativo sobre necesidad, prioridad, plazo, participación en la decisión y condiciones para avanzar. Todas las preguntas son de opción única.",
   "usa_scoring": true
 }

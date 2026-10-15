@@ -1,108 +1,83 @@
 {
   "id": "demo-test-madurez-marketing-digital",
-  "cliente": "Test de Madurez de Marketing Digital",
+  "cliente": "Cuestionario de Prácticas de Marketing Digital",
   "estado": "template_demo_ficticio",
-  "landingTitulo": "Test de Madurez de Marketing Digital",
-  "landingDescripcion": "Reflexiona sobre cuatro dimensiones acotadas de tu marketing digital: planificación de contenido, definición de audiencia, medición de canales y coherencia entre canales. Esta evaluación ficticia y orientativa no es un benchmark ni una evaluación integral de marketing; sus puntajes y umbrales no son métricas validadas.",
+  "landingTitulo": "Cuestionario de Prácticas de Marketing Digital",
+  "landingDescripcion": "Confirma si tu equipo ya aplica algunas prácticas concretas de marketing digital. Todas las preguntas son de Sí o No para hacer una revisión breve y consistente; el resultado es orientativo y no constituye una evaluación integral ni un benchmark.",
   "usa_scoring": true,
   "posicion_contacto": "final",
   "secciones": [
-    "Estrategia y contenido",
-    "Canales y medición",
-    "Siguiente paso"
+    "Planificación y audiencia",
+    "Canales y medición"
   ],
   "preguntas": [
     {
       "id": "p1",
-      "seccion": "Estrategia y contenido",
-      "texto": "¿Cómo planificas los temas y objetivos de tu contenido digital?",
+      "seccion": "Planificación y audiencia",
+      "texto": "¿Planifican el contenido digital con objetivos definidos?",
       "tipo": "opcion_multiple",
       "opciones": [
-        { "texto": "Publicamos cuando surge una idea", "puntos": 0 },
-        { "texto": "Tenemos temas frecuentes, pero poca planificación", "puntos": 12 },
-        { "texto": "Planificamos contenido según objetivos y audiencia", "puntos": 25 }
+        { "texto": "Sí", "puntos": 25 },
+        { "texto": "No", "puntos": 0 }
       ],
       "participa_scoring": true
     },
     {
       "id": "p2",
-      "seccion": "Estrategia y contenido",
-      "texto": "¿Qué tan claramente está definida la audiencia de tus principales canales digitales?",
-      "tipo": "escala",
-      "escala": {
-        "min": 1,
-        "max": 5,
-        "etiqueta_min": "Aún no la hemos definido",
-        "etiqueta_max": "La usamos para orientar nuestras decisiones"
-      },
-      "participa_scoring": true,
-      "puntos_por_valor": { "1": 0, "2": 6, "3": 12, "4": 18, "5": 25 }
+      "seccion": "Planificación y audiencia",
+      "texto": "¿Tienen definida la audiencia prioritaria para sus principales canales digitales?",
+      "tipo": "opcion_multiple",
+      "opciones": [
+        { "texto": "Sí", "puntos": 25 },
+        { "texto": "No", "puntos": 0 }
+      ],
+      "participa_scoring": true
     },
     {
       "id": "p3",
       "seccion": "Canales y medición",
-      "texto": "¿Cómo evalúas qué canales digitales están contribuyendo a tus objetivos?",
+      "texto": "¿Cada canal digital activo tiene un objetivo relacionado con las metas del negocio?",
       "tipo": "opcion_multiple",
       "opciones": [
-        { "texto": "No lo medimos todavía", "puntos": 0 },
-        { "texto": "Revisamos algunas métricas de vez en cuando", "puntos": 12 },
-        { "texto": "Revisamos métricas relevantes y las usamos para ajustar acciones", "puntos": 25 }
+        { "texto": "Sí", "puntos": 25 },
+        { "texto": "No", "puntos": 0 }
       ],
       "participa_scoring": true
     },
     {
       "id": "p4",
       "seccion": "Canales y medición",
-      "texto": "¿Qué tan constante es la experiencia de tu marca entre tus principales canales?",
-      "tipo": "escala",
-      "escala": {
-        "min": 1,
-        "max": 5,
-        "etiqueta_min": "Cada canal funciona por separado",
-        "etiqueta_max": "El mensaje y la experiencia son coherentes"
-      },
-      "participa_scoring": true,
-      "puntos_por_valor": { "1": 0, "2": 6, "3": 12, "4": 18, "5": 25 }
-    },
-    {
-      "id": "p5",
-      "seccion": "Siguiente paso",
-      "texto": "¿Qué canal o actividad de marketing te gustaría mejorar primero?",
-      "tipo": "abierta",
-      "limite_caracteres": 500,
-      "participa_scoring": false
-    },
-    {
-      "id": "p6",
-      "seccion": "Siguiente paso",
-      "texto": "¿Qué objetivo te gustaría alcanzar con tu marketing digital durante los próximos meses?",
-      "tipo": "abierta",
-      "limite_caracteres": 500,
-      "participa_scoring": false
+      "texto": "¿Revisan periódicamente métricas para decidir qué acciones de marketing ajustar?",
+      "tipo": "opcion_multiple",
+      "opciones": [
+        { "texto": "Sí", "puntos": 25 },
+        { "texto": "No", "puntos": 0 }
+      ],
+      "participa_scoring": true
     }
   ],
   "reglas_scoring": [
-    { "puntaje_min": 0, "puntaje_max": 34, "segmento": "base_por_definir" },
-    { "puntaje_min": 35, "puntaje_max": 69, "segmento": "estrategia_en_marcha" },
-    { "puntaje_min": 70, "puntaje_max": 100, "segmento": "practicas_integradas" }
+    { "puntaje_min": 0, "puntaje_max": 24, "segmento": "practicas_por_definir" },
+    { "puntaje_min": 25, "puntaje_max": 74, "segmento": "practicas_en_desarrollo" },
+    { "puntaje_min": 75, "puntaje_max": 100, "segmento": "practicas_consistentes" }
   ],
   "resultado": {
     "tipo": "por_segmento",
     "resultados": [
       {
-        "segmento": "base_por_definir",
-        "contenido": "Elige un objetivo y una audiencia prioritaria antes de sumar canales. Un plan sencillo puede ayudarte a enfocar tus primeras pruebas.",
-        "cta": { "texto": "Definir un objetivo y una audiencia prioritaria", "accion": "definir_objetivo_y_audiencia_prioritaria" }
+        "segmento": "practicas_por_definir",
+        "contenido": "Tus respuestas señalan que varias prácticas de marketing aún están por establecerse. Una conversación inicial puede ayudar a elegir un objetivo y una audiencia prioritaria antes de definir acciones.",
+        "cta": { "texto": "Definir objetivo y audiencia", "accion": "definir_objetivo_y_audiencia_prioritaria" }
       },
       {
-        "segmento": "estrategia_en_marcha",
-        "contenido": "Ya hay actividad y oportunidades para conectarla mejor. Define una métrica útil por objetivo y revisa periódicamente qué acciones vale la pena ajustar.",
-        "cta": { "texto": "Elegir una métrica para revisar periódicamente", "accion": "elegir_metrica_para_revision_periodica" }
+        "segmento": "practicas_en_desarrollo",
+        "contenido": "Tus respuestas muestran algunas prácticas ya implementadas y otras que podrían conectarse mejor. El siguiente paso es revisar cómo vincular objetivos, canales y medición.",
+        "cta": { "texto": "Revisar objetivos, canales y medición", "accion": "revisar_objetivos_canales_y_medicion" }
       },
       {
-        "segmento": "practicas_integradas",
-        "contenido": "Parece que estrategia, canales y medición ya se relacionan. Puedes seguir experimentando con mejoras y documentar qué aprendes de cada iniciativa.",
-        "cta": { "texto": "Documentar un aprendizaje de la próxima iniciativa", "accion": "documentar_aprendizaje_de_iniciativa" }
+        "segmento": "practicas_consistentes",
+        "contenido": "Tus respuestas indican que ya aplican varias prácticas de planificación y medición. Una conversación puede enfocarse en optimizar las acciones actuales y detectar nuevas oportunidades.",
+        "cta": { "texto": "Explorar oportunidades de optimización", "accion": "explorar_oportunidades_de_optimizacion" }
       }
     ]
   }

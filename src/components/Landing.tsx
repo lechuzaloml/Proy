@@ -31,7 +31,7 @@ export default function Landing({ onComenzar }: LandingProps) {
           alt=""
           aria-hidden="true"
           className="landing-brand-mark"
-          src="/clear-ia-logo.png"
+          src="/merkatic-brand-mark.png"
         />
         <span>CLEAR-IA</span>
       </header>
@@ -54,7 +54,13 @@ export default function Landing({ onComenzar }: LandingProps) {
             >
               Iniciar diagnóstico
               <span aria-hidden="true" className="landing-button-arrow">
-                →
+                <svg
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  xmlns="http://www.w3.org/2000/svg"
+                >
+                  <path d="M4 12h15m-6-6 6 6-6 6" />
+                </svg>
               </span>
             </button>
             <p className="landing-duration">
@@ -204,7 +210,15 @@ export default function Landing({ onComenzar }: LandingProps) {
           type="button"
         >
           Iniciar diagnóstico
-          <span aria-hidden="true">→</span>
+          <span aria-hidden="true" className="landing-next-step-arrow">
+            <svg
+              fill="none"
+              viewBox="0 0 24 24"
+              xmlns="http://www.w3.org/2000/svg"
+            >
+              <path d="M4 12h15m-6-6 6 6-6 6" />
+            </svg>
+          </span>
         </button>
         <p className="landing-next-step-note">
           Toma aproximadamente 2–3 minutos.
