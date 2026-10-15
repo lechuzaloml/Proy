@@ -1,4 +1,11 @@
 export type Seccion = string;
+export type EstiloVisualCuestionario =
+  | "finanzas"
+  | "ciberseguridad"
+  | "liderazgo"
+  | "madurez-digital"
+  | "comercial"
+  | "masterclass";
 
 export interface Opcion {
   texto: string;
@@ -78,6 +85,7 @@ interface CuestionarioBase {
   posicion_contacto: "inicio" | "final";
   secciones?: Seccion[];
   preguntas: Pregunta[];
+  estilo_visual?: EstiloVisualCuestionario;
   landingTitulo?: string;
   landingDescripcion?: string;
 }

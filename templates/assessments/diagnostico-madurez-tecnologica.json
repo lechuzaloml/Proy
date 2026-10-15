@@ -2,6 +2,7 @@
   "id": "demo-evaluacion-madurez-practicas-digitales",
   "cliente": "Evaluación de Madurez de Prácticas Digitales",
   "estado": "template_demo_ficticio",
+  "estilo_visual": "madurez-digital",
   "landingTitulo": "Evaluación de Madurez de Prácticas Digitales",
   "landingDescripcion": "Reflexiona sobre cuatro prácticas digitales de tu organización: selección e integración de herramientas, gestión de permisos y acompañamiento ante cambios. Es una evaluación ficticia y orientativa; no es una evaluación integral de infraestructura tecnológica ni una auditoría, y sus puntajes y umbrales no son métricas validadas.",
   "usa_scoring": true,

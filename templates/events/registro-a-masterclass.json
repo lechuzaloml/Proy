@@ -2,6 +2,7 @@
   "id": "demo-registro-masterclass",
   "cliente": "Registro de Interés — Masterclass",
   "estado": "template_demo_ficticio",
+  "estilo_visual": "masterclass",
   "landingTitulo": "Registro de Interés — Masterclass",
   "landingDescripcion": "Comparte tu interés, experiencia, objetivo y modalidad preferida para una masterclass ficticia sobre cómo convertir una idea de negocio en un plan de acción. Es solo una demostración: no crea una inscripción, reserva ni envía confirmaciones o recordatorios.",
   "usa_scoring": false,

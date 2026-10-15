@@ -264,6 +264,23 @@ function esCuestionario(
     valido = false;
   }
 
+  const estilosVisuales = [
+    "finanzas",
+    "ciberseguridad",
+    "liderazgo",
+    "madurez-digital",
+    "comercial",
+    "masterclass",
+  ];
+  if (
+    tienePropiedad(value, "estilo_visual") &&
+    (typeof value.estilo_visual !== "string" ||
+      !estilosVisuales.includes(value.estilo_visual))
+  ) {
+    errores.push("cuestionario.estilo_visual no corresponde a un estilo visual válido.");
+    valido = false;
+  }
+
   const secciones = tienePropiedad(value, "secciones") ? value.secciones : [];
   if (!Array.isArray(secciones)) {
     errores.push("cuestionario.secciones debe ser un array.");

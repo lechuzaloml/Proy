@@ -23,15 +23,19 @@ export default function PantallaResultado({
   contenidoPersonalizado,
   errorPersonalizacion,
 }: PantallaResultadoProps) {
-  const dimensiones = cuestionario.usa_scoring
-    ? calcularPerfilSecciones(cuestionario, respuestas).filter((dimension) =>
-        cuestionario.preguntas.some(
-          (pregunta) =>
-            pregunta.participa_scoring &&
-            pregunta.seccion === dimension.nombre,
-        ),
-      )
-    : [];
+  const dimensiones = calcularPerfilSecciones(
+    cuestionario,
+    respuestas,
+  ).filter(
+    (dimension) =>
+      !cuestionario.usa_scoring ||
+      cuestionario.preguntas.some(
+        (pregunta) =>
+          pregunta.participa_scoring &&
+          (pregunta.seccion ?? pregunta.texto) === dimension.nombre,
+      ),
+  );
+  const esPerfilDePuntaje = cuestionario.usa_scoring;
   const puntos = dimensiones.map((dimension, indice) => {
     const angulo = -Math.PI / 2 + (indice * 2 * Math.PI) / dimensiones.length;
     const distancia = (dimension.porcentaje / 100) * RADIO;
@@ -61,24 +65,35 @@ export default function PantallaResultado({
           </div>
         )}
       </article>
-      {dimensiones.length >= 3 && (
+      {dimensiones.length >= 2 && (
         <section
           aria-labelledby="result-profile-title"
           className="result-profile"
         >
           <header className="result-profile-header">
-            <p className="eyebrow">Perfil por categoría</p>
+            <p className="eyebrow">
+              {esPerfilDePuntaje
+                ? "Perfil por categoría"
+                : "Resumen de respuestas"}
+            </p>
             <h2 id="result-profile-title">
-              Así se distribuye tu resultado por categoría
+              {esPerfilDePuntaje
+                ? "Así se distribuye tu resultado por categoría"
+                : "Preguntas respondidas por sección"}
             </h2>
             <p>
-              Cada porcentaje muestra los puntos obtenidos frente al máximo
-              posible en esa categoría. Las preguntas abiertas no se puntúan.
+              {esPerfilDePuntaje
+                ? "Cada porcentaje muestra los puntos obtenidos frente al máximo posible en esa categoría. Las preguntas abiertas no se puntúan."
+                : "El porcentaje muestra cuántas preguntas de cada sección respondiste. Este resumen no representa fortalezas, debilidades ni una evaluación."}
             </p>
           </header>
           <div className="result-profile-content">
             <svg
-              aria-label="Gráfica radial del puntaje por categoría"
+              aria-label={
+                esPerfilDePuntaje
+                  ? "Gráfica radial del puntaje por categoría"
+                  : "Gráfica radial de preguntas respondidas por sección"
+              }
               className="result-profile-chart"
               role="img"
               viewBox="0 0 320 320"
@@ -140,7 +155,9 @@ export default function PantallaResultado({
                     <h3>{dimension.nombre}</h3>
                     <p>
                       {dimension.respondidas} de {dimension.totalPreguntas}{" "}
-                      preguntas puntuadas respondidas
+                      {esPerfilDePuntaje
+                        ? "preguntas puntuadas respondidas"
+                        : "preguntas respondidas"}
                     </p>
                     <progress
                       aria-label={`${dimension.nombre}: ${dimension.porcentaje}%`}

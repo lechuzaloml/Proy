@@ -95,6 +95,12 @@ describe("validarCuestionario", () => {
     expect(resultado.valido).toBe(true);
   });
 
+  it("rechaza estilos visuales que no estén soportados", () => {
+    const data = clonarCuestionario();
+    data.estilo_visual = "estilo-inexistente";
+    erroresDe(data, "estilo_visual no corresponde a un estilo visual válido");
+  });
+
   it("rechaza usa_scoring distinto de un booleano", () => {
     const data = clonarCuestionario();
     data.usa_scoring = "no_demostrado";

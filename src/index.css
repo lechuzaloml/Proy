@@ -779,6 +779,229 @@ textarea {
   font-size: 0.875rem;
 }
 
+.questionnaire[data-style="finanzas"] {
+  --questionnaire-accent: #176b52;
+  --questionnaire-tint: #e8f4ee;
+  --questionnaire-border: #b7d6c7;
+}
+
+.questionnaire[data-style="ciberseguridad"] {
+  --questionnaire-accent: #14647a;
+  --questionnaire-tint: #e7f3f6;
+  --questionnaire-border: #b7d7df;
+}
+
+.questionnaire[data-style="liderazgo"] {
+  --questionnaire-accent: #7350a5;
+  --questionnaire-tint: #f1ebf8;
+  --questionnaire-border: #d4c2e7;
+}
+
+.questionnaire[data-style="madurez-digital"] {
+  --questionnaire-accent: #28745c;
+  --questionnaire-tint: #e9f4ee;
+  --questionnaire-border: #bdd8cb;
+}
+
+.questionnaire[data-style="comercial"] {
+  --questionnaire-accent: #a45d2f;
+  --questionnaire-tint: #fbf0e7;
+  --questionnaire-border: #e7c9b2;
+}
+
+.questionnaire[data-style="masterclass"] {
+  --questionnaire-accent: #5d54a3;
+  --questionnaire-tint: #efeffa;
+  --questionnaire-border: #ccc9e6;
+}
+
+.questionnaire[data-style] .questionnaire-header {
+  margin: 0 0 2rem;
+  padding: 1.35rem 1.5rem;
+  border-left: 5px solid var(--questionnaire-accent);
+  border-radius: 0 1rem 1rem 0;
+  background: var(--questionnaire-tint);
+}
+
+.questionnaire[data-style] .questionnaire-header .eyebrow,
+.questionnaire[data-style] .question-section h2 {
+  color: var(--questionnaire-accent);
+}
+
+.questionnaire[data-style] .question-card {
+  border-color: var(--questionnaire-border);
+  border-radius: 1rem;
+  box-shadow: 0 8px 24px rgb(17 17 17 / 5%);
+}
+
+.questionnaire[data-style] .question-progress {
+  color: var(--questionnaire-accent);
+}
+
+.questionnaire[data-style] .question-progress-bar {
+  height: 0.8rem;
+  border: 1px solid var(--questionnaire-border);
+}
+
+.questionnaire[data-style] .question-progress-bar::-webkit-progress-value,
+.questionnaire[data-style] .question-progress-bar::-moz-progress-bar {
+  background: var(--questionnaire-accent);
+}
+
+.questionnaire[data-style] .option-list-finanzas,
+.questionnaire[data-style] .option-list-madurez-digital,
+.questionnaire[data-style] .option-list-masterclass {
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 14rem), 1fr));
+}
+
+.questionnaire[data-style] .option-finanzas,
+.questionnaire[data-style] .option-ciberseguridad,
+.questionnaire[data-style] .option-liderazgo,
+.questionnaire[data-style] .option-madurez-digital,
+.questionnaire[data-style] .option-comercial,
+.questionnaire[data-style] .option-masterclass {
+  min-height: 3.5rem;
+  padding: 0.85rem 1rem;
+  border: 1px solid var(--questionnaire-border);
+  border-radius: 0.85rem;
+  background: var(--color-white);
+  line-height: 1.45;
+  transition:
+    border-color 160ms ease,
+    background-color 160ms ease,
+    transform 160ms ease;
+}
+
+.questionnaire[data-style] .option input {
+  flex: 0 0 auto;
+  accent-color: var(--questionnaire-accent);
+}
+
+.questionnaire[data-style] .option-selected {
+  border-color: var(--questionnaire-accent);
+  background: var(--questionnaire-tint);
+  font-weight: 650;
+}
+
+.questionnaire[data-style="finanzas"] .option-finanzas {
+  border-radius: 1.15rem;
+}
+
+.questionnaire[data-style="ciberseguridad"] .option-list-ciberseguridad {
+  gap: 0.55rem;
+}
+
+.questionnaire[data-style="ciberseguridad"] .option-ciberseguridad {
+  border-left: 4px solid var(--questionnaire-accent);
+  border-radius: 0.35rem 0.85rem 0.85rem 0.35rem;
+}
+
+.questionnaire[data-style="liderazgo"] .option-liderazgo {
+  border-radius: 0.4rem 1.1rem 1.1rem 0.4rem;
+}
+
+.questionnaire[data-style="madurez-digital"] .option-madurez-digital {
+  border-radius: 0.45rem;
+}
+
+.questionnaire[data-style="comercial"] .option-list-comercial {
+  gap: 0.55rem;
+}
+
+.questionnaire[data-style="comercial"] .option-comercial {
+  min-height: 4rem;
+  border-left-width: 4px;
+  border-radius: 0.35rem;
+}
+
+.questionnaire[data-style="masterclass"] .option-masterclass {
+  min-height: 5rem;
+  border-radius: 1.1rem;
+}
+
+.scale-choice-fieldset {
+  min-width: 0;
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+
+.scale-choices {
+  display: flex;
+  justify-content: center;
+  gap: clamp(0.4rem, 2vw, 0.8rem);
+}
+
+.scale-choice {
+  position: relative;
+  display: block;
+  cursor: pointer;
+}
+
+.scale-choice input {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  margin: 0;
+  opacity: 0;
+  cursor: pointer;
+}
+
+.scale-choice span {
+  display: grid;
+  width: clamp(2.7rem, 10vw, 3.5rem);
+  aspect-ratio: 1;
+  place-items: center;
+  border: 2px solid var(--questionnaire-border);
+  border-radius: 50%;
+  background: var(--color-white);
+  color: var(--color-dark-gray);
+  font-size: 1.05rem;
+  font-weight: 700;
+  transition:
+    background-color 160ms ease,
+    border-color 160ms ease,
+    color 160ms ease,
+    transform 160ms ease;
+}
+
+.scale-choice input:checked + span {
+  transform: translateY(-2px);
+  border-color: var(--questionnaire-accent);
+  background: var(--questionnaire-accent);
+  color: var(--color-white);
+}
+
+.scale-choice input:focus-visible + span {
+  outline: 3px solid var(--questionnaire-accent);
+  outline-offset: 3px;
+}
+
+.scale-choices-segments {
+  gap: 0.4rem;
+}
+
+.scale-choices-segments .scale-choice {
+  flex: 1 1 0;
+}
+
+.scale-choices-segments .scale-choice span {
+  width: 100%;
+  aspect-ratio: auto;
+  min-height: 2.75rem;
+  border-radius: 0.45rem;
+}
+
+.scale-choice-fieldset .scale-labels {
+  margin-top: 0.75rem;
+  gap: 1rem;
+  color: var(--color-dark-gray);
+  font-size: 0.8rem;
+  line-height: 1.4;
+}
+
 .text-answer textarea {
   display: block;
   width: 100%;

@@ -2,6 +2,7 @@
   "id": "demo-evaluacion-liderazgo",
   "cliente": "Evaluación de Liderazgo",
   "estado": "template_demo_ficticio",
+  "estilo_visual": "liderazgo",
   "landingTitulo": "Evaluación de Liderazgo",
   "landingDescripcion": "Reflexiona sobre hábitos de liderazgo, comunicación, delegación y desarrollo del equipo. Es una evaluación ficticia y orientativa, no una evaluación profesional, medición validada ni certificación; los puntajes y umbrales son demostrativos.",
   "usa_scoring": true,

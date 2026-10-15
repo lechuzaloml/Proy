@@ -63,6 +63,7 @@ export default function RenderizadorCuestionario({
       cuestionario.posicion_contacto !== "inicio",
   );
   const [generandoResultado, setGenerandoResultado] = useState(false);
+  const estiloVisual = cuestionario.estilo_visual;
 
   function publicarEstado(
     siguiente: Partial<EstadoFlujoCuestionario>,
@@ -238,6 +239,16 @@ export default function RenderizadorCuestionario({
     const idPregunta = `pregunta-${indice}`;
     const esOpcionDoble =
       pregunta.tipo === "opcion_multiple" && pregunta.opciones.length === 2;
+    const esEscalaVisual =
+      pregunta.tipo === "escala" &&
+      Number.isInteger(pregunta.escala.min) &&
+      Number.isInteger(pregunta.escala.max) &&
+      pregunta.escala.max - pregunta.escala.min <= 9 &&
+      (estiloVisual === "finanzas" ||
+        estiloVisual === "ciberseguridad" ||
+        estiloVisual === "liderazgo" ||
+        estiloVisual === "madurez-digital" ||
+        estiloVisual === "masterclass");
 
     return (
       <article className="question-card" key={indice}>
@@ -245,11 +256,9 @@ export default function RenderizadorCuestionario({
         {pregunta.tipo === "opcion_multiple" && (
           <fieldset
             aria-labelledby={idPregunta}
-            className={
-              esOpcionDoble
-                ? "option-list option-list-binary"
-                : "option-list"
-            }
+            className={`option-list option-list-${estiloVisual ?? "default"}${
+              esOpcionDoble ? " option-list-binary" : ""
+            }`}
           >
             {pregunta.opciones.map((opcion, indiceOpcion) => {
               const respuesta = respuestas[indice];
@@ -259,8 +268,8 @@ export default function RenderizadorCuestionario({
 
               return (
                 <label
-                  className={`option${
-                    esOpcionDoble && seleccionada ? " option-selected" : ""
+                  className={`option option-${estiloVisual ?? "default"}${
+                    seleccionada ? " option-selected" : ""
                   }`}
                   key={indiceOpcion}
                 >
@@ -283,50 +292,112 @@ export default function RenderizadorCuestionario({
           </fieldset>
         )}
         {pregunta.tipo === "escala" && (
-          <div className="scale-control">
-            <label className="sr-only" htmlFor={idPregunta}>
-              {pregunta.texto}
-            </label>
-            <input
-              id={idPregunta}
-              max={pregunta.escala.max}
-              min={pregunta.escala.min}
-              onClick={(evento) =>
-                actualizarRespuesta(indice, {
-                  tipo: "escala",
-                  valor: Number(evento.currentTarget.value),
-                })
-              }
-              onChange={(evento) =>
-                actualizarRespuesta(indice, {
-                  tipo: "escala",
-                  valor: Number(evento.target.value),
-                })
-              }
-              type="range"
-              value={
-                respuestas[indice]?.tipo === "escala"
-                  ? respuestas[indice].valor
-                  : pregunta.escala.min
-              }
-            />
-            <output aria-live="polite">
-              {respuestas[indice]?.tipo === "escala"
-                ? respuestas[indice].valor
-                : pregunta.escala.min}
-            </output>
-            {(pregunta.escala.etiqueta_min !== undefined ||
-              pregunta.escala.etiqueta_max !== undefined) && (
-              <div className="scale-labels">
-                {pregunta.escala.etiqueta_min !== undefined && (
-                  <span>{pregunta.escala.etiqueta_min}</span>
-                )}
-                {pregunta.escala.etiqueta_max !== undefined && (
-                  <span>{pregunta.escala.etiqueta_max}</span>
-                )}
+          esEscalaVisual ? (
+            <fieldset
+              aria-labelledby={idPregunta}
+              className={`scale-choice-fieldset scale-choice-fieldset-${estiloVisual}`}
+            >
+              <legend className="sr-only">{pregunta.texto}</legend>
+              <div
+                className={`scale-choices ${
+                  estiloVisual === "madurez-digital"
+                    ? "scale-choices-segments"
+                    : "scale-choices-circles"
+                }`}
+              >
+                {Array.from(
+                  {
+                    length:
+                      pregunta.escala.max - pregunta.escala.min + 1,
+                  },
+                  (_, offset) => pregunta.escala.min + offset,
+                ).map((valor) => {
+                  const seleccionada =
+                    respuestas[indice]?.tipo === "escala" &&
+                    respuestas[indice].valor === valor;
+
+                  return (
+                    <label
+                      className={`scale-choice${
+                        seleccionada ? " scale-choice-selected" : ""
+                      }`}
+                      key={valor}
+                    >
+                      <input
+                        checked={seleccionada}
+                        name={`respuesta-${indice}`}
+                        onChange={() =>
+                          actualizarRespuesta(indice, {
+                            tipo: "escala",
+                            valor,
+                          })
+                        }
+                        type="radio"
+                        value={valor}
+                      />
+                      <span>{valor}</span>
+                    </label>
+                  );
+                })}
               </div>
-            )}
-          </div>
+              {(pregunta.escala.etiqueta_min !== undefined ||
+                pregunta.escala.etiqueta_max !== undefined) && (
+                <div className="scale-labels">
+                  {pregunta.escala.etiqueta_min !== undefined && (
+                    <span>{pregunta.escala.etiqueta_min}</span>
+                  )}
+                  {pregunta.escala.etiqueta_max !== undefined && (
+                    <span>{pregunta.escala.etiqueta_max}</span>
+                  )}
+                </div>
+              )}
+            </fieldset>
+          ) : (
+            <div className="scale-control">
+              <label className="sr-only" htmlFor={idPregunta}>
+                {pregunta.texto}
+              </label>
+              <input
+                id={idPregunta}
+                max={pregunta.escala.max}
+                min={pregunta.escala.min}
+                onClick={(evento) =>
+                  actualizarRespuesta(indice, {
+                    tipo: "escala",
+                    valor: Number(evento.currentTarget.value),
+                  })
+                }
+                onChange={(evento) =>
+                  actualizarRespuesta(indice, {
+                    tipo: "escala",
+                    valor: Number(evento.target.value),
+                  })
+                }
+                type="range"
+                value={
+                  respuestas[indice]?.tipo === "escala"
+                    ? respuestas[indice].valor
+                    : pregunta.escala.min
+                }
+              />
+              <output aria-live="polite">
+                {respuestas[indice]?.tipo === "escala"
+                  ? respuestas[indice].valor
+                  : pregunta.escala.min}
+              </output>
+              {(pregunta.escala.etiqueta_min !== undefined ||
+                pregunta.escala.etiqueta_max !== undefined) && (
+                <div className="scale-labels">
+                  {pregunta.escala.etiqueta_min !== undefined && (
+                    <span>{pregunta.escala.etiqueta_min}</span>
+                  )}
+                  {pregunta.escala.etiqueta_max !== undefined && (
+                    <span>{pregunta.escala.etiqueta_max}</span>
+                  )}
+                </div>
+              )}
+            </div>
+          )
         )}
         {pregunta.tipo === "abierta" && (
           <label className="text-answer">
@@ -354,7 +425,7 @@ export default function RenderizadorCuestionario({
   const secciones = cuestionario.secciones ?? [];
 
   return (
-    <main className="questionnaire">
+    <main className="questionnaire" data-style={estiloVisual}>
       {generandoResultado && (
         <p aria-live="polite" className="eyebrow">
           Preparando tu resultado personalizado…

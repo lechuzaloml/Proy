@@ -2,6 +2,7 @@
   "id": "demo-evaluacion-ciberseguridad",
   "cliente": "Autoevaluación de Prácticas Básicas de Ciberseguridad",
   "estado": "template_demo_ficticio",
+  "estilo_visual": "ciberseguridad",
   "landingTitulo": "Autoevaluación de Prácticas Básicas de Ciberseguridad",
   "landingDescripcion": "Reflexiona sobre prácticas generales de acceso, autenticación multifactor, preparación del equipo y reporte de incidentes. Esta autoevaluación ficticia tiene fines educativos: no es una auditoría, evaluación profesional de riesgos ni métrica validada; los puntajes y umbrales son demostrativos.",
   "usa_scoring": true,

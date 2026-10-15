@@ -2,6 +2,7 @@
   "id": "demo-diagnostico-preparacion-comercial",
   "cliente": "Preparación para una Conversación Comercial",
   "estado": "template_demo_ficticio",
+  "estilo_visual": "comercial",
   "landingTitulo": "Preparación para una Conversación Comercial",
   "landingDescripcion": "Comparte información sobre la necesidad, los tiempos y las condiciones que rodean una posible decisión. Todas las preguntas usan opciones de respuesta única para preparar una conversación comercial pertinente. Esta demostración es orientativa y no sustituye la calificación profesional.",
   "usa_scoring": true,

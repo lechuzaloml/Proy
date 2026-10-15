@@ -136,4 +136,34 @@ describe("calcularPerfilSecciones", () => {
       },
     ]);
   });
+
+  it("prepara resúmenes visuales completos para formularios y encuestas sin scoring", () => {
+    for (const template of [
+      onboardingAgencia,
+      saludFinanciera,
+      registroMasterclass,
+    ]) {
+      const cuestionario = obtenerCuestionario(template);
+      const respuestas = Object.fromEntries(
+        cuestionario.preguntas.map((pregunta, indice) => {
+          if (pregunta.tipo === "opcion_multiple") {
+            return [indice, { tipo: "opcion_multiple", indiceOpcion: 0 }];
+          }
+          if (pregunta.tipo === "escala") {
+            return [
+              indice,
+              { tipo: "escala", valor: pregunta.escala.min },
+            ];
+          }
+          return [indice, { tipo: "abierta", valor: "Respuesta de prueba" }];
+        }),
+      );
+      const perfil = calcularPerfilSecciones(cuestionario, respuestas);
+
+      expect(perfil.length).toBeGreaterThanOrEqual(2);
+      expect(perfil.every(({ modo, porcentaje }) =>
+        modo === "avance" && porcentaje === 100
+      )).toBe(true);
+    }
+  });
 });

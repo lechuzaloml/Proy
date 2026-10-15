@@ -2,6 +2,7 @@
   "id": "demo-encuesta-habitos-intereses-financieros",
   "cliente": "Encuesta de Hábitos e Intereses Financieros",
   "estado": "template_demo_ficticio",
+  "estilo_visual": "finanzas",
   "landingTitulo": "Encuesta de Hábitos e Intereses Financieros",
   "landingDescripcion": "Comparte algunos hábitos de organización financiera, objetivos e intereses de aprendizaje. Es una encuesta ficticia para recopilar perspectivas; no es un diagnóstico integral, no ofrece recomendaciones personalizadas ni asesoría financiera profesional.",
   "usa_scoring": false,
