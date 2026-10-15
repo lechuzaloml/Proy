@@ -1,0 +1,434 @@
+CLEAR-IA — DESCRIPCION COMPLETA DE LA APLICACION
+================================================
+
+Este documento describe las funciones implementadas en el proyecto Clear-IA,
+incluyendo el diagnóstico inicial, la biblioteca de templates, la captura de
+datos, los cálculos, los resultados, las gráficas, la calculadora comercial,
+las recomendaciones y las funciones que todavía son demostrativas.
+
+
+1. ¿QUE ES CLEAR-IA?
+--------------------
+
+Clear-IA es una aplicación web hecha con React y TypeScript. Su experiencia
+principal es un diagnóstico breve para orientar a un negocio sobre sus
+prácticas de captación, calificación, priorización y seguimiento de prospectos.
+
+También contiene una biblioteca de ejemplos de cuestionarios, evaluaciones,
+formularios, encuestas y registros de eventos. Los cuestionarios se definen
+mediante archivos JSON: cada configuración puede incluir preguntas, secciones,
+tipo de respuesta, reglas de puntaje, resultados y llamadas a la acción.
+
+La aplicación muestra los cuestionarios y calcula localmente sus resultados.
+Opcionalmente, solicita a Gemini que redacte una versión personalizada del
+resultado. La personalización no calcula el puntaje ni decide el segmento.
+
+
+2. RECORRIDO PRINCIPAL
+----------------------
+
+1. La página inicial presenta Clear-IA y ofrece iniciar un diagnóstico de
+   crecimiento comercial.
+2. Al iniciar se abre el diagnóstico inicial de siete preguntas. En este
+   diagnóstico los datos de contacto se solicitan antes de las preguntas.
+3. Se responde una pregunta por pantalla. Se puede avanzar y volver a preguntas
+   anteriores; el botón para avanzar se habilita después de contestar la
+   pregunta visible.
+4. Al completar el cuestionario, Clear-IA calcula el resultado y el segmento.
+5. Para el diagnóstico inicial se muestra una recomendación de template,
+   acompañada de una explicación basada en el resultado, una calculadora de
+   impacto comercial estimado, una propuesta de acompañamiento y la oferta
+   informativa de Clear-IA Premium.
+6. Desde esa recomendación se puede abrir el template sugerido en modo demo o
+   consultar los tres planes.
+7. También se puede volver a la biblioteca y ejecutar otros templates o casos
+   de referencia. Esos cuestionarios muestran una pantalla de resultado con
+   el texto configurado y, cuando hay suficientes secciones, un perfil gráfico.
+
+La navegación usa el historial del navegador para regresar y restaurar el
+estado del flujo mientras se navega. Incluye controles para volver a la
+biblioteca y, cuando corresponde, al inicio.
+
+
+3. PAGINA INICIAL
+-----------------
+
+La página de bienvenida contiene:
+
+- Una presentación de Clear-IA y un botón para iniciar el diagnóstico.
+- Una duración aproximada anunciada de dos a tres minutos.
+- Una explicación de que el diagnóstico revisa captación, priorización y
+  seguimiento de oportunidades comerciales.
+- Tres áreas descritas: captar oportunidades, priorizar prospectos y dar
+  seguimiento a las conversaciones.
+- Una sección que explica el problema que busca atender y una ilustración de
+  distintas formas de conectar con prospectos.
+- Un botón de inicio adicional al final de la página.
+
+
+4. PREGUNTAS Y FORMULARIOS
+--------------------------
+
+Tipos de pregunta disponibles:
+
+- Opción múltiple: se elige una opción. Cada opción puede tener puntos si la
+  pregunta forma parte de un cuestionario puntuado.
+- Escala: se elige un valor entre un mínimo y un máximo. Los extremos pueden
+  tener etiquetas descriptivas; cada valor también puede tener puntos.
+- Abierta: se escribe texto libre; la configuración puede limitar el número
+  de caracteres. Las preguntas abiertas no producen puntos automáticamente.
+
+Las preguntas pueden organizarse en secciones o quedar sin sección. El orden
+de las preguntas se conserva. En el flujo que usa actualmente la aplicación
+se muestra una pregunta por pantalla, con indicador de progreso, número de
+pregunta y botones Anterior y Siguiente.
+
+El formulario de contacto solicita nombre, correo electrónico y teléfono o
+WhatsApp. Los tres campos son obligatorios y el correo utiliza validación de
+formato del navegador. La configuración del cuestionario determina si el
+formulario aparece al inicio o al final.
+
+El catálogo incluye ambas posiciones: el diagnóstico inicial, el registro de
+masterclass y el formulario de descubrimiento piden el contacto al inicio; las
+evaluaciones de madurez digital, preparación comercial, ciberseguridad y
+liderazgo, el cuestionario de marketing digital y la encuesta financiera lo
+piden al final.
+
+La aplicación mantiene las respuestas y los datos de contacto durante el flujo
+en el estado de la aplicación y del historial de navegación. Aunque construye
+un objeto de lead al terminar, el proyecto actual no lo guarda en una base de
+datos ni lo envía a un servicio de leads, CRM o WhatsApp.
+
+La validación previa comprueba que la configuración tenga campos obligatorios,
+preguntas y opciones con estructura válida, límites de escala coherentes,
+datos de scoring y resultados compatibles con la modalidad del cuestionario.
+Si encuentra errores, los presenta en pantalla en vez de intentar cargar una
+configuración inválida.
+
+
+5. DIAGNOSTICO INICIAL Y PUNTAJE
+--------------------------------
+
+El diagnóstico inicial se titula “Diagnóstico inicial de crecimiento”. Tiene
+siete preguntas distribuidas en tres secciones:
+
+- Tu negocio:
+  - Tipo de negocio (opción múltiple; no puntúa).
+  - Aspecto de captación o seguimiento que se quiere mejorar primero
+    (respuesta abierta; no puntúa; máximo 500 caracteres).
+- Captación y calificación de prospectos:
+  - Cómo genera el negocio nuevas oportunidades (opción múltiple, de 0 a 4).
+  - Consistencia de los criterios para evaluar prospectos (escala de 1 a 5,
+    convertida a puntos de 0 a 4).
+  - Cómo se priorizan los prospectos (opción múltiple, de 0 a 4 puntos;
+    las opciones configuradas valen 0, 2 y 4).
+- Seguimiento y medición:
+  - Claridad de la medición del avance entre etapas (escala de 1 a 5,
+    convertida a puntos de 0 a 4).
+  - Descripción del seguimiento a prospectos interesados (opción múltiple,
+    con opciones de 0, 2 y 4 puntos).
+
+Cinco preguntas participan en el puntaje. Las preguntas sobre tipo de negocio
+y prioridad de mejora son informativas y no afectan el resultado. El puntaje
+máximo es 20.
+
+El cálculo suma los puntos de las opciones elegidas y los puntos asignados al
+valor elegido en cada escala. Las preguntas sin respuesta y las que no
+participan en el scoring no agregan puntos. Si una respuesta no tiene un valor
+de puntos configurado, aporta cero.
+
+Rangos del diagnóstico inicial:
+
+- 0 a 6: proceso_por_construir.
+- 7 a 13: proceso_en_consolidacion.
+- 14 a 20: proceso_preparado_para_crecer.
+
+Cada segmento tiene un texto de resultado y una llamada a la acción
+informativa configurados. La llamada a la acción del resultado se muestra como
+texto; no ejecuta por sí sola un pago ni una navegación.
+
+Si un puntaje no cae dentro de ninguna regla o no existe un resultado asociado
+al segmento, la aplicación presenta un error explícito en lugar de inventar un
+resultado.
+
+
+6. BIBLIOTECA Y CONTENIDO DE LOS TEMPLATES
+-----------------------------------------
+
+La biblioteca se genera a partir de los archivos de configuración y metadatos
+incluidos en el proyecto. Cada tarjeta muestra nombre, formato, caso de uso,
+nicho y descripción, y permite abrir el cuestionario. Hay ocho templates:
+
+1. Evaluación de Madurez de Prácticas Digitales
+   - Assessment de tecnología, orientado a generación de leads.
+   - Seis preguntas: dos de opción múltiple, dos de escala y dos abiertas.
+   - Revisa herramientas, permisos, gestión de accesos, adopción de cambios y
+     próximos pasos.
+   - Puntajes: 0–34 prácticas_por_ordenar; 35–69 prácticas_en_evolucion;
+     70–100 prácticas_integradas.
+
+2. Preparación para una Conversación Comercial
+   - Cuestionario de opción única para calificación comercial.
+   - Siete preguntas de opción múltiple: seis puntuadas y una informativa.
+   - Revisa necesidad y prioridad, momento de compra, participación en la
+     decisión y capacidad para avanzar.
+   - Puntajes: 0–39 exploracion_inicial; 40–79 evaluacion_activa;
+     80–120 listo_para_siguiente_paso.
+
+3. Autoevaluación de Prácticas Básicas de Ciberseguridad
+   - Assessment de tecnología y ciberseguridad, orientado a generación de leads.
+   - Seis preguntas: dos de opción múltiple, dos de escala y dos abiertas.
+   - Revisa cuentas y permisos, autenticación multifactor, preparación del
+     equipo y prioridades de seguridad.
+   - Puntajes: 0–34 prácticas_por_fortalecer; 35–69 preparacion_basica;
+     70–100 buenas_practicas_en_uso.
+
+4. Evaluación de Liderazgo
+   - Assessment de desarrollo personal, orientado a generación de leads.
+   - Seis preguntas: dos de opción múltiple, dos de escala y dos abiertas.
+   - Revisa comunicación y dirección, desarrollo del equipo y reflexión
+     personal.
+   - Puntajes: 0–34 habitos_iniciales; 35–69 habitos_en_practica;
+     70–100 habitos_consistentes.
+
+5. Registro de Interés — Masterclass
+   - Registro de evento sin puntaje.
+   - Cinco preguntas: tres de opción múltiple, una de escala y una abierta.
+   - Recopila interés, objetivo de aprendizaje, perfil, familiaridad con el
+     tema y modalidad preferida.
+   - Muestra un resultado fijo de agradecimiento. Es una demostración: no crea
+     una inscripción o reserva ni envía confirmaciones o recordatorios.
+
+6. Descubrimiento de Proyecto de Marketing
+   - Formulario de descubrimiento comercial sin puntaje.
+   - Siete preguntas abiertas para conocer la organización, audiencia, etapa
+     del proyecto, objetivos, entregables, materiales, referencias y criterios
+     de éxito.
+   - Muestra un resultado fijo de agradecimiento. No es un onboarding operativo,
+     no genera un resumen y no envía ni conserva las respuestas fuera del flujo
+     actual.
+
+7. Cuestionario de Prácticas de Marketing Digital
+   - Cuestionario Sí/No con cuatro preguntas de opción múltiple puntuadas.
+   - Revisa audiencia, objetivos de canales y uso de métricas en planificación
+     y medición.
+   - Puntajes: 0–24 prácticas_por_definir; 25–74 practicas_en_desarrollo;
+     75–100 practicas_consistentes.
+
+8. Encuesta de Hábitos e Intereses Financieros
+   - Encuesta sin puntaje.
+   - Seis preguntas: tres de opción múltiple, una de escala y dos abiertas.
+   - Revisa organización de ingresos y gastos, facilidad para identificar
+     gastos recurrentes, objetivos, frecuencia de revisión y temas de interés.
+   - Muestra un resultado fijo; no es una evaluación de fortalezas ni debilidades.
+
+Los templates también incluyen tres casos de referencia que se pueden abrir
+desde la biblioteca: Ser Empresario, Merkatics y Caso nuevo (este último está
+marcado como ficticio). Son ejemplos aparte del catálogo de ocho templates.
+
+
+7. CALCULOS DE RESULTADO Y PERFILES POR SECCION
+----------------------------------------------
+
+En cuestionarios puntuados, el total se obtiene sumando las respuestas
+puntuadas y se asigna el primer segmento cuya regla incluya ese total. Los
+límites mínimo y máximo de cada regla son inclusivos. El resultado textual se
+busca usando el nombre de ese segmento.
+
+Además del puntaje total, la pantalla de resultado puede mostrar un perfil por
+sección:
+
+- Para un cuestionario con scoring, calcula cada sección como puntos obtenidos
+  divididos entre el máximo posible de sus preguntas puntuadas, multiplicado
+  por 100 y redondeado al entero más cercano.
+- El máximo de una pregunta de opción múltiple es el mayor puntaje de sus
+  opciones. El máximo de una escala es el mayor puntaje configurado para sus
+  valores dentro del rango de la escala.
+- Las preguntas sin puntaje máximo positivo y las preguntas abiertas no
+  contribuyen a ese perfil. Las preguntas puntuadas no contestadas permanecen
+  en el máximo posible y, por tanto, reducen el porcentaje.
+- Para un formulario, encuesta o registro sin scoring, calcula por sección el
+  porcentaje de preguntas respondidas: preguntas completas dividido entre
+  preguntas de esa sección, por 100, redondeado. Una respuesta abierta cuenta
+  como respondida si contiene texto no vacío después de quitar espacios.
+- Una pregunta sin sección se agrupa usando el texto de la pregunta como
+  dimensión del perfil.
+
+La pantalla muestra el perfil solo si hay al menos dos dimensiones. El texto
+aclara si se presenta un perfil de puntaje o un resumen de avance y advierte
+que el porcentaje de formularios sin scoring no representa una evaluación.
+
+
+8. GRAFICAS Y VISUALIZACIONES
+-----------------------------
+
+Perfil del resultado:
+
+- Gráfica radial SVG con anillos de referencia al 25, 50, 75 y 100 por ciento.
+- Un eje por sección o dimensión.
+- Un punto por porcentaje y una figura rellena cuando hay al menos tres puntos.
+- Etiqueta emergente con nombre de dimensión y porcentaje.
+- Lista detallada que acompaña la gráfica, con porcentaje, número de preguntas
+  respondidas y barra de progreso por dimensión.
+- Etiquetas accesibles para tecnologías de asistencia.
+
+Controles de cuestionario:
+
+- Barra de avance general y texto “Pregunta N de total” cuando se responde una
+  pregunta por pantalla.
+- Las escalas pueden representarse como controles circulares o segmentos
+  visuales cuando el estilo y el rango configurados lo permiten; en otros
+  casos se utiliza un control deslizante con valor actual y etiquetas de los
+  extremos.
+- Las opciones de respuesta se muestran como opciones seleccionables. Los
+  estilos visuales dependen del template.
+
+Calculadora comercial:
+
+- Cuadrícula de 100 puntos que representa aproximadamente el porcentaje de
+  prospectos sin seguimiento.
+- Gráfica de barras con la proyección acumulada de los doce meses. Se muestran
+  etiquetas de los meses 1, 6 y 12; cada barra revela su importe al pasar sobre
+  ella.
+- La altura de las barras usa una escala logarítmica comprimida para poder
+  visualizar escenarios de distinto tamaño. Los importes exactos se muestran
+  en el resumen y en la información emergente.
+
+
+9. CALCULADORA DE IMPACTO COMERCIAL
+-----------------------------------
+
+La calculadora aparece en la pantalla de recomendación del diagnóstico inicial.
+Permite cambiar cuatro datos mediante controles deslizantes:
+
+- Prospectos mensuales: de 10 a 1,000, en incrementos de 10. Valor inicial: 160.
+- Ticket promedio: de $500 a $100,000 MXN, en incrementos de $500. Valor
+  inicial: $5,000 MXN.
+- Conversión actual: de 0 a 100 por ciento, en incrementos de 1. Valor
+  inicial: 5 por ciento.
+- Prospectos sin seguimiento: de 0 hasta el número de prospectos mensuales.
+  Valor inicial: 40. Si se reduce el número de prospectos mensuales, el número
+  sin seguimiento también se limita para no excederlo.
+
+Calcula y muestra:
+
+- Porcentaje sin seguimiento = prospectos sin seguimiento / prospectos
+  mensuales × 100.
+- Ventas actuales estimadas por mes = prospectos mensuales × tasa de conversión.
+  La cifra se muestra como cantidad estimada, con un decimal.
+- Oportunidad mensual estimada = prospectos sin seguimiento × tasa de
+  conversión × ticket promedio.
+- Proyección anual ilustrativa = oportunidad mensual estimada × 12.
+- Proyección acumulada del mes N = oportunidad mensual estimada × N, para
+  N de 1 a 12.
+
+Con los valores iniciales, el cálculo equivale a 25 por ciento sin seguimiento,
+8 ventas estimadas al mes, $10,000 MXN de oportunidad mensual y $120,000 MXN
+en doce meses. Son estimaciones hipotéticas: no prueban ventas perdidas ni
+garantizan ventas futuras.
+
+
+10. RESULTADOS, PERSONALIZACION Y GEMINI
+----------------------------------------
+
+Un cuestionario puede tener un resultado fijo o varios resultados asociados a
+segmentos. El resultado puede incluir una CTA con texto y acción, que en la
+pantalla se presenta como información.
+
+Al completar un cuestionario, la aplicación intenta personalizar el texto del
+resultado con el endpoint del servidor. Envía a ese endpoint:
+
+- Nombre del cuestionario.
+- Resultado base ya calculado.
+- Segmento ya calculado, si existe.
+- Preguntas contestadas y respuestas legibles, incluidas las respuestas
+  abiertas que se hayan escrito.
+
+No incluye nombre, correo ni teléfono en la solicitud a Gemini. El servidor
+usa la variable GEMINI_API_KEY, que debe configurarse en el entorno del
+servidor, no como variable pública del cliente.
+
+Gemini recibe instrucciones para conservar el sentido del resultado y el
+segmento, no recalcular puntajes ni inventar datos, y tratar las respuestas
+como datos en lugar de instrucciones. Se solicitan dos frases completas en
+español y un máximo de 60 palabras. Se intenta primero el modelo
+gemini-3.5-flash-lite y luego gemini-2.5-flash si el primero falla de una forma
+reintentable o produce texto incompleto. Las interacciones se envían con
+store: false.
+
+Si falta la configuración, hay un error de API o la respuesta no es válida,
+la aplicación informa que no pudo personalizar el resultado y muestra el
+resultado base. El cálculo del puntaje y la selección del segmento siguen
+siendo responsabilidad del código de la aplicación.
+
+Las respuestas abiertas pueden contener datos personales. Se recomienda no
+escribir información sensible en ellas.
+
+
+11. RECOMENDACIONES Y PLANES
+----------------------------
+
+Después del diagnóstico inicial, el segmento determina el template y el plan
+recomendados:
+
+- proceso_por_construir: formulario Descubrimiento de Proyecto de Marketing y
+  Plan Inicial, anunciado a $19 USD al mes.
+- proceso_en_consolidacion: Cuestionario de Prácticas de Marketing Digital y
+  Plan Pro, anunciado a $49 USD al mes.
+- proceso_preparado_para_crecer: Preparación para una Conversación Comercial y
+  Plan Avanzado, anunciado a $99 USD al mes.
+
+La pantalla de planes compara los tres planes y destaca el recomendado.
+Actualmente todos muestran los mismos beneficios:
+
+Disponibles:
+- Biblioteca demostrativa de templates.
+- Cuestionarios puntuados con resultados por segmento.
+- Captura de datos de contacto.
+
+Próximamente:
+- Almacenamiento y panel de leads.
+- Conexión con CRM y WhatsApp de Merkatics.
+- Personalización de cuestionarios propios.
+
+Los precios se identifican en el código como ejemplos pendientes de definición.
+Los enlaces de pago están vacíos, así que los botones de suscripción solo
+muestran que el pago se habilitará próximamente; actualmente no procesan pagos.
+
+La pantalla de recomendación también incluye una propuesta independiente de
+acompañamiento comercial (entender hallazgos, priorizar oportunidades y trazar
+un siguiente paso). La comunidad de WhatsApp se anuncia como próximamente; el
+botón “Unirme” no tiene una integración operativa.
+
+
+12. FUNCIONES QUE NO ESTAN IMPLEMENTADAS O SON DEMOSTRATIVAS
+-----------------------------------------------------------
+
+- No hay almacenamiento persistente de leads en una base de datos ni panel
+  operativo de prospectos.
+- No hay conexión implementada con un CRM o WhatsApp.
+- No hay pasarela de pago ni suscripciones procesadas.
+- El botón de comunidad de WhatsApp no conecta a un grupo.
+- El registro de masterclass no crea reservas, inscripciones ni envía
+  confirmaciones o recordatorios.
+- El formulario de descubrimiento de proyecto no es un onboarding operativo,
+  no crea un resumen y no envía o conserva la información fuera del flujo.
+- Los templates y los casos de referencia se ejecutan como demostraciones.
+- Los CTA configurados son informativos; la aplicación no ejecuta la acción
+  descrita automáticamente.
+- La calculadora de impacto es ilustrativa y no constituye una predicción
+  financiera ni una garantía de resultados.
+
+
+13. VISTA GENERAL TECNICA
+-------------------------
+
+- Interfaz: React y TypeScript.
+- Servidor local: Express/Node.js, con endpoint para solicitar la
+  personalización del resultado.
+- Catálogo: archivos JSON y metadatos JSON agrupados por tipo de plantilla.
+- El validador comprueba la estructura del cuestionario antes de renderizarlo.
+- La lógica de scoring, segmentación y perfil por sección se ejecuta en la
+  aplicación; Gemini se utiliza únicamente para redactar una personalización.
+
+Fin del documento.
