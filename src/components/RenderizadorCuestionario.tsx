@@ -15,6 +15,7 @@ import type { RespuestaParaPersonalizacion } from "../logic/personalizarResultad
 export interface EstadoFlujoCuestionario {
   respuestas: RespuestasCuestionario;
   datosContacto: DatosContacto | null;
+  consentimientoAceptado: boolean;
   indicePreguntaActual: number;
   mostrarPreguntas: boolean;
 }
@@ -34,6 +35,7 @@ interface RenderizadorCuestionarioProps {
     modoHistorial?: "reemplazar" | "avanzar" | "retroceder",
   ) => void;
   unaPreguntaPorVista?: boolean;
+  requiereConsentimiento?: boolean;
 }
 
 interface EntradaPregunta {
@@ -47,12 +49,16 @@ export default function RenderizadorCuestionario({
   estadoInicial,
   onEstadoChange,
   unaPreguntaPorVista = false,
+  requiereConsentimiento = false,
 }: RenderizadorCuestionarioProps) {
   const [respuestas, setRespuestas] = useState<RespuestasCuestionario>(
     () => estadoInicial?.respuestas ?? {},
   );
   const [datosContacto, setDatosContacto] = useState<DatosContacto | null>(
     () => estadoInicial?.datosContacto ?? null,
+  );
+  const [consentimientoAceptado, setConsentimientoAceptado] = useState(
+    () => estadoInicial?.consentimientoAceptado ?? false,
   );
   const [indicePreguntaActual, setIndicePreguntaActual] = useState(
     () => estadoInicial?.indicePreguntaActual ?? 0,
@@ -73,6 +79,7 @@ export default function RenderizadorCuestionario({
       {
         respuestas,
         datosContacto,
+        consentimientoAceptado,
         indicePreguntaActual,
         mostrarPreguntas,
         ...siguiente,
@@ -173,6 +180,11 @@ export default function RenderizadorCuestionario({
   function actualizarDatosContacto(datos: DatosContacto) {
     setDatosContacto(datos);
     publicarEstado({ datosContacto: datos });
+  }
+
+  function actualizarConsentimiento(aceptado: boolean) {
+    setConsentimientoAceptado(aceptado);
+    publicarEstado({ consentimientoAceptado: aceptado });
   }
 
   function cambiarPregunta(indice: number) {
@@ -400,23 +412,28 @@ export default function RenderizadorCuestionario({
           )
         )}
         {pregunta.tipo === "abierta" && (
-          <label className="text-answer">
-            <span className="sr-only">{pregunta.texto}</span>
-            <textarea
-              maxLength={pregunta.limite_caracteres}
-              onChange={(evento) =>
-                actualizarRespuesta(indice, {
-                  tipo: "abierta",
-                  valor: evento.target.value,
-                })
-              }
-              value={
-                respuestas[indice]?.tipo === "abierta"
-                  ? respuestas[indice].valor
-                  : ""
-              }
-            />
-          </label>
+          <>
+            <p className="sensitive-data-notice">
+              No escribas datos sensibles.
+            </p>
+            <label className="text-answer">
+              <span className="sr-only">{pregunta.texto}</span>
+              <textarea
+                maxLength={pregunta.limite_caracteres}
+                onChange={(evento) =>
+                  actualizarRespuesta(indice, {
+                    tipo: "abierta",
+                    valor: evento.target.value,
+                  })
+                }
+                value={
+                  respuestas[indice]?.tipo === "abierta"
+                    ? respuestas[indice].valor
+                    : ""
+                }
+              />
+            </label>
+          </>
         )}
       </article>
     );
@@ -440,6 +457,9 @@ export default function RenderizadorCuestionario({
           <FormularioContacto
             datosIniciales={datosContacto ?? undefined}
             deshabilitado={generandoResultado}
+            requiereConsentimiento={requiereConsentimiento}
+            consentimientoAceptado={consentimientoAceptado}
+            onConsentimientoChange={actualizarConsentimiento}
             onCambio={actualizarDatosContacto}
             onCompletar={completarContacto}
           />

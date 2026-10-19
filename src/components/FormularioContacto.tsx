@@ -1,5 +1,6 @@
 import { useState, type FormEvent } from "react";
 import type { Lead } from "../types/model";
+import { TEXTO_AVISO_PRIVACIDAD } from "../config/privacidad";
 
 export type DatosContacto = Pick<Lead, "nombre" | "correo" | "telefono">;
 
@@ -8,6 +9,9 @@ interface FormularioContactoProps {
   onCambio?: (datos: DatosContacto) => void;
   onCompletar: (datos: DatosContacto) => void;
   deshabilitado?: boolean;
+  requiereConsentimiento?: boolean;
+  consentimientoAceptado?: boolean;
+  onConsentimientoChange?: (aceptado: boolean) => void;
 }
 
 const DATOS_VACIOS: DatosContacto = {
@@ -21,6 +25,9 @@ export default function FormularioContacto({
   onCambio,
   onCompletar,
   deshabilitado = false,
+  requiereConsentimiento = false,
+  consentimientoAceptado = false,
+  onConsentimientoChange,
 }: FormularioContactoProps) {
   const [datos, setDatos] = useState(datosIniciales ?? DATOS_VACIOS);
 
@@ -32,6 +39,9 @@ export default function FormularioContacto({
 
   function enviar(evento: FormEvent<HTMLFormElement>) {
     evento.preventDefault();
+    if (requiereConsentimiento && !consentimientoAceptado) {
+      return;
+    }
     onCompletar(datos);
   }
 
@@ -71,7 +81,39 @@ export default function FormularioContacto({
           value={datos.telefono}
         />
       </label>
-      <button className="submit-button" disabled={deshabilitado} type="submit">
+      {requiereConsentimiento ? (
+        <div className="privacy-consent">
+          <details>
+            <summary>Leer aviso de privacidad</summary>
+            <p>{TEXTO_AVISO_PRIVACIDAD}</p>
+          </details>
+          <label>
+            <input
+              checked={consentimientoAceptado}
+              disabled={deshabilitado}
+              onChange={(evento) =>
+                onConsentimientoChange?.(evento.target.checked)
+              }
+              required
+              type="checkbox"
+            />
+            <span>
+              He leído el aviso y consiento el uso de mis datos para los fines
+              descritos.
+            </span>
+          </label>
+        </div>
+      ) : (
+        <p className="demo-notice">Demostración: no se guardan datos.</p>
+      )}
+      <button
+        className="submit-button"
+        disabled={
+          deshabilitado ||
+          (requiereConsentimiento && !consentimientoAceptado)
+        }
+        type="submit"
+      >
         {deshabilitado ? "Generando resultado…" : "Continuar"}
       </button>
     </form>

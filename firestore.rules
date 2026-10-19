@@ -1,0 +1,102 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+    function esAdministrador() {
+      return request.auth != null
+        && request.auth.token.email_verified == true
+        && request.auth.token.email == "ADMIN_EMAIL_PENDIENTE";
+    }
+
+    function textoRespuestaValido(respuestas, id) {
+      return !(id in respuestas)
+        || (respuestas[id] is string && respuestas[id].size() <= 500);
+    }
+
+    function respuestasValidas(respuestas) {
+      return respuestas is map
+        && respuestas.keys().hasOnly([
+          "tipo-negocio",
+          "captacion-leads",
+          "calificacion-prospectos",
+          "criterios-prioridad",
+          "medicion-conversion",
+          "seguimiento-prospectos",
+          "prioridad-crecimiento"
+        ])
+        && respuestas.size() <= 7
+        && textoRespuestaValido(respuestas, "tipo-negocio")
+        && textoRespuestaValido(respuestas, "captacion-leads")
+        && textoRespuestaValido(respuestas, "calificacion-prospectos")
+        && textoRespuestaValido(respuestas, "criterios-prioridad")
+        && textoRespuestaValido(respuestas, "medicion-conversion")
+        && textoRespuestaValido(respuestas, "seguimiento-prospectos")
+        && textoRespuestaValido(respuestas, "prioridad-crecimiento");
+    }
+
+    function consentimientoValido(consentimiento) {
+      return consentimiento is map
+        && consentimiento.keys().hasAll(["aceptado", "version", "fecha"])
+        && consentimiento.keys().hasOnly(["aceptado", "version", "fecha"])
+        && consentimiento.aceptado == true
+        && consentimiento.version is string
+        && consentimiento.version.size() <= 100
+        && consentimiento.fecha is timestamp;
+    }
+
+    match /leads/{leadId} {
+      allow create: if request.resource.data.keys().hasAll([
+          "nombre",
+          "correo",
+          "telefono",
+          "consentimiento",
+          "cuestionarioId",
+          "respuestas",
+          "puntaje",
+          "segmento",
+          "templateRecomendadoId",
+          "planRecomendado",
+          "estado",
+          "creadoEn"
+        ])
+        && request.resource.data.keys().hasOnly([
+          "nombre",
+          "correo",
+          "telefono",
+          "consentimiento",
+          "cuestionarioId",
+          "respuestas",
+          "puntaje",
+          "segmento",
+          "templateRecomendadoId",
+          "planRecomendado",
+          "estado",
+          "creadoEn"
+        ])
+        && request.resource.data.nombre is string
+        && request.resource.data.nombre.size() <= 120
+        && request.resource.data.correo is string
+        && request.resource.data.correo.size() <= 254
+        && request.resource.data.telefono is string
+        && request.resource.data.telefono.size() <= 40
+        && consentimientoValido(request.resource.data.consentimiento)
+        && request.resource.data.cuestionarioId is string
+        && request.resource.data.cuestionarioId.size() <= 100
+        && request.resource.data.cuestionarioId == "clear-ia-diagnostico-inicial"
+        && respuestasValidas(request.resource.data.respuestas)
+        && request.resource.data.puntaje is int
+        && request.resource.data.puntaje >= 0
+        && request.resource.data.puntaje <= 20
+        && request.resource.data.segmento is string
+        && request.resource.data.segmento.size() <= 100
+        && request.resource.data.templateRecomendadoId is string
+        && request.resource.data.templateRecomendadoId.size() <= 300
+        && request.resource.data.planRecomendado is string
+        && request.resource.data.planRecomendado.size() <= 100
+        && request.resource.data.estado == "nuevo"
+        && request.resource.data.creadoEn == request.time;
+
+      allow read, update, delete: if esAdministrador();
+    }
+  }
+}

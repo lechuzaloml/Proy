@@ -1,5 +1,6 @@
 import TarjetaTemplate from "./TarjetaTemplate";
 import type { TemplateCatalogo } from "../templates/catalogo";
+import { tienePortadaTemplate } from "./PantallaInicioTemplate";
 
 export interface CasoReferencia {
   id: string;
@@ -11,7 +12,12 @@ export interface CasoReferencia {
 interface BibliotecaTemplatesProps {
   templates: TemplateCatalogo[];
   casosReferencia: CasoReferencia[];
-  onSeleccionar: (id: string, nombre: string, configuracion: unknown) => void;
+  onSeleccionar: (
+    id: string,
+    nombre: string,
+    configuracion: unknown,
+    origenIntroduccionTemplate?: "biblioteca" | "recomendacion",
+  ) => void;
 }
 
 export default function BibliotecaTemplates({
@@ -42,6 +48,7 @@ export default function BibliotecaTemplates({
                   template.id,
                   template.metadata.nombre,
                   template.configuracion,
+                  tienePortadaTemplate(template.id) ? "biblioteca" : undefined,
                 )
               }
             />

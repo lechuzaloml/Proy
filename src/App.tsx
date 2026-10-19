@@ -7,6 +7,7 @@ import RenderizadorCuestionario from "./components/RenderizadorCuestionario";
 import PantallaResultado from "./components/PantallaResultado";
 import PantallaRecomendacion from "./components/PantallaRecomendacion";
 import PantallaPlanes from "./components/PantallaPlanes";
+import PantallaInicioTemplate from "./components/PantallaInicioTemplate";
 import { catalogoTemplates } from "./templates/catalogo";
 import { recomendaciones } from "./config/recomendaciones";
 import diagnosticoInicial from "../templates/assessments/diagnostico-inicial.json";
@@ -20,6 +21,9 @@ import type {
 import type { Lead } from "./types/model";
 import { validarCuestionario } from "./validation/validarCuestionario";
 import type { EstadoFlujoCuestionario } from "./components/RenderizadorCuestionario";
+import { serverTimestamp } from "firebase/firestore";
+import { construirDocumentoLead } from "./lib/construirDocumentoLead";
+import { guardarLead } from "./lib/guardarLead";
 
 interface SeleccionCuestionario {
   id: string;
@@ -29,9 +33,11 @@ interface SeleccionCuestionario {
 
 interface EstadoAplicacion {
   historialId: number;
+  idIntento: string | null;
   bienvenidaCompletada: boolean;
   seleccion: SeleccionCuestionario | null;
   mostrarPlanes: boolean;
+  origenIntroduccionTemplate: "biblioteca" | "recomendacion" | null;
   envio: {
     lead: Lead;
     calculo: ResultadoCalculado;
@@ -56,9 +62,11 @@ function obtenerEstadoInicial(): EstadoAplicacion {
 
   const inicial: EstadoAplicacion = {
     historialId: 0,
+    idIntento: null,
     bienvenidaCompletada: false,
     seleccion: null,
     mostrarPlanes: false,
+    origenIntroduccionTemplate: null,
     envio: null,
     estadoCuestionario: null,
   };
@@ -93,6 +101,7 @@ const casosReferencia: CasoReferencia[] = [
 export default function App() {
   const [estadoApp, setEstadoApp] = useState(obtenerEstadoInicial);
   const estadoAppRef = useRef(estadoApp);
+  const intentosGuardadosRef = useRef(new Set<string>());
   const { seleccion, bienvenidaCompletada, mostrarPlanes, envio } = estadoApp;
   const calculo = envio?.calculo ?? null;
   const resultadoValidacion = seleccion
@@ -164,13 +173,16 @@ export default function App() {
     id: string,
     nombre: string,
     configuracion: unknown,
+    origenIntroduccionTemplate: "biblioteca" | "recomendacion" | null = null,
   ) {
     navegar({
       ...estadoAppRef.current,
       bienvenidaCompletada: true,
+      idIntento: null,
       seleccion: { id, nombre, configuracion },
       envio: null,
       mostrarPlanes: false,
+      origenIntroduccionTemplate,
       estadoCuestionario: null,
     });
   }
@@ -181,6 +193,7 @@ export default function App() {
       seleccion: null,
       envio: null,
       mostrarPlanes: false,
+      origenIntroduccionTemplate: null,
       estadoCuestionario: null,
     });
   }
@@ -189,6 +202,7 @@ export default function App() {
     navegar({
       ...estadoAppRef.current,
       bienvenidaCompletada: true,
+      idIntento: crypto.randomUUID(),
       seleccion: {
         id: "diagnostico-inicial",
         nombre: "Diagnóstico inicial de crecimiento",
@@ -196,6 +210,7 @@ export default function App() {
       },
       envio: null,
       mostrarPlanes: false,
+      origenIntroduccionTemplate: null,
       estadoCuestionario: null,
       historialId: estadoAppRef.current.historialId,
     });
@@ -246,10 +261,18 @@ export default function App() {
       ) : (
         <button
           className="secondary-button"
-          onClick={regresarBiblioteca}
+          onClick={
+            estadoApp.origenIntroduccionTemplate
+              ? () => window.history.back()
+              : regresarBiblioteca
+          }
           type="button"
         >
-          Volver a la biblioteca
+          {estadoApp.origenIntroduccionTemplate
+            ? estadoApp.origenIntroduccionTemplate === "recomendacion"
+              ? "Volver a recomendación"
+              : "Volver a la biblioteca"
+            : "Volver a la biblioteca"}
         </button>
       )}
       <span>{seleccion.nombre}</span>
@@ -269,6 +292,42 @@ export default function App() {
             ))}
           </ul>
         </main>
+      </>
+    );
+  }
+
+  if (estadoApp.origenIntroduccionTemplate) {
+    const templateIntroduccion = catalogoTemplates.find(
+      ({ id }) => id === seleccion.id,
+    );
+    if (!templateIntroduccion) {
+      return (
+        <>
+          {navegacion}
+          <main className="validation-errors" role="alert">
+            <h1>No se encontró el template recomendado</h1>
+            <p>Vuelve a la recomendación e inténtalo de nuevo.</p>
+          </main>
+        </>
+      );
+    }
+
+    return (
+      <>
+        {navegacion}
+        <PantallaInicioTemplate
+          templateId={seleccion.id}
+          template={templateIntroduccion.metadata}
+          origen={estadoApp.origenIntroduccionTemplate}
+          onComenzar={() =>
+            navegar({
+              ...estadoAppRef.current,
+              origenIntroduccionTemplate: null,
+              estadoCuestionario: null,
+              envio: null,
+            })
+          }
+        />
       </>
     );
   }
@@ -342,6 +401,7 @@ export default function App() {
                 template.id,
                 template.metadata.nombre,
                 template.configuracion,
+                "recomendacion",
               )
             }
             onVerPlanes={() =>
@@ -380,9 +440,47 @@ export default function App() {
           respuestas,
           contenidoPersonalizado,
           errorPersonalizacion,
-        ) =>
+        ) => {
+          const estadoActual = estadoAppRef.current;
+          if (
+            seleccion.id === "diagnostico-inicial" &&
+            resultado.estado === "ok" &&
+            resultado.tipo === "segmentado" &&
+            estadoActual.idIntento &&
+            estadoActual.estadoCuestionario?.consentimientoAceptado === true
+          ) {
+            const recomendacion = recomendaciones[resultado.segmento];
+            if (recomendacion) {
+              const documento = construirDocumentoLead({
+                contacto: lead,
+                cuestionario: resultadoValidacion.data,
+                respuestas,
+                puntaje: resultado.puntajeTotal,
+                segmento: resultado.segmento,
+                templateRecomendadoId:
+                  recomendacion.templateRecomendadoId,
+                planRecomendado: recomendacion.plan.nombre,
+                consentimientoAceptado: true,
+                consentimientoFecha: serverTimestamp(),
+                creadoEn: serverTimestamp(),
+              });
+              const idIntento = estadoActual.idIntento;
+              if (!intentosGuardadosRef.current.has(idIntento)) {
+                intentosGuardadosRef.current.add(idIntento);
+                void guardarLead(idIntento, documento).catch(
+                  (error: unknown) => {
+                    intentosGuardadosRef.current.delete(idIntento);
+                    console.error(
+                      "No se pudo guardar el lead del diagnóstico.",
+                      error,
+                    );
+                  },
+                );
+              }
+            }
+          }
           navegar({
-            ...estadoAppRef.current,
+            ...estadoActual,
             envio: {
               lead,
               calculo: resultado,
@@ -390,9 +488,10 @@ export default function App() {
               contenidoPersonalizado,
               errorPersonalizacion,
             },
-          })
-        }
+          });
+        }}
         onEstadoChange={actualizarEstadoCuestionario}
+        requiereConsentimiento={seleccion.id === "diagnostico-inicial"}
         unaPreguntaPorVista
       />
     </>
