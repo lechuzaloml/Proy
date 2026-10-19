@@ -10,6 +10,7 @@ import PantallaPlanes from "./components/PantallaPlanes";
 import PantallaInicioTemplate from "./components/PantallaInicioTemplate";
 import { catalogoTemplates } from "./templates/catalogo";
 import { recomendaciones } from "./config/recomendaciones";
+import { obtenerPresentacionTemplate } from "./config/presentacionTemplates";
 import diagnosticoInicial from "../templates/assessments/diagnostico-inicial.json";
 import casoNuevo from "../spec/Ejemplos/caso-nuevo.json";
 import serEmpresario from "../spec/Ejemplos/ser-empresario-config.json";
@@ -318,7 +319,10 @@ export default function App() {
         <PantallaInicioTemplate
           templateId={seleccion.id}
           template={templateIntroduccion.metadata}
-          origen={estadoApp.origenIntroduccionTemplate}
+          cuestionario={resultadoValidacion.data}
+          presentacion={obtenerPresentacionTemplate(
+            resultadoValidacion.data.id,
+          )}
           onComenzar={() =>
             navegar({
               ...estadoAppRef.current,
@@ -492,6 +496,11 @@ export default function App() {
         }}
         onEstadoChange={actualizarEstadoCuestionario}
         requiereConsentimiento={seleccion.id === "diagnostico-inicial"}
+        presentacion={
+          seleccion.id === "diagnostico-inicial"
+            ? undefined
+            : obtenerPresentacionTemplate(resultadoValidacion.data.id)
+        }
         unaPreguntaPorVista
       />
     </>

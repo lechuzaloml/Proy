@@ -11,6 +11,7 @@ import {
 } from "../logic/calcularResultado";
 import { personalizarResultado } from "../logic/personalizarResultado";
 import type { RespuestaParaPersonalizacion } from "../logic/personalizarResultado";
+import type { PresentacionTemplate } from "../config/presentacionTemplates";
 
 export interface EstadoFlujoCuestionario {
   respuestas: RespuestasCuestionario;
@@ -36,6 +37,7 @@ interface RenderizadorCuestionarioProps {
   ) => void;
   unaPreguntaPorVista?: boolean;
   requiereConsentimiento?: boolean;
+  presentacion?: PresentacionTemplate;
 }
 
 interface EntradaPregunta {
@@ -50,6 +52,7 @@ export default function RenderizadorCuestionario({
   onEstadoChange,
   unaPreguntaPorVista = false,
   requiereConsentimiento = false,
+  presentacion,
 }: RenderizadorCuestionarioProps) {
   const [respuestas, setRespuestas] = useState<RespuestasCuestionario>(
     () => estadoInicial?.respuestas ?? {},
@@ -251,26 +254,35 @@ export default function RenderizadorCuestionario({
     const idPregunta = `pregunta-${indice}`;
     const esOpcionDoble =
       pregunta.tipo === "opcion_multiple" && pregunta.opciones.length === 2;
-    const esEscalaVisual =
-      pregunta.tipo === "escala" &&
-      Number.isInteger(pregunta.escala.min) &&
-      Number.isInteger(pregunta.escala.max) &&
-      pregunta.escala.max - pregunta.escala.min <= 9 &&
-      (estiloVisual === "finanzas" ||
-        estiloVisual === "ciberseguridad" ||
-        estiloVisual === "liderazgo" ||
-        estiloVisual === "madurez-digital" ||
-        estiloVisual === "masterclass");
+    const esEscalaVisual = presentacion
+      ? presentacion.escala !== "deslizador"
+      : pregunta.tipo === "escala" &&
+        Number.isInteger(pregunta.escala.min) &&
+        Number.isInteger(pregunta.escala.max) &&
+        pregunta.escala.max - pregunta.escala.min <= 9 &&
+        (estiloVisual === "finanzas" ||
+          estiloVisual === "ciberseguridad" ||
+          estiloVisual === "liderazgo" ||
+          estiloVisual === "madurez-digital" ||
+          estiloVisual === "masterclass");
 
     return (
       <article className="question-card" key={indice}>
+        {presentacion && unaPreguntaPorVista && pregunta.seccion && (
+          <p className="question-card-section">{pregunta.seccion}</p>
+        )}
         <h3 id={idPregunta}>{pregunta.texto}</h3>
         {pregunta.tipo === "opcion_multiple" && (
           <fieldset
             aria-labelledby={idPregunta}
-            className={`option-list option-list-${estiloVisual ?? "default"}${
-              esOpcionDoble ? " option-list-binary" : ""
-            }`}
+            className={[
+              "option-list",
+              `option-list-${presentacion?.opciones ?? estiloVisual ?? "default"}`,
+              estiloVisual ? `option-list-${estiloVisual}` : "",
+              esOpcionDoble ? "option-list-binary" : "",
+            ]
+              .filter(Boolean)
+              .join(" ")}
           >
             {pregunta.opciones.map((opcion, indiceOpcion) => {
               const respuesta = respuestas[indice];
@@ -280,9 +292,14 @@ export default function RenderizadorCuestionario({
 
               return (
                 <label
-                  className={`option option-${estiloVisual ?? "default"}${
-                    seleccionada ? " option-selected" : ""
-                  }`}
+                  className={[
+                    "option",
+                    estiloVisual ? `option-${estiloVisual}` : "",
+                    presentacion ? `option-choice-${presentacion.opciones}` : "",
+                    seleccionada ? "option-selected" : "",
+                  ]
+                    .filter(Boolean)
+                    .join(" ")}
                   key={indiceOpcion}
                 >
                   <input
@@ -297,7 +314,22 @@ export default function RenderizadorCuestionario({
                     type="radio"
                     value={opcion.texto}
                   />
-                  <span>{opcion.texto}</span>
+                  {presentacion?.opciones === "tarjetas" && !esOpcionDoble && (
+                    <span aria-hidden="true" className="option-letter">
+                      {String.fromCharCode(65 + (indiceOpcion % 26))}
+                    </span>
+                  )}
+                  {presentacion?.opciones === "filas" && !esOpcionDoble && (
+                    <span aria-hidden="true" className="option-number">
+                      {String(indiceOpcion + 1).padStart(2, "0")}
+                    </span>
+                  )}
+                  <span className="option-choice-text">{opcion.texto}</span>
+                  {presentacion && (
+                    <span aria-hidden="true" className="option-selection-mark">
+                      {seleccionada ? "✓" : ""}
+                    </span>
+                  )}
                 </label>
               );
             })}
@@ -312,9 +344,11 @@ export default function RenderizadorCuestionario({
               <legend className="sr-only">{pregunta.texto}</legend>
               <div
                 className={`scale-choices ${
-                  estiloVisual === "madurez-digital"
-                    ? "scale-choices-segments"
-                    : "scale-choices-circles"
+                  presentacion
+                    ? `scale-choices-${presentacion.escala}`
+                    : estiloVisual === "madurez-digital"
+                      ? "scale-choices-segments"
+                      : "scale-choices-circles"
                 }`}
               >
                 {Array.from(
@@ -352,20 +386,36 @@ export default function RenderizadorCuestionario({
                   );
                 })}
               </div>
-              {(pregunta.escala.etiqueta_min !== undefined ||
+              {(presentacion !== undefined ||
+                pregunta.escala.etiqueta_min !== undefined ||
                 pregunta.escala.etiqueta_max !== undefined) && (
                 <div className="scale-labels">
-                  {pregunta.escala.etiqueta_min !== undefined && (
-                    <span>{pregunta.escala.etiqueta_min}</span>
-                  )}
-                  {pregunta.escala.etiqueta_max !== undefined && (
-                    <span>{pregunta.escala.etiqueta_max}</span>
+                  {presentacion ? (
+                    <>
+                      <span>
+                        {pregunta.escala.etiqueta_min ??
+                          String(pregunta.escala.min)}
+                      </span>
+                      <span>
+                        {pregunta.escala.etiqueta_max ??
+                          String(pregunta.escala.max)}
+                      </span>
+                    </>
+                  ) : (
+                    <>
+                      {pregunta.escala.etiqueta_min !== undefined && (
+                        <span>{pregunta.escala.etiqueta_min}</span>
+                      )}
+                      {pregunta.escala.etiqueta_max !== undefined && (
+                        <span>{pregunta.escala.etiqueta_max}</span>
+                      )}
+                    </>
                   )}
                 </div>
               )}
             </fieldset>
           ) : (
-            <div className="scale-control">
+            <div className={`scale-control${presentacion ? " scale-control-presentacion" : ""}`}>
               <label className="sr-only" htmlFor={idPregunta}>
                 {pregunta.texto}
               </label>
@@ -397,14 +447,30 @@ export default function RenderizadorCuestionario({
                   ? respuestas[indice].valor
                   : pregunta.escala.min}
               </output>
-              {(pregunta.escala.etiqueta_min !== undefined ||
+              {(presentacion !== undefined ||
+                pregunta.escala.etiqueta_min !== undefined ||
                 pregunta.escala.etiqueta_max !== undefined) && (
                 <div className="scale-labels">
-                  {pregunta.escala.etiqueta_min !== undefined && (
-                    <span>{pregunta.escala.etiqueta_min}</span>
-                  )}
-                  {pregunta.escala.etiqueta_max !== undefined && (
-                    <span>{pregunta.escala.etiqueta_max}</span>
+                  {presentacion ? (
+                    <>
+                      <span>
+                        {pregunta.escala.etiqueta_min ??
+                          String(pregunta.escala.min)}
+                      </span>
+                      <span>
+                        {pregunta.escala.etiqueta_max ??
+                          String(pregunta.escala.max)}
+                      </span>
+                    </>
+                  ) : (
+                    <>
+                      {pregunta.escala.etiqueta_min !== undefined && (
+                        <span>{pregunta.escala.etiqueta_min}</span>
+                      )}
+                      {pregunta.escala.etiqueta_max !== undefined && (
+                        <span>{pregunta.escala.etiqueta_max}</span>
+                      )}
+                    </>
                   )}
                 </div>
               )}
@@ -416,9 +482,14 @@ export default function RenderizadorCuestionario({
             <p className="sensitive-data-notice">
               No escribas datos sensibles.
             </p>
-            <label className="text-answer">
+            <label
+              className={`text-answer${
+                presentacion ? ` text-answer-${presentacion.abierta}` : ""
+              }`}
+            >
               <span className="sr-only">{pregunta.texto}</span>
               <textarea
+                id={`${idPregunta}-respuesta`}
                 maxLength={pregunta.limite_caracteres}
                 onChange={(evento) =>
                   actualizarRespuesta(indice, {
@@ -432,6 +503,19 @@ export default function RenderizadorCuestionario({
                     : ""
                 }
               />
+              {presentacion?.abierta === "amplia" &&
+                pregunta.limite_caracteres !== undefined && (
+                  <output
+                    aria-label="Caracteres utilizados"
+                    className="text-answer-counter"
+                    htmlFor={`${idPregunta}-respuesta`}
+                  >
+                    {(respuestas[indice]?.tipo === "abierta"
+                      ? respuestas[indice].valor.length
+                      : 0) +
+                      ` / ${pregunta.limite_caracteres}`}
+                  </output>
+                )}
             </label>
           </>
         )}
@@ -442,7 +526,12 @@ export default function RenderizadorCuestionario({
   const secciones = cuestionario.secciones ?? [];
 
   return (
-    <main className="questionnaire" data-style={estiloVisual}>
+    <main
+      className="questionnaire"
+      data-style={estiloVisual}
+      data-presentation={presentacion ? "template" : undefined}
+      data-presentation-options={presentacion?.opciones}
+    >
       {generandoResultado && (
         <p aria-live="polite" className="eyebrow">
           Preparando tu resultado personalizado…
@@ -478,10 +567,14 @@ export default function RenderizadorCuestionario({
               <p aria-live="polite" className="question-progress">
                 Pregunta {indicePreguntaActual + 1} de {entradas.length}
               </p>
-              <section className="question-section">
-                {entradaActual.pregunta.seccion && (
-                  <h2>{entradaActual.pregunta.seccion}</h2>
-                )}
+              <section
+                className="question-section question-step-panel"
+                key={presentacion ? indicePreguntaActual : 0}
+              >
+                {(!presentacion || !unaPreguntaPorVista) &&
+                  entradaActual.pregunta.seccion && (
+                    <h2>{entradaActual.pregunta.seccion}</h2>
+                  )}
                 <div className="question-list">
                   {renderPregunta(entradaActual)}
                 </div>
