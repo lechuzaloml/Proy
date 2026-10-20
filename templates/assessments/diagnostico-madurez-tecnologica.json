@@ -17,14 +17,16 @@
     {
       "id": "p1",
       "seccion": "Herramientas y permisos",
-      "texto": "¿Cómo se eligen e incorporan nuevas herramientas digitales en tu organización?",
-      "tipo": "opcion_multiple",
-      "opciones": [
-        { "texto": "Cada área decide por separado según su necesidad inmediata", "puntos": 0 },
-        { "texto": "Se consultan algunas áreas antes de decidir", "puntos": 12 },
-        { "texto": "Se evalúan necesidades, responsables y compatibilidad antes de adoptarlas", "puntos": 25 }
-      ],
-      "participa_scoring": true
+      "texto": "¿Qué tan estructurado está el proceso para elegir e incorporar nuevas herramientas digitales en tu organización?",
+      "tipo": "escala",
+      "escala": {
+        "min": 1,
+        "max": 5,
+        "etiqueta_min": "Cada área decide por su cuenta",
+        "etiqueta_max": "Se evalúan necesidades, responsables y compatibilidad"
+      },
+      "participa_scoring": true,
+      "puntos_por_valor": { "1": 0, "2": 6, "3": 12, "4": 18, "5": 25 }
     },
     {
       "id": "p2",
@@ -43,17 +45,33 @@
     {
       "id": "p3",
       "seccion": "Gestión de permisos",
-      "texto": "¿Cómo se definen los permisos para consultar información de trabajo?",
-      "tipo": "opcion_multiple",
-      "opciones": [
-        { "texto": "No hay criterios compartidos para asignar permisos", "puntos": 0 },
-        { "texto": "Se revisan algunos accesos, aunque no siempre con una frecuencia definida", "puntos": 12 },
-        { "texto": "Los permisos responden a roles y se revisan periódicamente", "puntos": 25 }
-      ],
-      "participa_scoring": true
+      "texto": "¿Qué tan definidos están los criterios para asignar permisos a la información de trabajo?",
+      "tipo": "escala",
+      "escala": {
+        "min": 1,
+        "max": 5,
+        "etiqueta_min": "No hay criterios compartidos",
+        "etiqueta_max": "Los permisos responden a roles definidos"
+      },
+      "participa_scoring": true,
+      "puntos_por_valor": { "1": 0, "2": 6, "3": 12, "4": 18, "5": 25 }
     },
     {
       "id": "p4",
+      "seccion": "Gestión de permisos",
+      "texto": "¿Con qué frecuencia se revisan los permisos de acceso del equipo?",
+      "tipo": "escala",
+      "escala": {
+        "min": 1,
+        "max": 5,
+        "etiqueta_min": "No se revisan regularmente",
+        "etiqueta_max": "Se revisan con criterios definidos"
+      },
+      "participa_scoring": true,
+      "puntos_por_valor": { "1": 0, "2": 6, "3": 12, "4": 18, "5": 25 }
+    },
+    {
+      "id": "p5",
       "seccion": "Adopción de cambios",
       "texto": "¿Qué tan preparada está tu organización para capacitar al equipo cuando cambia una herramienta o proceso?",
       "tipo": "escala",
@@ -67,26 +85,52 @@
       "puntos_por_valor": { "1": 0, "2": 6, "3": 12, "4": 18, "5": 25 }
     },
     {
-      "id": "p5",
-      "seccion": "Siguientes pasos",
-      "texto": "¿Qué proceso de tu organización te gustaría mejorar primero con apoyo tecnológico?",
-      "tipo": "abierta",
-      "limite_caracteres": 500,
-      "participa_scoring": false
+      "id": "p6",
+      "seccion": "Adopción de cambios",
+      "texto": "¿Qué tan disponibles están la capacitación y los recursos cuando cambia una herramienta o proceso?",
+      "tipo": "escala",
+      "escala": {
+        "min": 1,
+        "max": 5,
+        "etiqueta_min": "No hay recursos definidos",
+        "etiqueta_max": "Hay capacitación y recursos disponibles"
+      },
+      "participa_scoring": true,
+      "puntos_por_valor": { "1": 0, "2": 6, "3": 12, "4": 18, "5": 25 }
     },
     {
-      "id": "p6",
+      "id": "p7",
       "seccion": "Siguientes pasos",
-      "texto": "¿Qué cambio reciente ha sido más difícil de adoptar para el equipo?",
-      "tipo": "abierta",
-      "limite_caracteres": 500,
-      "participa_scoring": false
+      "texto": "¿Qué tan claramente ha identificado tu organización el proceso que le gustaría mejorar primero con apoyo tecnológico?",
+      "tipo": "escala",
+      "escala": {
+        "min": 1,
+        "max": 5,
+        "etiqueta_min": "Aún no está definido",
+        "etiqueta_max": "Está claramente identificado"
+      },
+      "participa_scoring": true,
+      "puntos_por_valor": { "1": 0, "2": 6, "3": 12, "4": 18, "5": 25 }
+    },
+    {
+      "id": "p8",
+      "seccion": "Siguientes pasos",
+      "texto": "¿Qué tan identificadas están las dificultades del equipo para adoptar cambios recientes?",
+      "tipo": "escala",
+      "escala": {
+        "min": 1,
+        "max": 5,
+        "etiqueta_min": "Todavía no las hemos identificado",
+        "etiqueta_max": "Están identificadas y sabemos qué apoyo se necesita"
+      },
+      "participa_scoring": true,
+      "puntos_por_valor": { "1": 0, "2": 6, "3": 12, "4": 18, "5": 25 }
     }
   ],
   "reglas_scoring": [
-    { "puntaje_min": 0, "puntaje_max": 34, "segmento": "practicas_por_ordenar" },
-    { "puntaje_min": 35, "puntaje_max": 69, "segmento": "practicas_en_evolucion" },
-    { "puntaje_min": 70, "puntaje_max": 100, "segmento": "practicas_integradas" }
+    { "puntaje_min": 0, "puntaje_max": 69, "segmento": "practicas_por_ordenar" },
+    { "puntaje_min": 70, "puntaje_max": 139, "segmento": "practicas_en_evolucion" },
+    { "puntaje_min": 140, "puntaje_max": 200, "segmento": "practicas_integradas" }
   ],
   "resultado": {
     "tipo": "por_segmento",

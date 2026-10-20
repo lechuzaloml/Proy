@@ -30,13 +30,13 @@
       "id": "p2",
       "seccion": "Hábitos de organización",
       "texto": "¿Qué tan fácil te resulta identificar tus gastos recurrentes?",
-      "tipo": "escala",
-      "escala": {
-        "min": 1,
-        "max": 5,
-        "etiqueta_min": "Me resulta difícil",
-        "etiqueta_max": "Los tengo bien identificados"
-      },
+      "tipo": "opcion_multiple",
+      "opciones": [
+        { "texto": "Me resulta difícil identificarlos" },
+        { "texto": "Identifico algunos, pero no todos" },
+        { "texto": "Los identifico al revisar mis movimientos" },
+        { "texto": "Los tengo identificados y registrados" }
+      ],
       "participa_scoring": false
     },
     {
@@ -70,16 +70,27 @@
       "id": "p5",
       "seccion": "Comentarios",
       "texto": "¿Qué tema financiero te gustaría aprender o conversar con más detalle?",
-      "tipo": "abierta",
-      "limite_caracteres": 600,
+      "tipo": "opcion_multiple",
+      "opciones": [
+        { "texto": "Organización de ingresos y gastos" },
+        { "texto": "Ahorro para una meta" },
+        { "texto": "Planificación de deudas" },
+        { "texto": "Preparación para gastos importantes" },
+        { "texto": "Otro tema financiero" }
+      ],
       "participa_scoring": false
     },
     {
       "id": "p6",
       "seccion": "Comentarios",
       "texto": "¿Hay algo más que quieras compartir sobre tus hábitos u objetivos financieros?",
-      "tipo": "abierta",
-      "limite_caracteres": 600,
+      "tipo": "opcion_multiple",
+      "opciones": [
+        { "texto": "Quiero explorar un hábito que ya estoy desarrollando" },
+        { "texto": "Quiero revisar un objetivo que aún estoy definiendo" },
+        { "texto": "Me interesa conocer recursos de aprendizaje" },
+        { "texto": "Por ahora no tengo otro tema que agregar" }
+      ],
       "participa_scoring": false
     }
   ],

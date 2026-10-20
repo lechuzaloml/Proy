@@ -16,76 +16,74 @@
     {
       "id": "p1",
       "seccion": "Acceso y protección",
-      "texto": "¿Cómo se gestionan las cuentas y los permisos de las herramientas de trabajo?",
+      "texto": "¿Hay responsables que revisan periódicamente las cuentas y los permisos de las herramientas de trabajo?",
       "tipo": "opcion_multiple",
       "opciones": [
-        { "texto": "No tenemos un proceso compartido para revisarlos", "puntos": 0 },
-        { "texto": "Se administran, pero las revisiones no tienen una frecuencia fija", "puntos": 12 },
-        { "texto": "Hay responsables y revisiones periódicas de permisos", "puntos": 25 }
+        { "texto": "Sí", "puntos": 25 },
+        { "texto": "No", "puntos": 0 }
       ],
       "participa_scoring": true
     },
     {
       "id": "p2",
       "seccion": "Acceso y protección",
-      "texto": "¿Qué tan extendido está el uso de autenticación multifactor en las cuentas de trabajo?",
-      "tipo": "escala",
-      "escala": {
-        "min": 1,
-        "max": 5,
-        "etiqueta_min": "No lo hemos revisado",
-        "etiqueta_max": "Está habilitada según nuestras políticas"
-      },
-      "participa_scoring": true,
-      "puntos_por_valor": { "1": 0, "2": 6, "3": 12, "4": 18, "5": 25 }
+      "texto": "¿Está habilitada la autenticación multifactor en las cuentas de trabajo según las políticas de la organización?",
+      "tipo": "opcion_multiple",
+      "opciones": [
+        { "texto": "Sí", "puntos": 25 },
+        { "texto": "No", "puntos": 0 }
+      ],
+      "participa_scoring": true
     },
     {
       "id": "p3",
       "seccion": "Preparación del equipo",
-      "texto": "¿Cómo se prepara al equipo para reconocer y reportar mensajes o solicitudes sospechosas?",
+      "texto": "¿Recibe el equipo orientación periódica para reconocer y reportar mensajes o solicitudes sospechosas?",
       "tipo": "opcion_multiple",
       "opciones": [
-        { "texto": "No hemos establecido pautas comunes", "puntos": 0 },
-        { "texto": "Compartimos recomendaciones ocasionalmente", "puntos": 12 },
-        { "texto": "Tenemos orientación periódica y un canal claro para reportar", "puntos": 25 }
+        { "texto": "Sí", "puntos": 25 },
+        { "texto": "No", "puntos": 0 }
       ],
       "participa_scoring": true
     },
     {
       "id": "p4",
       "seccion": "Preparación del equipo",
-      "texto": "¿Qué tan claro está el procedimiento para informar un posible incidente?",
-      "tipo": "escala",
-      "escala": {
-        "min": 1,
-        "max": 5,
-        "etiqueta_min": "No está definido",
-        "etiqueta_max": "Está documentado y el equipo lo conoce"
-      },
-      "participa_scoring": true,
-      "puntos_por_valor": { "1": 0, "2": 6, "3": 12, "4": 18, "5": 25 }
+      "texto": "¿Está documentado el procedimiento para informar un posible incidente y lo conoce el equipo?",
+      "tipo": "opcion_multiple",
+      "opciones": [
+        { "texto": "Sí", "puntos": 25 },
+        { "texto": "No", "puntos": 0 }
+      ],
+      "participa_scoring": true
     },
     {
       "id": "p5",
       "seccion": "Prioridades de seguridad",
-      "texto": "¿Qué práctica de seguridad te gustaría revisar primero en tu organización?",
-      "tipo": "abierta",
-      "limite_caracteres": 500,
-      "participa_scoring": false
+      "texto": "¿Han identificado una práctica de seguridad que les gustaría revisar primero en la organización?",
+      "tipo": "opcion_multiple",
+      "opciones": [
+        { "texto": "Sí", "puntos": 25 },
+        { "texto": "No", "puntos": 0 }
+      ],
+      "participa_scoring": true
     },
     {
       "id": "p6",
       "seccion": "Prioridades de seguridad",
-      "texto": "¿Qué recursos o acompañamiento ayudarían a tu equipo a mejorar sus prácticas?",
-      "tipo": "abierta",
-      "limite_caracteres": 500,
-      "participa_scoring": false
+      "texto": "¿Tiene el equipo claro qué recursos o acompañamiento necesita para mejorar sus prácticas?",
+      "tipo": "opcion_multiple",
+      "opciones": [
+        { "texto": "Sí", "puntos": 25 },
+        { "texto": "No", "puntos": 0 }
+      ],
+      "participa_scoring": true
     }
   ],
   "reglas_scoring": [
-    { "puntaje_min": 0, "puntaje_max": 34, "segmento": "practicas_por_fortalecer" },
-    { "puntaje_min": 35, "puntaje_max": 69, "segmento": "preparacion_basica" },
-    { "puntaje_min": 70, "puntaje_max": 100, "segmento": "buenas_practicas_en_uso" }
+    { "puntaje_min": 0, "puntaje_max": 52, "segmento": "practicas_por_fortalecer" },
+    { "puntaje_min": 53, "puntaje_max": 104, "segmento": "preparacion_basica" },
+    { "puntaje_min": 105, "puntaje_max": 150, "segmento": "buenas_practicas_en_uso" }
   ],
   "resultado": {
     "tipo": "por_segmento",

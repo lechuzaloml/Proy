@@ -11,7 +11,7 @@ import {
 } from "../logic/calcularResultado";
 import { personalizarResultado } from "../logic/personalizarResultado";
 import type { RespuestaParaPersonalizacion } from "../logic/personalizarResultado";
-import type { PresentacionTemplate } from "../config/presentacionTemplates";
+import type { Presentacion } from "../config/presentacionTemplates";
 
 export interface EstadoFlujoCuestionario {
   respuestas: RespuestasCuestionario;
@@ -37,7 +37,7 @@ interface RenderizadorCuestionarioProps {
   ) => void;
   unaPreguntaPorVista?: boolean;
   requiereConsentimiento?: boolean;
-  presentacion?: PresentacionTemplate;
+  presentacion?: Presentacion;
 }
 
 interface EntradaPregunta {
@@ -249,13 +249,21 @@ export default function RenderizadorCuestionario({
     indice,
   }));
   const entradaActual = entradas[indicePreguntaActual];
+  const opcionesPresentacion =
+    presentacion && "opciones" in presentacion
+      ? presentacion.opciones
+      : undefined;
+  const escalaPresentacion =
+    presentacion && "escala" in presentacion ? presentacion.escala : undefined;
+  const abiertaPresentacion =
+    presentacion && "abierta" in presentacion ? presentacion.abierta : undefined;
 
   function renderPregunta({ pregunta, indice }: EntradaPregunta) {
     const idPregunta = `pregunta-${indice}`;
     const esOpcionDoble =
       pregunta.tipo === "opcion_multiple" && pregunta.opciones.length === 2;
     const esEscalaVisual = presentacion
-      ? presentacion.escala !== "deslizador"
+      ? (escalaPresentacion ?? "deslizador") !== "deslizador"
       : pregunta.tipo === "escala" &&
         Number.isInteger(pregunta.escala.min) &&
         Number.isInteger(pregunta.escala.max) &&
@@ -277,7 +285,7 @@ export default function RenderizadorCuestionario({
             aria-labelledby={idPregunta}
             className={[
               "option-list",
-              `option-list-${presentacion?.opciones ?? estiloVisual ?? "default"}`,
+              `option-list-${opcionesPresentacion ?? estiloVisual ?? "default"}`,
               estiloVisual ? `option-list-${estiloVisual}` : "",
               esOpcionDoble ? "option-list-binary" : "",
             ]
@@ -295,7 +303,9 @@ export default function RenderizadorCuestionario({
                   className={[
                     "option",
                     estiloVisual ? `option-${estiloVisual}` : "",
-                    presentacion ? `option-choice-${presentacion.opciones}` : "",
+                    opcionesPresentacion
+                      ? `option-choice-${opcionesPresentacion}`
+                      : "",
                     seleccionada ? "option-selected" : "",
                   ]
                     .filter(Boolean)
@@ -314,12 +324,12 @@ export default function RenderizadorCuestionario({
                     type="radio"
                     value={opcion.texto}
                   />
-                  {presentacion?.opciones === "tarjetas" && !esOpcionDoble && (
+                  {opcionesPresentacion === "tarjetas" && !esOpcionDoble && (
                     <span aria-hidden="true" className="option-letter">
                       {String.fromCharCode(65 + (indiceOpcion % 26))}
                     </span>
                   )}
-                  {presentacion?.opciones === "filas" && !esOpcionDoble && (
+                  {opcionesPresentacion === "filas" && !esOpcionDoble && (
                     <span aria-hidden="true" className="option-number">
                       {String(indiceOpcion + 1).padStart(2, "0")}
                     </span>
@@ -345,7 +355,7 @@ export default function RenderizadorCuestionario({
               <div
                 className={`scale-choices ${
                   presentacion
-                    ? `scale-choices-${presentacion.escala}`
+                    ? `scale-choices-${escalaPresentacion ?? "circulos"}`
                     : estiloVisual === "madurez-digital"
                       ? "scale-choices-segments"
                       : "scale-choices-circles"
@@ -484,7 +494,7 @@ export default function RenderizadorCuestionario({
             </p>
             <label
               className={`text-answer${
-                presentacion ? ` text-answer-${presentacion.abierta}` : ""
+                abiertaPresentacion ? ` text-answer-${abiertaPresentacion}` : ""
               }`}
             >
               <span className="sr-only">{pregunta.texto}</span>
@@ -503,7 +513,7 @@ export default function RenderizadorCuestionario({
                     : ""
                 }
               />
-              {presentacion?.abierta === "amplia" &&
+              {abiertaPresentacion === "amplia" &&
                 pregunta.limite_caracteres !== undefined && (
                   <output
                     aria-label="Caracteres utilizados"
@@ -530,7 +540,7 @@ export default function RenderizadorCuestionario({
       className="questionnaire"
       data-style={estiloVisual}
       data-presentation={presentacion ? "template" : undefined}
-      data-presentation-options={presentacion?.opciones}
+      data-presentation-options={opcionesPresentacion}
     >
       {generandoResultado && (
         <p aria-live="polite" className="eyebrow">

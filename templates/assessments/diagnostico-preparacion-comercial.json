@@ -88,21 +88,20 @@
     {
       "id": "p7",
       "seccion": "Decisión y capacidad para avanzar",
-      "texto": "¿Qué factor tendría mayor peso para decidir si avanzas con una solución?",
+      "texto": "¿Qué tan definidos están los criterios que usarías para comparar soluciones?",
       "tipo": "opcion_multiple",
       "opciones": [
-        { "texto": "El ajuste de la solución a la necesidad", "puntos": 0 },
-        { "texto": "El plazo y la forma de implementación", "puntos": 0 },
-        { "texto": "La inversión y los recursos requeridos", "puntos": 0 },
-        { "texto": "La evidencia de resultados esperados", "puntos": 0 }
+        { "texto": "Todavía no los he definido", "puntos": 0 },
+        { "texto": "Tengo algunos criterios en mente", "puntos": 10 },
+        { "texto": "Tengo criterios claros y priorizados", "puntos": 20 }
       ],
-      "participa_scoring": false
+      "participa_scoring": true
     }
   ],
   "reglas_scoring": [
-    { "puntaje_min": 0, "puntaje_max": 39, "segmento": "exploracion_inicial" },
-    { "puntaje_min": 40, "puntaje_max": 79, "segmento": "evaluacion_activa" },
-    { "puntaje_min": 80, "puntaje_max": 120, "segmento": "listo_para_siguiente_paso" }
+    { "puntaje_min": 0, "puntaje_max": 48, "segmento": "exploracion_inicial" },
+    { "puntaje_min": 49, "puntaje_max": 97, "segmento": "evaluacion_activa" },
+    { "puntaje_min": 98, "puntaje_max": 140, "segmento": "listo_para_siguiente_paso" }
   ],
   "resultado": {
     "tipo": "por_segmento",

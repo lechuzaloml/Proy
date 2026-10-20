@@ -29,8 +29,13 @@
       "id": "p2",
       "seccion": "Interés y objetivo",
       "texto": "¿Qué objetivo te gustaría alcanzar al participar en una sesión sobre este tema?",
-      "tipo": "abierta",
-      "limite_caracteres": 500,
+      "tipo": "opcion_multiple",
+      "opciones": [
+        { "texto": "Aclarar y estructurar mejor una idea" },
+        { "texto": "Definir próximos pasos para un proyecto" },
+        { "texto": "Explorar si una idea responde a una necesidad" },
+        { "texto": "Organizar un plan de acción" }
+      ],
       "participa_scoring": false
     },
     {
@@ -49,14 +54,14 @@
     {
       "id": "p4",
       "seccion": "Perfil y modalidad",
-      "texto": "¿Qué tan familiarizado estás con la creación de un plan de acción para un negocio?",
-      "tipo": "escala",
-      "escala": {
-        "min": 1,
-        "max": 5,
-        "etiqueta_min": "Es un tema nuevo para mí",
-        "etiqueta_max": "Ya he creado varios planes"
-      },
+      "texto": "¿Cuál describe mejor tu experiencia al crear un plan de acción para un negocio?",
+      "tipo": "opcion_multiple",
+      "opciones": [
+        { "texto": "Todavía no he creado uno" },
+        { "texto": "He participado en la definición de algunos pasos" },
+        { "texto": "He creado un plan para un proyecto" },
+        { "texto": "He creado planes en más de una ocasión" }
+      ],
       "participa_scoring": false
     },
     {

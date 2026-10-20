@@ -49,21 +49,28 @@ describe("calcularPerfilSecciones", () => {
     }
   });
 
-  it("calcula porcentajes por sección e ignora preguntas abiertas", () => {
+  it("calcula porcentajes por sección e ignora preguntas sin scoring", () => {
     const cuestionario = obtenerCuestionario();
+    cuestionario.preguntas.push({
+      id: "p7",
+      seccion: "Comunicación y dirección",
+      texto: "Pregunta abierta sin scoring para la prueba",
+      tipo: "abierta",
+      participa_scoring: false,
+    });
     const perfil = calcularPerfilSecciones(cuestionario, {
       0: { tipo: "escala", valor: 5 },
-      1: { tipo: "opcion_multiple", indiceOpcion: 1 },
+      1: { tipo: "escala", valor: 4 },
       2: { tipo: "escala", valor: 3 },
-      3: { tipo: "opcion_multiple", indiceOpcion: 0 },
-      4: { tipo: "abierta", valor: "Respuesta libre" },
+      3: { tipo: "escala", valor: 1 },
+      6: { tipo: "abierta", valor: "Respuesta libre" },
     });
 
     expect(perfil).toEqual([
       {
         nombre: "Comunicación y dirección",
         modo: "puntaje",
-        porcentaje: 74,
+        porcentaje: 86,
         respondidas: 2,
         totalPreguntas: 2,
       },
@@ -72,6 +79,13 @@ describe("calcularPerfilSecciones", () => {
         modo: "puntaje",
         porcentaje: 24,
         respondidas: 2,
+        totalPreguntas: 2,
+      },
+      {
+        nombre: "Reflexión personal",
+        modo: "puntaje",
+        porcentaje: 0,
+        respondidas: 0,
         totalPreguntas: 2,
       },
     ]);

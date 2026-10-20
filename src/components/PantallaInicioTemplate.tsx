@@ -4,14 +4,14 @@ import type { MetadataTemplate } from "../templates/catalogo";
 import {
   obtenerPresentacionTemplate,
   type IlustracionTemplate,
-  type PresentacionTemplate,
+  type Presentacion,
 } from "../config/presentacionTemplates";
 
 interface PantallaInicioTemplateProps {
   templateId: string;
   template: MetadataTemplate;
   cuestionario: Cuestionario;
-  presentacion?: PresentacionTemplate;
+  presentacion?: Presentacion;
   onComenzar: () => void;
 }
 

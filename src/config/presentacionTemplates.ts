@@ -2,7 +2,12 @@ export type TipoPortada =
   | "imagenDerecha"
   | "imagenArriba"
   | "imagenFondoSuave";
-export type TipoOpciones = "tarjetas" | "pildoras" | "filas";
+export type TipoOpciones =
+  | "tarjetas"
+  | "pildoras"
+  | "filas"
+  | "siNoTarjetas"
+  | "siNoPildoras";
 export type TipoEscala = "circulos" | "segmentos" | "deslizador";
 export type TipoAbierta = "amplia" | "compacta";
 
@@ -20,15 +25,34 @@ export type IlustracionTemplate =
         | "finanzas";
     };
 
-export interface PresentacionTemplate {
+interface PresentacionBase {
   portada: TipoPortada;
   ilustracion: IlustracionTemplate;
+}
+
+export type PresentacionTemplate = PresentacionBase &
+  (
+    | {
+        familia: "si_no";
+        opciones: Extract<TipoOpciones, "siNoTarjetas" | "siNoPildoras">;
+      }
+    | {
+        familia: "opcion_multiple";
+        opciones: Extract<TipoOpciones, "tarjetas" | "pildoras" | "filas">;
+      }
+    | { familia: "escala"; escala: TipoEscala }
+    | { familia: "abierta"; abierta: TipoAbierta }
+  );
+
+export interface PresentacionPorDefecto extends PresentacionBase {
   opciones: TipoOpciones;
   escala: TipoEscala;
   abierta: TipoAbierta;
 }
 
-export const porDefecto: PresentacionTemplate = {
+export type Presentacion = PresentacionTemplate | PresentacionPorDefecto;
+
+export const porDefecto: PresentacionPorDefecto = {
   portada: "imagenFondoSuave",
   ilustracion: { tipo: "svg", icono: "marketing" },
   opciones: "filas",
@@ -40,9 +64,8 @@ export const presentacionesTemplates: Record<string, PresentacionTemplate> = {
   "demo-evaluacion-madurez-practicas-digitales": {
     portada: "imagenDerecha",
     ilustracion: { tipo: "svg", icono: "digital" },
-    opciones: "tarjetas",
+    familia: "escala",
     escala: "segmentos",
-    abierta: "compacta",
   },
   "demo-diagnostico-preparacion-comercial": {
     portada: "imagenFondoSuave",
@@ -51,30 +74,26 @@ export const presentacionesTemplates: Record<string, PresentacionTemplate> = {
       src: "/template-conversacion-comercial.png",
       alt: "Personas conversando frente a una computadora",
     },
+    familia: "opcion_multiple",
     opciones: "filas",
-    escala: "circulos",
-    abierta: "compacta",
   },
   "demo-evaluacion-ciberseguridad": {
     portada: "imagenFondoSuave",
     ilustracion: { tipo: "svg", icono: "seguridad" },
-    opciones: "tarjetas",
-    escala: "circulos",
-    abierta: "compacta",
+    familia: "si_no",
+    opciones: "siNoTarjetas",
   },
   "demo-evaluacion-liderazgo": {
     portada: "imagenDerecha",
     ilustracion: { tipo: "svg", icono: "liderazgo" },
-    opciones: "pildoras",
+    familia: "escala",
     escala: "circulos",
-    abierta: "amplia",
   },
   "demo-registro-masterclass": {
     portada: "imagenFondoSuave",
     ilustracion: { tipo: "svg", icono: "aprendizaje" },
+    familia: "opcion_multiple",
     opciones: "pildoras",
-    escala: "deslizador",
-    abierta: "amplia",
   },
   "demo-onboarding-para-agencia": {
     portada: "imagenFondoSuave",
@@ -83,8 +102,7 @@ export const presentacionesTemplates: Record<string, PresentacionTemplate> = {
       src: "/template-descubrimiento-marketing.png",
       alt: "Personas revisando un proyecto de marketing",
     },
-    opciones: "filas",
-    escala: "segmentos",
+    familia: "abierta",
     abierta: "amplia",
   },
   "demo-test-madurez-marketing-digital": {
@@ -94,21 +112,19 @@ export const presentacionesTemplates: Record<string, PresentacionTemplate> = {
       src: "/template-practicas-marketing.png",
       alt: "Métricas de redes sociales en un teléfono",
     },
-    opciones: "tarjetas",
-    escala: "deslizador",
-    abierta: "compacta",
+    familia: "si_no",
+    opciones: "siNoPildoras",
   },
   "demo-encuesta-habitos-intereses-financieros": {
     portada: "imagenFondoSuave",
     ilustracion: { tipo: "svg", icono: "finanzas" },
-    opciones: "filas",
-    escala: "deslizador",
-    abierta: "amplia",
+    familia: "opcion_multiple",
+    opciones: "tarjetas",
   },
 };
 
 export function obtenerPresentacionTemplate(
   cuestionarioId: string,
-): PresentacionTemplate {
+): Presentacion {
   return presentacionesTemplates[cuestionarioId] ?? porDefecto;
 }

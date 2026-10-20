@@ -22,3 +22,5 @@ sin modificar sus diez reglas.
 6. **Figura por categoría:** la Decisión 5 se mantiene para el diagnóstico
    inicial. En el resultado de los templates se muestra la figura con el valor
    por categoría; el nombre del segmento sigue oculto.
+7. **Familia de respuesta por template:** cada template de la biblioteca usa
+   una sola familia de respuesta.

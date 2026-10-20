@@ -30,14 +30,16 @@
     {
       "id": "p2",
       "seccion": "Comunicación y dirección",
-      "texto": "Cuando surge un desacuerdo, ¿qué sueles hacer primero?",
-      "tipo": "opcion_multiple",
-      "opciones": [
-        { "texto": "Posponer la conversación mientras se resuelve solo", "puntos": 0 },
-        { "texto": "Compartir mi perspectiva y escuchar la otra parte", "puntos": 12 },
-        { "texto": "Facilitar una conversación para acordar próximos pasos", "puntos": 25 }
-      ],
-      "participa_scoring": true
+      "texto": "Cuando surge un desacuerdo, ¿qué tan habitualmente facilitas una conversación para escuchar las perspectivas y acordar próximos pasos?",
+      "tipo": "escala",
+      "escala": {
+        "min": 1,
+        "max": 5,
+        "etiqueta_min": "Rara vez",
+        "etiqueta_max": "De forma habitual"
+      },
+      "participa_scoring": true,
+      "puntos_por_valor": { "1": 0, "2": 6, "3": 12, "4": 18, "5": 25 }
     },
     {
       "id": "p3",
@@ -56,36 +58,50 @@
     {
       "id": "p4",
       "seccion": "Desarrollo del equipo",
-      "texto": "¿Cómo acompañas el crecimiento profesional de las personas de tu equipo?",
-      "tipo": "opcion_multiple",
-      "opciones": [
-        { "texto": "No tenemos espacios definidos para hablar de desarrollo", "puntos": 0 },
-        { "texto": "Conversamos sobre ello cuando surge la ocasión", "puntos": 12 },
-        { "texto": "Tenemos conversaciones periódicas y acordamos acciones", "puntos": 25 }
-      ],
-      "participa_scoring": true
+      "texto": "¿Con qué frecuencia conversas sobre el crecimiento profesional del equipo y acuerdas acciones de desarrollo?",
+      "tipo": "escala",
+      "escala": {
+        "min": 1,
+        "max": 5,
+        "etiqueta_min": "Rara vez",
+        "etiqueta_max": "De forma periódica"
+      },
+      "participa_scoring": true,
+      "puntos_por_valor": { "1": 0, "2": 6, "3": 12, "4": 18, "5": 25 }
     },
     {
       "id": "p5",
       "seccion": "Reflexión personal",
-      "texto": "¿Qué situación de liderazgo te gustaría manejar mejor durante los próximos meses?",
-      "tipo": "abierta",
-      "limite_caracteres": 500,
-      "participa_scoring": false
+      "texto": "¿Qué tan clara tienes la situación de liderazgo que te gustaría manejar mejor durante los próximos meses?",
+      "tipo": "escala",
+      "escala": {
+        "min": 1,
+        "max": 5,
+        "etiqueta_min": "Aún no la tengo identificada",
+        "etiqueta_max": "La tengo identificada y sé qué paso quiero explorar"
+      },
+      "participa_scoring": true,
+      "puntos_por_valor": { "1": 0, "2": 6, "3": 12, "4": 18, "5": 25 }
     },
     {
       "id": "p6",
       "seccion": "Reflexión personal",
-      "texto": "¿Qué fortaleza personal te gustaría poner más al servicio de tu equipo?",
-      "tipo": "abierta",
-      "limite_caracteres": 500,
-      "participa_scoring": false
+      "texto": "¿Qué tan claro tienes cómo poner una fortaleza personal al servicio de tu equipo?",
+      "tipo": "escala",
+      "escala": {
+        "min": 1,
+        "max": 5,
+        "etiqueta_min": "Aún no lo tengo claro",
+        "etiqueta_max": "Tengo una forma concreta de hacerlo"
+      },
+      "participa_scoring": true,
+      "puntos_por_valor": { "1": 0, "2": 6, "3": 12, "4": 18, "5": 25 }
     }
   ],
   "reglas_scoring": [
-    { "puntaje_min": 0, "puntaje_max": 34, "segmento": "habitos_iniciales" },
-    { "puntaje_min": 35, "puntaje_max": 69, "segmento": "habitos_en_practica" },
-    { "puntaje_min": 70, "puntaje_max": 100, "segmento": "habitos_consistentes" }
+    { "puntaje_min": 0, "puntaje_max": 52, "segmento": "habitos_iniciales" },
+    { "puntaje_min": 53, "puntaje_max": 104, "segmento": "habitos_en_practica" },
+    { "puntaje_min": 105, "puntaje_max": 150, "segmento": "habitos_consistentes" }
   ],
   "resultado": {
     "tipo": "por_segmento",

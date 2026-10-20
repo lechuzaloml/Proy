@@ -2926,6 +2926,25 @@ textarea:focus-visible {
   }
 }
 
+.questionnaire[data-presentation] .option-list-siNoTarjetas .option {
+  min-height: 84px;
+  border-left: 4px solid var(--color-graphite);
+  border-radius: 12px;
+}
+
+.questionnaire[data-presentation] .option-list-siNoPildoras .option {
+  min-height: 72px;
+  justify-content: center;
+  border-radius: 12px;
+  text-align: center;
+}
+
+.questionnaire[data-presentation]
+  .option-list-siNoTarjetas
+  .option-selected {
+  border-left-width: 4px;
+}
+
 .template-landing {
   display: grid;
   width: min(100% - 2rem, 1160px);

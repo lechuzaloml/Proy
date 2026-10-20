@@ -1,0 +1,6 @@
+[35mDESCRIPCION_COMPLETA.txt[m[36m:[m[32m142[m[36m:[m- 0 a 6: [1;31mproceso_por_construir[m.
+[35mDESCRIPCION_COMPLETA.txt[m[36m:[m[32m374[m[36m:[m- [1;31mproceso_por_construir[m: formulario Descubrimiento de Proyecto de Marketing y
+[35msrc/config/recomendaciones.ts[m[36m:[m[32m53[m[36m:[m  [1;31mproceso_por_construir[m: {
+[35msrc/lib/construirDocumentoLead.test.ts[m[36m:[m[32m72[m[36m:[m        segmento: "[1;31mproceso_por_construir[m",
+[35mtemplates/assessments/diagnostico-inicial.json[m[36m:[m[32m115[m[36m:[m    { "puntaje_min": 0, "puntaje_max": 6, "segmento": "[1;31mproceso_por_construir[m" },
+[35mtemplates/assessments/diagnostico-inicial.json[m[36m:[m[32m123[m[36m:[m        "segmento": "[1;31mproceso_por_construir[m",

@@ -27,13 +27,26 @@ describe("presentacionesTemplates", () => {
     );
   });
 
-  it("asigna combinaciones de presentación únicas a los ocho templates", () => {
-    const combinaciones = Object.values(presentacionesTemplates).map(
-      ({ opciones, escala, abierta }) =>
-        [opciones, escala, abierta].join("|"),
+  it("asigna un solo estilo de familia y no repite estilos entre templates", () => {
+    const estilos = Object.values(presentacionesTemplates).map(
+      (presentacion) => {
+        const clavesEstilo = ["opciones", "escala", "abierta"].filter(
+          (clave) => clave in presentacion,
+        );
+        expect(clavesEstilo).toHaveLength(1);
+        switch (presentacion.familia) {
+          case "si_no":
+          case "opcion_multiple":
+            return `${presentacion.familia}|${presentacion.opciones}`;
+          case "escala":
+            return `${presentacion.familia}|${presentacion.escala}`;
+          case "abierta":
+            return `${presentacion.familia}|${presentacion.abierta}`;
+        }
+      },
     );
 
-    expect(new Set(combinaciones).size).toBe(8);
+    expect(new Set(estilos).size).toBe(8);
   });
 
   it("usa la configuración por defecto para IDs sin entrada", () => {
