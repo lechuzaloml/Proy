@@ -1,102 +1,158 @@
 rules_version = '2';
-
 service cloud.firestore {
   match /databases/{database}/documents {
-    function esAdministrador() {
-      return request.auth != null
-        && request.auth.token.email_verified == true
-        && request.auth.token.email == "ADMIN_EMAIL_PENDIENTE";
+
+    function conSesion() {
+      return request.auth != null && request.auth.token.email_verified == true;
+    }
+    function correo() {
+      return request.auth.token.email.lower();
+    }
+    function esPlataforma() {
+      return conSesion() && exists(/databases/$(database)/documents/plataformaAdmins/$(correo()));
+    }
+    function miembro(emp) {
+      return get(/databases/$(database)/documents/empresas/$(emp)/miembros/$(correo()));
+    }
+    function esMiembro(emp) {
+      return conSesion()
+        && exists(/databases/$(database)/documents/empresas/$(emp)/miembros/$(correo()))
+        && miembro(emp).data.estado == 'activo';
+    }
+    function esAdminEmpresa(emp) {
+      return esMiembro(emp) && miembro(emp).data.rol == 'admin';
+    }
+    function tienePermiso(emp, permiso) {
+      return esAdminEmpresa(emp)
+        || (esMiembro(emp) && miembro(emp).data.permisos.get(permiso, false) == true);
+    }
+    function puedeVerLeads(emp) {
+      return esPlataforma() || tienePermiso(emp, 'verLeads') || tienePermiso(emp, 'gestionarLeads');
+    }
+    function puedeGestionarLeads(emp) {
+      return esPlataforma() || tienePermiso(emp, 'gestionarLeads');
+    }
+    function puedeEditarCuestionarios(emp) {
+      return esPlataforma() || tienePermiso(emp, 'editarCuestionarios');
+    }
+    function cuestionarioPublicado(emp, cid) {
+      return exists(/databases/$(database)/documents/empresas/$(emp)/cuestionarios/$(cid))
+        && get(/databases/$(database)/documents/empresas/$(emp)/cuestionarios/$(cid)).data.estado == 'publicado';
+    }
+    function texto(v, minimo, maximo) {
+      return v is string && v.size() >= minimo && v.size() <= maximo;
+    }
+    function nuevo() {
+      return request.resource.data;
     }
 
-    function textoRespuestaValido(respuestas, id) {
-      return !(id in respuestas)
-        || (respuestas[id] is string && respuestas[id].size() <= 500);
+    match /plataformaAdmins/{id} {
+      allow get: if conSesion() && correo() == id;
+      allow list, write: if false;
     }
 
-    function respuestasValidas(respuestas) {
-      return respuestas is map
-        && respuestas.keys().hasOnly([
-          "tipo-negocio",
-          "captacion-leads",
-          "calificacion-prospectos",
-          "criterios-prioridad",
-          "medicion-conversion",
-          "seguimiento-prospectos",
-          "prioridad-crecimiento"
-        ])
-        && respuestas.size() <= 7
-        && textoRespuestaValido(respuestas, "tipo-negocio")
-        && textoRespuestaValido(respuestas, "captacion-leads")
-        && textoRespuestaValido(respuestas, "calificacion-prospectos")
-        && textoRespuestaValido(respuestas, "criterios-prioridad")
-        && textoRespuestaValido(respuestas, "medicion-conversion")
-        && textoRespuestaValido(respuestas, "seguimiento-prospectos")
-        && textoRespuestaValido(respuestas, "prioridad-crecimiento");
-    }
+    match /empresas/{emp} {
+      allow get: if true;
+      allow list, write: if esPlataforma();
 
-    function consentimientoValido(consentimiento) {
-      return consentimiento is map
-        && consentimiento.keys().hasAll(["aceptado", "version", "fecha"])
-        && consentimiento.keys().hasOnly(["aceptado", "version", "fecha"])
-        && consentimiento.aceptado == true
-        && consentimiento.version is string
-        && consentimiento.version.size() <= 100
-        && consentimiento.fecha is timestamp;
-    }
+      match /miembros/{id} {
+        allow get: if conSesion() && correo() == id;
+        allow list: if esAdminEmpresa(emp) || esPlataforma();
+        allow write: if esAdminEmpresa(emp) || esPlataforma();
+      }
 
-    match /leads/{leadId} {
-      allow create: if request.resource.data.keys().hasAll([
-          "nombre",
-          "correo",
-          "telefono",
-          "consentimiento",
-          "cuestionarioId",
-          "respuestas",
-          "puntaje",
-          "segmento",
-          "templateRecomendadoId",
-          "planRecomendado",
-          "estado",
-          "creadoEn"
-        ])
-        && request.resource.data.keys().hasOnly([
-          "nombre",
-          "correo",
-          "telefono",
-          "consentimiento",
-          "cuestionarioId",
-          "respuestas",
-          "puntaje",
-          "segmento",
-          "templateRecomendadoId",
-          "planRecomendado",
-          "estado",
-          "creadoEn"
-        ])
-        && request.resource.data.nombre is string
-        && request.resource.data.nombre.size() <= 120
-        && request.resource.data.correo is string
-        && request.resource.data.correo.size() <= 254
-        && request.resource.data.telefono is string
-        && request.resource.data.telefono.size() <= 40
-        && consentimientoValido(request.resource.data.consentimiento)
-        && request.resource.data.cuestionarioId is string
-        && request.resource.data.cuestionarioId.size() <= 100
-        && request.resource.data.cuestionarioId == "clear-ia-diagnostico-inicial"
-        && respuestasValidas(request.resource.data.respuestas)
-        && request.resource.data.puntaje is int
-        && request.resource.data.puntaje >= 0
-        && request.resource.data.puntaje <= 20
-        && request.resource.data.segmento is string
-        && request.resource.data.segmento.size() <= 100
-        && request.resource.data.templateRecomendadoId is string
-        && request.resource.data.templateRecomendadoId.size() <= 300
-        && request.resource.data.planRecomendado is string
-        && request.resource.data.planRecomendado.size() <= 100
-        && request.resource.data.estado == "nuevo"
-        && request.resource.data.creadoEn == request.time;
+      match /cuestionarios/{cid} {
+        allow get: if resource.data.estado == 'publicado' || puedeEditarCuestionarios(emp);
+        allow list: if puedeEditarCuestionarios(emp);
+        allow write: if puedeEditarCuestionarios(emp);
 
-      allow read, update, delete: if esAdministrador();
+        match /versiones/{vid} {
+          allow get: if cuestionarioPublicado(emp, cid) || puedeEditarCuestionarios(emp);
+          allow list: if puedeEditarCuestionarios(emp);
+          allow create: if puedeEditarCuestionarios(emp);
+          allow update, delete: if false;
+        }
+      }
+
+      match /leads/{lid} {
+        allow create: if emp == 'clearia'
+          && nuevo().keys().hasAll(['nombre','correo','telefono','consentimiento','estado','ultimoDiagnosticoId','ultimaActividadEn','creadoEn'])
+          && nuevo().keys().hasOnly(['nombre','correo','telefono','consentimiento','origen','estado','ultimaActividadEn','ultimoDiagnosticoId','ultimoPorcentaje','ultimoSegmento','ultimaCalificacion','creadoEn'])
+          && texto(nuevo().nombre, 1, 120)
+          && texto(nuevo().correo, 5, 200)
+          && nuevo().correo == nuevo().correo.lower()
+          && nuevo().correo.matches('^[^@\\s]+@[^@\\s]+\\.[^@\\s]+$')
+          && texto(nuevo().telefono, 5, 30)
+          && nuevo().consentimiento is map
+          && nuevo().consentimiento.keys().hasAll(['aceptado','version','fecha'])
+          && nuevo().consentimiento.keys().hasOnly(['aceptado','version','fecha'])
+          && nuevo().consentimiento.aceptado == true
+          && texto(nuevo().consentimiento.version, 1, 40)
+          && nuevo().consentimiento.fecha == request.time
+          && nuevo().estado == 'nuevo'
+          && nuevo().ultimoDiagnosticoId == lid
+          && nuevo().ultimaActividadEn == request.time
+          && nuevo().creadoEn == request.time
+          && (!('origen' in nuevo()) || texto(nuevo().origen, 1, 100))
+          && (!('ultimoPorcentaje' in nuevo()) || (nuevo().ultimoPorcentaje is number && nuevo().ultimoPorcentaje >= 0 && nuevo().ultimoPorcentaje <= 100))
+          && (!('ultimoSegmento' in nuevo()) || texto(nuevo().ultimoSegmento, 1, 80))
+          && (!('ultimaCalificacion' in nuevo()) || texto(nuevo().ultimaCalificacion, 1, 40))
+          && existsAfter(/databases/$(database)/documents/empresas/$(emp)/diagnosticos/$(lid));
+
+        allow get, list: if puedeVerLeads(emp);
+
+                allow update: if puedeGestionarLeads(emp)
+          && nuevo().diff(resource.data).affectedKeys().hasOnly(['estado','asignadoA','contactadoEn','ultimaActividadEn'])
+          && nuevo().estado in ['nuevo','contactado','interesado','convertido','descartado']
+          && (!nuevo().diff(resource.data).affectedKeys().hasAny(['contactadoEn'])
+              || (!('contactadoEn' in resource.data) && nuevo().contactadoEn == request.time))
+          && (!nuevo().diff(resource.data).affectedKeys().hasAny(['ultimaActividadEn'])
+              || nuevo().ultimaActividadEn == request.time);
+
+        allow delete: if esAdminEmpresa(emp) || esPlataforma();
+
+        match /seguimientos/{sid} {
+          allow read: if puedeVerLeads(emp);
+          allow create: if puedeGestionarLeads(emp)
+            && nuevo().keys().hasAll(['tipo','notas','creadoPor','creadoEn'])
+            && nuevo().keys().hasOnly(['tipo','notas','resultado','proximaAccionEn','creadoPor','creadoEn'])
+            && nuevo().tipo in ['llamada','whatsapp','correo','nota']
+            && texto(nuevo().notas, 1, 2000)
+            && nuevo().creadoPor == correo()
+            && nuevo().creadoEn == request.time
+            && (!('resultado' in nuevo()) || texto(nuevo().resultado, 1, 500))
+            && (!('proximaAccionEn' in nuevo()) || nuevo().proximaAccionEn is timestamp);
+          allow update: if false;
+          allow delete: if esAdminEmpresa(emp) || esPlataforma();
+        }
+      }
+
+      match /diagnosticos/{did} {
+        allow create: if emp == 'clearia'
+          && nuevo().keys().hasAll(['leadId','cuestionarioId','versionId','respuestas','completadoEn'])
+          && nuevo().keys().hasOnly(['leadId','cuestionarioId','versionId','respuestas','puntajeTotal','puntajeMaximo','porcentaje','segmento','puntajePorDimension','calificacionComercial','templateRecomendadoId','planRecomendadoId','completadoEn'])
+          && nuevo().leadId == did
+          && texto(nuevo().cuestionarioId, 1, 100)
+          && cuestionarioPublicado(emp, nuevo().cuestionarioId)
+          && texto(nuevo().versionId, 1, 40)
+          && nuevo().respuestas is map
+          && nuevo().respuestas.size() <= 60
+          && nuevo().completadoEn == request.time
+          && (!('puntajeTotal' in nuevo()) || (nuevo().puntajeTotal is number && nuevo().puntajeTotal >= 0))
+          && (!('puntajeMaximo' in nuevo()) || (nuevo().puntajeMaximo is number && nuevo().puntajeMaximo > 0))
+          && (!('porcentaje' in nuevo()) || (nuevo().porcentaje is number && nuevo().porcentaje >= 0 && nuevo().porcentaje <= 100))
+          && (!('puntajeTotal' in nuevo() && 'puntajeMaximo' in nuevo()) || nuevo().puntajeTotal <= nuevo().puntajeMaximo)
+          && (!('segmento' in nuevo()) || texto(nuevo().segmento, 1, 80))
+          && (!('puntajePorDimension' in nuevo()) || (nuevo().puntajePorDimension is map && nuevo().puntajePorDimension.size() <= 20))
+          && (!('calificacionComercial' in nuevo()) || nuevo().calificacionComercial is map)
+          && (!('templateRecomendadoId' in nuevo()) || texto(nuevo().templateRecomendadoId, 1, 100))
+          && (!('planRecomendadoId' in nuevo()) || texto(nuevo().planRecomendadoId, 1, 80))
+          && existsAfter(/databases/$(database)/documents/empresas/$(emp)/leads/$(did));
+
+        allow read: if puedeVerLeads(emp);
+        allow update: if false;
+        allow delete: if esAdminEmpresa(emp) || esPlataforma();
+      }
     }
   }
 }

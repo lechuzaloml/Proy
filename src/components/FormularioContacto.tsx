@@ -53,6 +53,7 @@ export default function FormularioContacto({
         <input
           autoComplete="name"
           disabled={deshabilitado}
+          maxLength={120}
           onChange={(evento) => actualizarDato("nombre", evento.target.value)}
           required
           type="text"
@@ -64,6 +65,7 @@ export default function FormularioContacto({
         <input
           autoComplete="email"
           disabled={deshabilitado}
+          maxLength={200}
           onChange={(evento) => actualizarDato("correo", evento.target.value)}
           required
           type="email"
@@ -75,6 +77,8 @@ export default function FormularioContacto({
         <input
           autoComplete="tel"
           disabled={deshabilitado}
+          maxLength={30}
+          minLength={5}
           onChange={(evento) => actualizarDato("telefono", evento.target.value)}
           required
           type="tel"

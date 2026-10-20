@@ -24,3 +24,14 @@ sin modificar sus diez reglas.
    por categoría; el nombre del segmento sigue oculto.
 7. **Familia de respuesta por template:** cada template de la biblioteca usa
    una sola familia de respuesta.
+8. **Aislamiento multiempresa:** los leads, diagnósticos, miembros y
+   cuestionarios se almacenan bajo la ruta de su empresa; el panel de Clear-IA
+   opera en `empresas/clearia`.
+9. **Puntaje para el panel:** el panel administrativo puede mostrar puntaje y
+   segmento del diagnóstico. La Decisión 5 aplica únicamente a quien responde.
+10. **Confianza en el puntaje:** por ahora el navegador guarda directamente
+    en Firestore y el puntaje no está verificado por el servidor. Antes de
+    abrir el servicio a empresas externas, el guardado y el cálculo deben
+    pasar a un servidor.
+11. **Calificación comercial:** permanece vacía hasta que Carlos defina qué
+    caracteriza a un prospecto prioritario.

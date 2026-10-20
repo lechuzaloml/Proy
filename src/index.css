@@ -2926,6 +2926,325 @@ textarea:focus-visible {
   }
 }
 
+.admin-page {
+  width: min(100% - 2rem, 1280px);
+  min-height: 100vh;
+  margin: 0 auto;
+  padding: 2rem 0 4rem;
+}
+
+.admin-login {
+  display: grid;
+  align-content: center;
+  justify-items: start;
+  min-height: 70vh;
+}
+
+.admin-login h1,
+.admin-header h1 {
+  margin: 0;
+  color: var(--color-graphite);
+}
+
+.admin-header,
+.admin-detail-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-bottom: 1.5rem;
+}
+
+.admin-header > div > p:last-child {
+  margin: 0.5rem 0 0;
+  overflow-wrap: anywhere;
+}
+
+.admin-header .eyebrow {
+  margin: 0 0 0.4rem;
+  color: var(--color-coral);
+  font-size: 0.8rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.admin-filters {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 1rem;
+  margin: 1.5rem 0;
+  padding: 1rem;
+  border: 1px solid var(--color-divider);
+  border-radius: 10px;
+  background: var(--color-light-gray);
+}
+
+.admin-filters label,
+.admin-state-editor label,
+.admin-followup-form label {
+  display: grid;
+  gap: 0.4rem;
+  font-size: 0.88rem;
+  font-weight: 650;
+}
+
+.admin-filters input,
+.admin-filters select,
+.admin-state-editor select,
+.admin-followup-form select,
+.admin-followup-form textarea {
+  width: 100%;
+  min-width: 0;
+  padding: 0.65rem;
+  border: 1px solid var(--color-divider);
+  border-radius: 7px;
+  background: var(--color-white);
+  color: var(--color-dark-gray);
+}
+
+.admin-table-scroll {
+  width: 100%;
+  overflow-x: auto;
+  border: 1px solid var(--color-divider);
+  border-radius: 10px;
+}
+
+.admin-table {
+  width: 100%;
+  border-collapse: collapse;
+  text-align: left;
+}
+
+.admin-table th,
+.admin-table td {
+  padding: 0.85rem;
+  border-bottom: 1px solid var(--color-divider);
+  white-space: nowrap;
+}
+
+.admin-table th {
+  background: var(--color-light-gray);
+  font-size: 0.82rem;
+}
+
+.admin-table tbody tr:last-child td {
+  border-bottom: 0;
+}
+
+.admin-lead-link {
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--color-graphite);
+  font: inherit;
+  font-weight: 700;
+  text-align: left;
+  text-decoration: underline;
+  cursor: pointer;
+}
+
+.admin-load-more {
+  margin-top: 1rem;
+}
+
+.admin-empty {
+  padding: 2rem 1rem;
+  border: 1px dashed var(--color-divider);
+  border-radius: 10px;
+  text-align: center;
+}
+
+.admin-error {
+  padding: 0.85rem 1rem;
+  border: 1px solid var(--color-coral);
+  border-radius: 8px;
+  color: #8d211c;
+  overflow-wrap: anywhere;
+}
+
+.admin-detail {
+  display: grid;
+  gap: 1rem;
+}
+
+.admin-detail > h2 {
+  margin: 0;
+}
+
+.admin-danger-button {
+  padding: 0.65rem 1rem;
+  border: 1px solid #a52d27;
+  border-radius: 7px;
+  background: #a52d27;
+  color: var(--color-white);
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.admin-danger-button:disabled {
+  opacity: 0.65;
+  cursor: wait;
+}
+
+.admin-detail-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  align-items: start;
+  gap: 1rem;
+}
+
+.admin-card {
+  min-width: 0;
+  padding: 1.1rem;
+  border: 1px solid var(--color-divider);
+  border-radius: 10px;
+  background: var(--color-white);
+}
+
+.admin-card h3 {
+  margin: 0 0 0.8rem;
+}
+
+.admin-card h4 {
+  margin: 1.25rem 0 0.5rem;
+}
+
+.admin-card dl {
+  display: grid;
+  grid-template-columns: minmax(6rem, 0.65fr) minmax(0, 1.35fr);
+  gap: 0.55rem 0.9rem;
+  margin: 0 0 1rem;
+}
+
+.admin-card dt {
+  color: var(--color-gray);
+}
+
+.admin-card dd {
+  min-width: 0;
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+
+.admin-state-editor {
+  display: flex;
+  align-items: end;
+  flex-wrap: wrap;
+  gap: 0.7rem;
+  padding-top: 0.9rem;
+  border-top: 1px solid var(--color-divider);
+}
+
+.admin-warning {
+  padding: 0.75rem;
+  border-left: 4px solid #c77a00;
+  background: #fff7e8;
+  line-height: 1.5;
+}
+
+.admin-answers,
+.admin-followup-list {
+  display: grid;
+  gap: 0.7rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.admin-answers li,
+.admin-followup-list li {
+  display: grid;
+  gap: 0.35rem;
+  padding: 0.75rem;
+  border: 1px solid var(--color-divider);
+  border-radius: 7px;
+  overflow-wrap: anywhere;
+}
+
+.admin-answers li span,
+.admin-followup-list li span,
+.admin-followup-list small {
+  color: var(--color-gray);
+}
+
+.admin-followups {
+  display: grid;
+  gap: 1rem;
+}
+
+.admin-followup-form {
+  display: grid;
+  grid-template-columns: minmax(9rem, 0.3fr) minmax(0, 1fr) auto;
+  align-items: end;
+  gap: 0.8rem;
+  padding-bottom: 1rem;
+  border-bottom: 1px solid var(--color-divider);
+}
+
+.admin-followup-form textarea {
+  min-height: 5rem;
+  resize: vertical;
+}
+
+.admin-followup-list li > div {
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.admin-followup-list p {
+  margin: 0;
+  white-space: pre-wrap;
+}
+
+@media (max-width: 760px) {
+  .admin-page {
+    width: min(100% - 1.25rem, 1280px);
+    padding-top: 1.25rem;
+  }
+
+  .admin-header {
+    align-items: flex-start;
+  }
+
+  .admin-filters {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0.75rem;
+    padding: 0.75rem;
+  }
+
+  .admin-detail-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .admin-followup-form {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .admin-followup-form .secondary-button {
+    justify-self: start;
+  }
+}
+
+@media (max-width: 420px) {
+  .admin-header {
+    flex-direction: column;
+  }
+
+  .admin-filters {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .admin-detail-heading {
+    align-items: stretch;
+  }
+
+  .admin-detail-heading > button {
+    flex: 1 1 0;
+  }
+}
+
 .questionnaire[data-presentation] .option-list-siNoTarjetas .option {
   min-height: 84px;
   border-left: 4px solid var(--color-graphite);

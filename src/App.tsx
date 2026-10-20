@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { lazy, Suspense, useEffect, useRef, useState } from "react";
 import BibliotecaTemplates, {
   type CasoReferencia,
 } from "./components/BibliotecaTemplates";
@@ -23,8 +23,9 @@ import type { Lead } from "./types/model";
 import { validarCuestionario } from "./validation/validarCuestionario";
 import type { EstadoFlujoCuestionario } from "./components/RenderizadorCuestionario";
 import { serverTimestamp } from "firebase/firestore";
-import { construirDocumentoLead } from "./lib/construirDocumentoLead";
-import { guardarLead } from "./lib/guardarLead";
+import { construirDocumentosDiagnostico } from "./lib/construirDocumentosDiagnostico";
+import { guardarDiagnostico } from "./lib/guardarDiagnostico";
+import { CUESTIONARIO_ID } from "./config/firebaseDatos";
 
 interface SeleccionCuestionario {
   id: string;
@@ -54,6 +55,37 @@ interface EntradaHistorialAplicacion {
 }
 
 const CLAVE_HISTORIAL = "clearIaNavigation";
+const CLAVE_INTENTOS_GUARDADOS = "clearIaDiagnosticosGuardados";
+const PanelAdmin = lazy(() => import("./admin/AdminPanel"));
+
+function intentoMarcadoComoGuardado(id: string): boolean {
+  try {
+    const ids = JSON.parse(
+      window.sessionStorage.getItem(CLAVE_INTENTOS_GUARDADOS) ?? "[]",
+    ) as unknown;
+    return Array.isArray(ids) && ids.includes(id);
+  } catch (error) {
+    console.error("No se pudo revisar la protección contra duplicados.", error);
+    return false;
+  }
+}
+
+function marcarIntentoGuardado(id: string) {
+  try {
+    const ids = JSON.parse(
+      window.sessionStorage.getItem(CLAVE_INTENTOS_GUARDADOS) ?? "[]",
+    ) as unknown;
+    const guardados = Array.isArray(ids) ? ids : [];
+    if (!guardados.includes(id)) {
+      window.sessionStorage.setItem(
+        CLAVE_INTENTOS_GUARDADOS,
+        JSON.stringify([...guardados, id]),
+      );
+    }
+  } catch (error) {
+    console.error("No se pudo conservar la protección contra duplicados.", error);
+  }
+}
 
 function obtenerEstadoInicial(): EstadoAplicacion {
   const entrada = window.history.state as EntradaHistorialAplicacion | null;
@@ -122,6 +154,14 @@ export default function App() {
     window.addEventListener("popstate", restaurarDesdeHistorial);
     return () => window.removeEventListener("popstate", restaurarDesdeHistorial);
   }, []);
+
+  if (window.location.pathname.replace(/\/+$/, "") === "/admin") {
+    return (
+      <Suspense fallback={<main className="admin-page">Cargando panel…</main>}>
+        <PanelAdmin />
+      </Suspense>
+    );
+  }
 
   function navegar(siguiente: EstadoAplicacion) {
     siguiente = {
@@ -448,6 +488,7 @@ export default function App() {
           const estadoActual = estadoAppRef.current;
           if (
             seleccion.id === "diagnostico-inicial" &&
+            resultadoValidacion.data.id === CUESTIONARIO_ID &&
             resultado.estado === "ok" &&
             resultado.tipo === "segmentado" &&
             estadoActual.idIntento &&
@@ -455,31 +496,55 @@ export default function App() {
           ) {
             const recomendacion = recomendaciones[resultado.segmento];
             if (recomendacion) {
-              const documento = construirDocumentoLead({
+              const documentos = construirDocumentosDiagnostico({
+                id: estadoActual.idIntento,
                 contacto: lead,
                 cuestionario: resultadoValidacion.data,
                 respuestas,
-                puntaje: resultado.puntajeTotal,
+                puntajeTotal: resultado.puntajeTotal,
                 segmento: resultado.segmento,
                 templateRecomendadoId:
                   recomendacion.templateRecomendadoId,
-                planRecomendado: recomendacion.plan.nombre,
+                planRecomendadoId: recomendacion.plan.nombre
+                  .normalize("NFD")
+                  .replace(/[\u0300-\u036f]/g, "")
+                  .toLowerCase()
+                  .replace(/[^a-z0-9]+/g, "-")
+                  .replace(/^-|-$/g, ""),
                 consentimientoAceptado: true,
-                consentimientoFecha: serverTimestamp(),
-                creadoEn: serverTimestamp(),
+                fecha: serverTimestamp(),
               });
               const idIntento = estadoActual.idIntento;
-              if (!intentosGuardadosRef.current.has(idIntento)) {
+              if (
+                !intentosGuardadosRef.current.has(idIntento) &&
+                !intentoMarcadoComoGuardado(idIntento)
+              ) {
                 intentosGuardadosRef.current.add(idIntento);
-                void guardarLead(idIntento, documento).catch(
-                  (error: unknown) => {
+                void guardarDiagnostico(idIntento, documentos)
+                  .then((guardado) => {
+                    if (guardado) {
+                      marcarIntentoGuardado(idIntento);
+                    } else {
+                      intentosGuardadosRef.current.delete(idIntento);
+                    }
+                  })
+                  .catch((error: unknown) => {
                     intentosGuardadosRef.current.delete(idIntento);
+                    const codigo =
+                      typeof error === "object" &&
+                      error !== null &&
+                      "code" in error
+                        ? error.code
+                        : "";
+                    if (codigo === "already-exists") {
+                      marcarIntentoGuardado(idIntento);
+                      return;
+                    }
                     console.error(
-                      "No se pudo guardar el lead del diagnóstico.",
+                      "No se pudo guardar el diagnóstico del lead.",
                       error,
                     );
-                  },
-                );
+                  });
               }
             }
           }
