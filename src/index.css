@@ -45,7 +45,10 @@ textarea {
 
 .landing-brand {
   display: inline-flex;
+  position: relative;
+  width: 100%;
   align-items: center;
+  justify-content: space-between;
   gap: 0.45rem;
   color: var(--color-dark-gray);
   font-size: 0.85rem;
@@ -2135,6 +2138,95 @@ textarea {
   margin: 3rem auto;
 }
 
+.account-panel {
+  display: grid;
+  width: min(100% - 2rem, 1120px);
+  gap: 0.75rem;
+  margin: 1.5rem auto 0;
+  padding: 1rem 1.25rem;
+  border: 1px solid var(--color-divider);
+  border-radius: 8px;
+  background: var(--color-light-gray);
+}
+
+.landing-account {
+  margin-left: auto;
+  letter-spacing: normal;
+}
+
+.landing-account .account-panel {
+  width: auto;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  background: transparent;
+}
+
+.landing-account .account-panel-open {
+  position: absolute;
+  top: calc(100% + 0.75rem);
+  right: 0;
+  z-index: 10;
+  width: min(90vw, 420px);
+  padding: 1rem 1.25rem;
+  border: 1px solid var(--color-divider);
+  background: var(--color-white);
+  box-shadow: 0 8px 24px rgb(0 0 0 / 12%);
+}
+
+.library-header > .account-panel {
+  width: 100%;
+  margin: 0 0 1rem;
+}
+
+.account-login-trigger {
+  white-space: nowrap;
+}
+
+.account-google-button {
+  justify-self: start;
+}
+
+.account-login-divider {
+  margin: 0;
+  color: var(--color-dark-gray);
+  font-size: 0.9rem;
+}
+
+.account-panel > p {
+  margin: 0;
+}
+
+.account-panel > .secondary-button {
+  justify-self: start;
+}
+
+.account-login-form {
+  display: grid;
+  max-width: 420px;
+  gap: 0.75rem;
+}
+
+.account-login-form label {
+  display: grid;
+  gap: 0.35rem;
+  font-weight: 700;
+}
+
+.account-login-form input {
+  width: 100%;
+}
+
+.account-login-form .submit-button {
+  justify-self: start;
+  margin: 0.25rem 0 0;
+}
+
+.account-note {
+  color: var(--color-dark-gray);
+  font-size: 0.9rem;
+}
+
 .library-header {
   max-width: 700px;
   margin-bottom: 2.5rem;
@@ -2230,6 +2322,16 @@ textarea {
 
 .template-card > .submit-button {
   margin-top: auto;
+}
+
+.template-card > .submit-button,
+.template-card > .template-copy-button {
+  width: min(100%, 12rem);
+  margin-left: 0;
+}
+
+.template-card > .template-copy-button {
+  margin-top: 0.5rem;
 }
 
 .reference-cases {

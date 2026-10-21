@@ -1,5 +1,8 @@
+import type { ReactNode } from "react";
+
 interface LandingProps {
   onComenzar: () => void;
+  accesoCuenta: ReactNode;
 }
 
 const retosNegocio = [
@@ -23,7 +26,7 @@ const retosNegocio = [
   },
 ];
 
-export default function Landing({ onComenzar }: LandingProps) {
+export default function Landing({ onComenzar, accesoCuenta }: LandingProps) {
   return (
     <main className="landing-page">
       <header className="landing-brand">
@@ -34,6 +37,7 @@ export default function Landing({ onComenzar }: LandingProps) {
           src="/merkatic-brand-mark.png"
         />
         <span>CLEAR-IA</span>
+        <div className="landing-account">{accesoCuenta}</div>
       </header>
       <section aria-labelledby="landing-title" className="landing-hero">
         <div className="landing-intro">

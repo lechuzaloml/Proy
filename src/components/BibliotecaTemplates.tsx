@@ -1,5 +1,7 @@
+import type { ReactNode } from "react";
 import TarjetaTemplate from "./TarjetaTemplate";
 import type { TemplateCatalogo } from "../templates/catalogo";
+import { tienePortadaTemplate } from "./PantallaInicioTemplate";
 
 export interface CasoReferencia {
   id: string;
@@ -11,7 +13,8 @@ export interface CasoReferencia {
 interface BibliotecaTemplatesProps {
   templates: TemplateCatalogo[];
   casosReferencia: CasoReferencia[];
-  onCrearCopia: (nombre: string, configuracion: unknown) => void;
+  accesoCuenta: ReactNode;
+  onCrearCopia?: (nombre: string, configuracion: unknown) => void | Promise<void>;
   onSeleccionar: (
     id: string,
     nombre: string,
@@ -23,6 +26,7 @@ interface BibliotecaTemplatesProps {
 export default function BibliotecaTemplates({
   templates,
   casosReferencia,
+  accesoCuenta,
   onCrearCopia,
   onSeleccionar,
 }: BibliotecaTemplatesProps) {
@@ -30,6 +34,7 @@ export default function BibliotecaTemplates({
     <main className="template-library">
       <header className="library-header">
         <p className="eyebrow">Clear-IA</p>
+        {accesoCuenta}
         <h1>Biblioteca de templates</h1>
         <p>
         Elige una plantilla como punto de partida para crear tu propio
@@ -44,11 +49,22 @@ export default function BibliotecaTemplates({
             <TarjetaTemplate
               key={template.id}
               metadata={template.metadata}
-              onSeleccionar={() =>
-                onCrearCopia(
+              onProbar={() =>
+                onSeleccionar(
+                  template.id,
                   template.metadata.nombre,
                   template.configuracion,
+                  tienePortadaTemplate(template.id) ? "biblioteca" : undefined,
                 )
+              }
+              onCrearCopia={
+                onCrearCopia
+                  ? () =>
+                    onCrearCopia(
+                      template.metadata.nombre,
+                      template.configuracion,
+                    )
+                  : undefined
               }
             />
           ))}

@@ -2,12 +2,14 @@ import type { MetadataTemplate } from "../templates/catalogo";
 
 interface TarjetaTemplateProps {
   metadata: MetadataTemplate;
-  onSeleccionar: () => void;
+  onProbar: () => void;
+  onCrearCopia?: () => void | Promise<void>;
 }
 
 export default function TarjetaTemplate({
   metadata,
-  onSeleccionar,
+  onProbar,
+  onCrearCopia,
 }: TarjetaTemplateProps) {
   return (
     <article className="template-card">
@@ -26,9 +28,18 @@ export default function TarjetaTemplate({
         </div>
       </dl>
       <p>{metadata.descripcion}</p>
-      <button className="submit-button" onClick={onSeleccionar} type="button">
-       Usar como plantilla
+      <button className="submit-button" onClick={onProbar} type="button">
+        Probar
       </button>
+      {onCrearCopia && (
+        <button
+          className="secondary-button template-copy-button"
+          onClick={() => void onCrearCopia()}
+          type="button"
+        >
+          Usar como plantilla
+        </button>
+      )}
     </article>
   );
 }

@@ -1,7 +1,20 @@
 import { lazy, Suspense, useEffect, useRef, useState } from "react";
+import {
+  onAuthStateChanged,
+  type User,
+} from "firebase/auth";
+import {
+  collectionGroup,
+  doc,
+  getDocFromServer,
+  getDocsFromServer,
+  query,
+  where,
+} from "firebase/firestore";
 import BibliotecaTemplates, {
   type CasoReferencia,
 } from "./components/BibliotecaTemplates";
+import AccesoCuenta from "./components/AccesoCuenta";
 import Landing from "./components/Landing";
 import RenderizadorCuestionario from "./components/RenderizadorCuestionario";
 import PantallaResultado from "./components/PantallaResultado";
@@ -28,6 +41,9 @@ import { construirDocumentosDiagnostico } from "./lib/construirDocumentosDiagnos
 import { guardarDiagnostico } from "./lib/guardarDiagnostico";
 import { CUESTIONARIO_ID, EMPRESA_ID, VERSION_ID } from "./config/firebaseDatos";
 import { crearCopiaPlantilla } from "./templates/crearCopiaPlantilla";
+import { auth } from "./lib/firebaseAuth";
+import { db } from "./lib/firebase";
+import { puedeCrearCopiasPlantilla } from "./lib/permisosPlantillas";
 
 interface SeleccionCuestionario {
   id: string;
@@ -60,6 +76,35 @@ interface EntradaHistorialAplicacion {
 const CLAVE_HISTORIAL = "clearIaNavigation";
 const CLAVE_INTENTOS_GUARDADOS = "clearIaDiagnosticosGuardados";
 const PanelAdmin = lazy(() => import("./admin/AdminPanel"));
+
+async function puedeEditarCuestionarios(usuario: User): Promise<boolean> {
+  const database = db;
+  const correo = usuario.email?.toLowerCase();
+  if (!database || !usuario.emailVerified || !correo) {
+    return false;
+  }
+
+  const plataforma = await getDocFromServer(
+    doc(database, "plataformaAdmins", correo),
+  );
+  if (plataforma.exists()) {
+    return puedeCrearCopiasPlantilla(
+      { correo, correoVerificado: usuario.emailVerified },
+      true,
+      [],
+    );
+  }
+
+  const membresias = await getDocsFromServer(query(
+    collectionGroup(database, "miembros"),
+    where("correo", "==", correo),
+  ));
+  return puedeCrearCopiasPlantilla(
+    { correo, correoVerificado: usuario.emailVerified },
+    false,
+    membresias.docs.map((membresia) => membresia.data()),
+  );
+}
 
 function intentoMarcadoComoGuardado(id: string): boolean {
   try {
@@ -137,6 +182,9 @@ const casosReferencia: CasoReferencia[] = [
 
 export default function App() {
   const [estadoApp, setEstadoApp] = useState(obtenerEstadoInicial);
+  const [puedeCrearCopias, setPuedeCrearCopias] = useState(false);
+  const [usuarioSesion, setUsuarioSesion] = useState<User | null>(null);
+  const [authListo, setAuthListo] = useState(false);
   const estadoAppRef = useRef(estadoApp);
   const intentosGuardadosRef = useRef(new Set<string>());
   const { seleccion, bienvenidaCompletada, mostrarPlanes, envio } = estadoApp;
@@ -160,6 +208,55 @@ export default function App() {
   }, []);
 
   const rutaActual = window.location.pathname.replace(/\/+$/, "");
+  useEffect(() => {
+    if (rutaActual === "/admin" || rutaActual.startsWith("/admin/")) {
+      return;
+    }
+    if (!auth || !db) {
+      setUsuarioSesion(null);
+      setAuthListo(true);
+      setPuedeCrearCopias(false);
+      return;
+    }
+
+    let cancelado = false;
+    let revision = 0;
+    const cancelarAuth = onAuthStateChanged(
+      auth,
+      (usuario) => {
+        const revisionActual = ++revision;
+        setUsuarioSesion(usuario);
+        setAuthListo(true);
+        setPuedeCrearCopias(false);
+        if (!usuario) {
+          return;
+        }
+        void puedeEditarCuestionarios(usuario)
+          .then((permitido) => {
+            if (!cancelado && revisionActual === revision) {
+              setPuedeCrearCopias(permitido);
+            }
+          })
+          .catch((error: unknown) => {
+            if (!cancelado && revisionActual === revision) {
+              console.error("No se pudo verificar el permiso para crear copias.", error);
+            }
+          });
+      },
+      (error) => {
+        setUsuarioSesion(null);
+        setAuthListo(true);
+        setPuedeCrearCopias(false);
+        console.error("No se pudo verificar la sesión para crear copias.", error);
+      },
+    );
+    return () => {
+      cancelado = true;
+      revision += 1;
+      cancelarAuth();
+    };
+  }, [rutaActual]);
+
   if (rutaActual === "/admin" || rutaActual.startsWith("/admin/")) {
     return (
       <Suspense fallback={<main className="admin-page">Cargando panel…</main>}>
@@ -235,18 +332,29 @@ export default function App() {
     });
   }
 
-  function seleccionarCopiaPlantilla(
+  async function seleccionarCopiaPlantilla(
     nombre: string,
     configuracion: unknown,
   ) {
-    const copia = crearCopiaPlantilla(nombre, configuracion);
-    seleccionarCuestionario(
-      copia.id,
-      copia.nombre,
-      copia.configuracion,
-      null,
-      true,
-    );
+    try {
+      const usuario = auth?.currentUser;
+      if (!usuario || !(await puedeEditarCuestionarios(usuario))) {
+        setPuedeCrearCopias(false);
+        return;
+      }
+
+      const copia = crearCopiaPlantilla(nombre, configuracion);
+      seleccionarCuestionario(
+        copia.id,
+        copia.nombre,
+        copia.configuracion,
+        null,
+        true,
+      );
+    } catch (error: unknown) {
+      setPuedeCrearCopias(false);
+      console.error("No se pudo verificar el permiso para crear la copia.", error);
+    }
   }
 
   function actualizarCopiaPlantilla(
@@ -307,14 +415,24 @@ export default function App() {
   }
 
   if (!bienvenidaCompletada) {
-    return <Landing onComenzar={abrirDiagnostico} />;
+    return (
+      <Landing
+        accesoCuenta={
+          <AccesoCuenta authListo={authListo} usuario={usuarioSesion} />
+        }
+        onComenzar={abrirDiagnostico}
+      />
+    );
   }
 
   if (!seleccion) {
     return (
       <BibliotecaTemplates
+        accesoCuenta={
+          <AccesoCuenta authListo={authListo} usuario={usuarioSesion} />
+        }
         casosReferencia={casosReferencia}
-        onCrearCopia={seleccionarCopiaPlantilla}
+        onCrearCopia={puedeCrearCopias ? seleccionarCopiaPlantilla : undefined}
         onSeleccionar={seleccionarCuestionario}
         templates={catalogoTemplates}
       />
