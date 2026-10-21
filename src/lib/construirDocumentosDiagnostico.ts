@@ -15,10 +15,13 @@ import type {
   RespuestaDiagnostico,
 } from "../types/documentosFirestore";
 
+
 export interface EntradaDocumentosDiagnostico {
   id: string;
   contacto: Pick<Lead, "nombre" | "correo" | "telefono">;
   cuestionario: Cuestionario;
+  cuestionarioId?: string;
+  versionId?: string;
   respuestas: RespuestasCuestionario;
   puntajeTotal: number;
   segmento: string;
@@ -27,6 +30,7 @@ export interface EntradaDocumentosDiagnostico {
   consentimientoAceptado: boolean;
   fecha: MarcaTiempoFirestore;
 }
+
 
 export interface DocumentosDiagnostico {
   lead: DocumentoLeadEmpresa;
@@ -155,8 +159,8 @@ export function construirDocumentoDiagnostico(
 
   return {
     leadId: entrada.id,
-    cuestionarioId: CUESTIONARIO_ID,
-    versionId: VERSION_ID,
+    cuestionarioId: entrada.cuestionarioId ?? CUESTIONARIO_ID,
+    versionId: entrada.versionId ?? VERSION_ID, 
     respuestas: respuestaLegible(entrada.cuestionario, entrada.respuestas),
     puntajeTotal: entrada.puntajeTotal,
     puntajeMaximo,

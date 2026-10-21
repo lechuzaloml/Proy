@@ -1,6 +1,5 @@
 import TarjetaTemplate from "./TarjetaTemplate";
 import type { TemplateCatalogo } from "../templates/catalogo";
-import { tienePortadaTemplate } from "./PantallaInicioTemplate";
 
 export interface CasoReferencia {
   id: string;
@@ -12,6 +11,7 @@ export interface CasoReferencia {
 interface BibliotecaTemplatesProps {
   templates: TemplateCatalogo[];
   casosReferencia: CasoReferencia[];
+  onCrearCopia: (nombre: string, configuracion: unknown) => void;
   onSeleccionar: (
     id: string,
     nombre: string,
@@ -23,6 +23,7 @@ interface BibliotecaTemplatesProps {
 export default function BibliotecaTemplates({
   templates,
   casosReferencia,
+  onCrearCopia,
   onSeleccionar,
 }: BibliotecaTemplatesProps) {
   return (
@@ -31,8 +32,8 @@ export default function BibliotecaTemplates({
         <p className="eyebrow">Clear-IA</p>
         <h1>Biblioteca de templates</h1>
         <p>
-          Explora configuraciones demostrativas y ejecuta cada cuestionario con
-          el flujo actual de Clear-IA.
+        Elige una plantilla como punto de partida para crear tu propio
+        cuestionario y adaptar sus preguntas, puntuación y resultados.
         </p>
       </header>
 
@@ -44,11 +45,9 @@ export default function BibliotecaTemplates({
               key={template.id}
               metadata={template.metadata}
               onSeleccionar={() =>
-                onSeleccionar(
-                  template.id,
+                onCrearCopia(
                   template.metadata.nombre,
                   template.configuracion,
-                  tienePortadaTemplate(template.id) ? "biblioteca" : undefined,
                 )
               }
             />

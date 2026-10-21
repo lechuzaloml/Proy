@@ -27,7 +27,7 @@ export default function TarjetaTemplate({
       </dl>
       <p>{metadata.descripcion}</p>
       <button className="submit-button" onClick={onSeleccionar} type="button">
-        Ver template
+       Usar como plantilla
       </button>
     </article>
   );

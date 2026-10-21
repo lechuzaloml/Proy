@@ -8,6 +8,7 @@ import PantallaResultado from "./components/PantallaResultado";
 import PantallaRecomendacion from "./components/PantallaRecomendacion";
 import PantallaPlanes from "./components/PantallaPlanes";
 import PantallaInicioTemplate from "./components/PantallaInicioTemplate";
+import EditorCuestionario from "./components/EditorCuestionario";
 import { catalogoTemplates } from "./templates/catalogo";
 import { recomendaciones } from "./config/recomendaciones";
 import { obtenerPresentacionTemplate } from "./config/presentacionTemplates";
@@ -25,7 +26,8 @@ import type { EstadoFlujoCuestionario } from "./components/RenderizadorCuestiona
 import { serverTimestamp } from "firebase/firestore";
 import { construirDocumentosDiagnostico } from "./lib/construirDocumentosDiagnostico";
 import { guardarDiagnostico } from "./lib/guardarDiagnostico";
-import { CUESTIONARIO_ID, EMPRESA_ID } from "./config/firebaseDatos";
+import { CUESTIONARIO_ID, EMPRESA_ID, VERSION_ID } from "./config/firebaseDatos";
+import { crearCopiaPlantilla } from "./templates/crearCopiaPlantilla";
 
 interface SeleccionCuestionario {
   id: string;
@@ -38,6 +40,7 @@ interface EstadoAplicacion {
   idIntento: string | null;
   bienvenidaCompletada: boolean;
   seleccion: SeleccionCuestionario | null;
+  editandoCopia: boolean;
   mostrarPlanes: boolean;
   origenIntroduccionTemplate: "biblioteca" | "recomendacion" | null;
   envio: {
@@ -98,6 +101,7 @@ function obtenerEstadoInicial(): EstadoAplicacion {
     idIntento: null,
     bienvenidaCompletada: false,
     seleccion: null,
+    editandoCopia: false,
     mostrarPlanes: false,
     origenIntroduccionTemplate: null,
     envio: null,
@@ -216,17 +220,61 @@ export default function App() {
     nombre: string,
     configuracion: unknown,
     origenIntroduccionTemplate: "biblioteca" | "recomendacion" | null = null,
+    editandoCopia = false,
   ) {
     navegar({
       ...estadoAppRef.current,
       bienvenidaCompletada: true,
       idIntento: null,
       seleccion: { id, nombre, configuracion },
+      editandoCopia,
       envio: null,
       mostrarPlanes: false,
       origenIntroduccionTemplate,
       estadoCuestionario: null,
     });
+  }
+
+  function seleccionarCopiaPlantilla(
+    nombre: string,
+    configuracion: unknown,
+  ) {
+    const copia = crearCopiaPlantilla(nombre, configuracion);
+    seleccionarCuestionario(
+      copia.id,
+      copia.nombre,
+      copia.configuracion,
+      null,
+      true,
+    );
+  }
+
+  function actualizarCopiaPlantilla(
+    nombre: string,
+    configuracion: unknown,
+    previsualizar: boolean,
+  ) {
+    const actual = estadoAppRef.current;
+    if (!actual.seleccion) {
+      return;
+    }
+    const siguiente = {
+      ...actual,
+      seleccion: { ...actual.seleccion, nombre, configuracion },
+      editandoCopia: !previsualizar,
+      estadoCuestionario: null,
+      envio: null,
+    };
+    if (previsualizar) {
+      navegar(siguiente);
+      return;
+    }
+    window.history.replaceState(
+      { ...(window.history.state ?? {}), [CLAVE_HISTORIAL]: siguiente },
+      "",
+    );
+    estadoAppRef.current = siguiente;
+    setEstadoApp(siguiente);
   }
 
   function regresarBiblioteca() {
@@ -266,6 +314,7 @@ export default function App() {
     return (
       <BibliotecaTemplates
         casosReferencia={casosReferencia}
+        onCrearCopia={seleccionarCopiaPlantilla}
         onSeleccionar={seleccionarCuestionario}
         templates={catalogoTemplates}
       />
@@ -334,6 +383,29 @@ export default function App() {
             ))}
           </ul>
         </main>
+      </>
+    );
+  }
+
+  if (
+    seleccion.id.startsWith("personalizado-") &&
+    estadoApp.editandoCopia
+  ) {
+    return (
+      <>
+        {navegacion}
+        <EditorCuestionario
+          id={seleccion.id}
+          key={seleccion.id}
+          nombre={seleccion.nombre}
+          cuestionario={resultadoValidacion.data}
+          onGuardar={(nombre, cuestionario) =>
+            actualizarCopiaPlantilla(nombre, cuestionario, false)
+          }
+          onPrevisualizar={(nombre, cuestionario) =>
+            actualizarCopiaPlantilla(nombre, cuestionario, true)
+          }
+        />
       </>
     );
   }
@@ -498,6 +570,8 @@ export default function App() {
             const recomendacion = recomendaciones[resultado.segmento];
             if (recomendacion) {
               const documentos = construirDocumentosDiagnostico({
+                cuestionarioId: resultadoValidacion.data.id,
+                versionId: VERSION_ID,
                 id: estadoActual.idIntento,
                 contacto: lead,
                 cuestionario: resultadoValidacion.data,
@@ -514,6 +588,7 @@ export default function App() {
                   .replace(/^-|-$/g, ""),
                 consentimientoAceptado: true,
                 fecha: serverTimestamp(),
+                
               });
               const idIntento = estadoActual.idIntento;
               if (

@@ -2274,6 +2274,116 @@ textarea {
   outline-offset: 2px;
 }
 
+.custom-editor {
+  display: grid;
+  width: min(100% - 2rem, 900px);
+  gap: 1rem;
+  margin: 2rem auto;
+}
+
+.custom-editor-header {
+  display: grid;
+  gap: 0.65rem;
+}
+
+.custom-editor-header h1,
+.custom-editor-header p {
+  margin: 0;
+}
+
+.custom-editor-name,
+.custom-editor-question > label,
+.custom-editor-option > label,
+.custom-editor-add > label {
+  display: grid;
+  gap: 0.4rem;
+  font-weight: 600;
+}
+
+.custom-editor input,
+.custom-editor textarea,
+.custom-editor select {
+  width: 100%;
+  padding: 0.65rem;
+  border: 1px solid var(--color-divider);
+  border-radius: 8px;
+  background: var(--color-white);
+  color: var(--color-dark-gray);
+  font: inherit;
+}
+
+.custom-editor textarea {
+  min-height: 5rem;
+  resize: vertical;
+}
+
+.custom-editor-questions {
+  display: grid;
+  gap: 1rem;
+}
+
+.custom-editor-question {
+  display: grid;
+  gap: 1rem;
+  padding: 1rem;
+  border: 1px solid var(--color-divider);
+  border-radius: 12px;
+  background: var(--color-white);
+}
+
+.custom-editor-question-heading,
+.custom-editor-option,
+.custom-editor-add,
+.custom-editor-actions {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+}
+
+.custom-editor-question-heading h2 {
+  margin: 0;
+  font-size: 1rem;
+  text-transform: capitalize;
+}
+
+.custom-editor-options {
+  display: grid;
+  gap: 0.75rem;
+  min-width: 0;
+  padding: 0;
+  border: 0;
+}
+
+.custom-editor-options legend {
+  margin-bottom: 0.5rem;
+  font-weight: 700;
+}
+
+.custom-editor-option > label {
+  flex: 1;
+}
+
+.custom-editor-add {
+  justify-content: flex-start;
+  flex-wrap: wrap;
+}
+
+.custom-editor-add > label {
+  min-width: min(100%, 260px);
+}
+
+.custom-editor-actions {
+  justify-content: flex-end;
+  flex-wrap: wrap;
+  padding-top: 0.5rem;
+}
+
+.custom-editor button:disabled {
+  cursor: not-allowed;
+  opacity: 0.55;
+}
+
 .flow-navigation {
   display: flex;
   width: min(100% - 2rem, 760px);
@@ -2290,6 +2400,21 @@ textarea {
 }
 
 @media (max-width: 820px) {
+  .custom-editor-question-heading,
+  .custom-editor-option {
+    align-items: stretch;
+  }
+
+  .custom-editor-question-heading,
+  .custom-editor-actions {
+    flex-direction: column;
+  }
+
+  .custom-editor-actions > button,
+  .custom-editor-question-heading > button {
+    width: 100%;
+  }
+
   .result-profile-content {
     grid-template-columns: minmax(0, 1fr);
   }
