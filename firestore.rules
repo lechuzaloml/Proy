@@ -35,9 +35,17 @@ service cloud.firestore {
     function puedeEditarCuestionarios(emp) {
       return esPlataforma() || tienePermiso(emp, 'editarCuestionarios');
     }
+    function empresaActiva(emp) {
+      return exists(/databases/$(database)/documents/empresas/$(emp))
+        && get(/databases/$(database)/documents/empresas/$(emp)).data.estado == 'activa';
+    }
     function cuestionarioPublicado(emp, cid) {
-      return exists(/databases/$(database)/documents/empresas/$(emp)/cuestionarios/$(cid))
+      return empresaActiva(emp)
+        && exists(/databases/$(database)/documents/empresas/$(emp)/cuestionarios/$(cid))
         && get(/databases/$(database)/documents/empresas/$(emp)/cuestionarios/$(cid)).data.estado == 'publicado';
+    }
+    function versionActual(emp, cid) {
+      return get(/databases/$(database)/documents/empresas/$(emp)/cuestionarios/$(cid)).data.versionActualId;
     }
     function texto(v, minimo, maximo) {
       return v is string && v.size() >= minimo && v.size() <= maximo;
@@ -58,11 +66,18 @@ service cloud.firestore {
       match /miembros/{id} {
         allow get: if conSesion() && correo() == id;
         allow list: if esAdminEmpresa(emp) || esPlataforma();
-        allow write: if esAdminEmpresa(emp) || esPlataforma();
+        allow delete: if esAdminEmpresa(emp) || esPlataforma();
+        allow create, update: if (esAdminEmpresa(emp) || esPlataforma())
+          && nuevo().keys().hasOnly(['correo','rol','permisos','estado','creadoEn'])
+          && id == id.lower()
+          && nuevo().correo == id
+          && nuevo().rol in ['admin','usuario']
+          && nuevo().estado in ['activo','inactivo']
+          && nuevo().permisos is map;
       }
 
       match /cuestionarios/{cid} {
-        allow get: if resource.data.estado == 'publicado' || puedeEditarCuestionarios(emp);
+        allow get: if (resource.data.estado == 'publicado' && empresaActiva(emp)) || puedeEditarCuestionarios(emp);
         allow list: if puedeEditarCuestionarios(emp);
         allow write: if puedeEditarCuestionarios(emp);
 
@@ -75,7 +90,7 @@ service cloud.firestore {
       }
 
       match /leads/{lid} {
-        allow create: if emp == 'clearia'
+        allow create: if empresaActiva(emp)
           && nuevo().keys().hasAll(['nombre','correo','telefono','consentimiento','estado','ultimoDiagnosticoId','ultimaActividadEn','creadoEn'])
           && nuevo().keys().hasOnly(['nombre','correo','telefono','consentimiento','origen','estado','ultimaActividadEn','ultimoDiagnosticoId','ultimoPorcentaje','ultimoSegmento','ultimaCalificacion','creadoEn'])
           && texto(nuevo().nombre, 1, 120)
@@ -128,13 +143,14 @@ service cloud.firestore {
       }
 
       match /diagnosticos/{did} {
-        allow create: if emp == 'clearia'
+        allow create: if empresaActiva(emp)
           && nuevo().keys().hasAll(['leadId','cuestionarioId','versionId','respuestas','completadoEn'])
           && nuevo().keys().hasOnly(['leadId','cuestionarioId','versionId','respuestas','puntajeTotal','puntajeMaximo','porcentaje','segmento','puntajePorDimension','calificacionComercial','templateRecomendadoId','planRecomendadoId','completadoEn'])
           && nuevo().leadId == did
           && texto(nuevo().cuestionarioId, 1, 100)
           && cuestionarioPublicado(emp, nuevo().cuestionarioId)
           && texto(nuevo().versionId, 1, 40)
+          && nuevo().versionId == versionActual(emp, nuevo().cuestionarioId)
           && nuevo().respuestas is map
           && nuevo().respuestas.size() <= 60
           && nuevo().completadoEn == request.time
@@ -153,6 +169,10 @@ service cloud.firestore {
         allow update: if false;
         allow delete: if esAdminEmpresa(emp) || esPlataforma();
       }
+    }
+
+    match /{path=**}/miembros/{id} {
+      allow read: if conSesion() && resource.data.correo == correo();
     }
   }
 }

@@ -25,7 +25,7 @@ import type { EstadoFlujoCuestionario } from "./components/RenderizadorCuestiona
 import { serverTimestamp } from "firebase/firestore";
 import { construirDocumentosDiagnostico } from "./lib/construirDocumentosDiagnostico";
 import { guardarDiagnostico } from "./lib/guardarDiagnostico";
-import { CUESTIONARIO_ID } from "./config/firebaseDatos";
+import { CUESTIONARIO_ID, EMPRESA_ID } from "./config/firebaseDatos";
 
 interface SeleccionCuestionario {
   id: string;
@@ -155,7 +155,8 @@ export default function App() {
     return () => window.removeEventListener("popstate", restaurarDesdeHistorial);
   }, []);
 
-  if (window.location.pathname.replace(/\/+$/, "") === "/admin") {
+  const rutaActual = window.location.pathname.replace(/\/+$/, "");
+  if (rutaActual === "/admin" || rutaActual.startsWith("/admin/")) {
     return (
       <Suspense fallback={<main className="admin-page">Cargando panel…</main>}>
         <PanelAdmin />
@@ -520,7 +521,7 @@ export default function App() {
                 !intentoMarcadoComoGuardado(idIntento)
               ) {
                 intentosGuardadosRef.current.add(idIntento);
-                void guardarDiagnostico(idIntento, documentos)
+                void guardarDiagnostico(EMPRESA_ID, idIntento, documentos)
                   .then((guardado) => {
                     if (guardado) {
                       marcarIntentoGuardado(idIntento);

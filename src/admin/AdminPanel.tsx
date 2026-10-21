@@ -14,6 +14,7 @@ import {
 } from "firebase/auth";
 import {
   collection,
+  collectionGroup,
   doc,
   getDoc,
   getDocs,
@@ -28,7 +29,6 @@ import {
   type DocumentData,
   type QueryDocumentSnapshot,
 } from "firebase/firestore";
-import { EMPRESA_ID } from "../config/firebaseDatos";
 import { auth } from "../lib/firebaseAuth";
 import { db } from "../lib/firebase";
 import {
@@ -36,6 +36,8 @@ import {
   type LeadParaLista,
   type OrdenLeads,
 } from "./funcionesLeads";
+import ConsolaPlataforma from "./ConsolaPlataforma";
+import GestorMiembros from "./GestorMiembros";
 
 type EstadoAcceso = "cargando" | "sin-sesion" | "revisando" | "denegado" | "listo";
 type EstadoLead =
@@ -54,6 +56,14 @@ interface PermisosMiembro {
 
 interface LeadAdmin extends LeadParaLista {
   datos: DocumentData;
+}
+
+interface EmpresaAccesible {
+  id: string;
+  nombre: string;
+  estado: string;
+  planId: string;
+  permisos: PermisosMiembro;
 }
 
 interface Seguimiento {
@@ -131,7 +141,8 @@ export default function AdminPanel() {
   const [usuario, setUsuario] = useState<User | null>(null);
   const [authListo, setAuthListo] = useState(false);
   const [estadoAcceso, setEstadoAcceso] = useState<EstadoAcceso>("cargando");
-  const [permisos, setPermisos] = useState<PermisosMiembro | null>(null);
+  const [empresas, setEmpresas] = useState<EmpresaAccesible[]>([]);
+  const [empresaIdActiva, setEmpresaIdActiva] = useState("");
   const [esPlataforma, setEsPlataforma] = useState(false);
   const [error, setError] = useState("");
   const [leads, setLeads] = useState<LeadAdmin[]>([]);
@@ -145,6 +156,10 @@ export default function AdminPanel() {
   const [busqueda, setBusqueda] = useState("");
   const [filtroSegmento, setFiltroSegmento] = useState("");
   const [filtroEstado, setFiltroEstado] = useState("");
+  const rutaPlataforma =
+    window.location.pathname.replace(/\/+$/, "") === "/admin/plataforma";
+  const empresaActiva =
+    empresas.find(({ id }) => id === empresaIdActiva) ?? null;
 
   useEffect(() => {
     if (!auth) {
@@ -171,7 +186,6 @@ export default function AdminPanel() {
   useEffect(() => {
     const database = db;
     if (!usuario || !database || !usuario.email) {
-      setPermisos(null);
       setEsPlataforma(false);
       if (usuario && !database) {
         setEstadoAcceso("denegado");
@@ -186,24 +200,103 @@ export default function AdminPanel() {
     setEstadoAcceso("revisando");
     setError("");
     void Promise.all([
-      getDoc(doc(database, "empresas", EMPRESA_ID, "miembros", correo)),
       getDoc(doc(database, "plataformaAdmins", correo)),
+      getDocs(query(
+        collectionGroup(database, "miembros"),
+        where("correo", "==", correo),
+      )),
     ])
-      .then(([miembroSnapshot, plataformaSnapshot]) => {
+      .then(async ([plataformaSnapshot, membresiasSnapshot]) => {
         if (cancelado) {
           return;
         }
-        setEsPlataforma(plataformaSnapshot.exists());
-        if (
-          !miembroSnapshot.exists() ||
-          miembroSnapshot.data().estado !== "activo"
-        ) {
-          setPermisos(null);
-          setEstadoAcceso("denegado");
+        const plataforma = plataformaSnapshot.exists();
+        setEsPlataforma(plataforma);
+        const membresiasActivas = membresiasSnapshot.docs.filter(
+          (snapshot) =>
+            snapshot.data().estado === "activo" &&
+            snapshot.data().correo === correo,
+        );
+        const empresasMembresia = await Promise.all(
+          membresiasActivas.map(async (membresia) => {
+            const referenciaEmpresa = membresia.ref.parent.parent;
+            if (!referenciaEmpresa) {
+              return null;
+            }
+            const empresaSnapshot = await getDoc(referenciaEmpresa);
+            if (!empresaSnapshot.exists()) {
+              return null;
+            }
+            const datosEmpresa = empresaSnapshot.data();
+            return {
+              id: empresaSnapshot.id,
+              nombre: typeof datosEmpresa.nombre === "string"
+                ? datosEmpresa.nombre
+                : empresaSnapshot.id,
+              estado: typeof datosEmpresa.estado === "string"
+                ? datosEmpresa.estado
+                : "desconocido",
+              planId: typeof datosEmpresa.planId === "string"
+                ? datosEmpresa.planId
+                : "interno",
+              permisos: leerPermisos(membresia.data()),
+            } satisfies EmpresaAccesible;
+          }),
+        );
+        let accesibles = empresasMembresia.filter(
+          (empresa): empresa is EmpresaAccesible => empresa !== null,
+        );
+        if (plataforma) {
+          const empresasSnapshot = await getDocs(
+            collection(database, "empresas"),
+          );
+          const membresiasPorId = new Map(
+            accesibles.map((empresa) => [empresa.id, empresa]),
+          );
+          accesibles = empresasSnapshot.docs.map((snapshot) => {
+            const existente = membresiasPorId.get(snapshot.id);
+            const datosEmpresa = snapshot.data();
+            return {
+              id: snapshot.id,
+              nombre: typeof datosEmpresa.nombre === "string"
+                ? datosEmpresa.nombre
+                : snapshot.id,
+              estado: typeof datosEmpresa.estado === "string"
+                ? datosEmpresa.estado
+                : "desconocido",
+              planId: typeof datosEmpresa.planId === "string"
+                ? datosEmpresa.planId
+                : "interno",
+              permisos: existente?.permisos ?? {
+                rol: "admin",
+                verLeads: true,
+                gestionarLeads: true,
+                editarCuestionarios: true,
+              },
+            };
+          });
+        }
+        if (cancelado) {
           return;
         }
-        setPermisos(leerPermisos(miembroSnapshot.data()));
-        setEstadoAcceso("listo");
+        accesibles.sort((primero, segundo) =>
+          primero.nombre.localeCompare(segundo.nombre),
+        );
+        setEmpresas(accesibles);
+        setEmpresaIdActiva((actual) =>
+          accesibles.some(({ id }) => id === actual)
+            ? actual
+            : accesibles.length === 1
+              ? accesibles[0].id
+              : "",
+        );
+        if (plataforma) {
+          setEstadoAcceso("listo");
+        } else if (accesibles.length === 0) {
+          setEstadoAcceso("denegado");
+        } else {
+          setEstadoAcceso("listo");
+        }
       })
       .catch((consultaError: unknown) => {
         if (!cancelado) {
@@ -222,18 +315,28 @@ export default function AdminPanel() {
   }, [usuario, authListo]);
 
   const puedeVerLeads = Boolean(
-    esPlataforma || permisos?.verLeads || permisos?.gestionarLeads,
+    esPlataforma ||
+      empresaActiva?.permisos.verLeads ||
+      empresaActiva?.permisos.gestionarLeads,
   );
   const puedeGestionarLeads = Boolean(
-    esPlataforma || permisos?.gestionarLeads,
+    esPlataforma || empresaActiva?.permisos.gestionarLeads,
   );
   const puedeEliminar = Boolean(
-    esPlataforma || permisos?.rol === "admin",
+    esPlataforma || empresaActiva?.permisos.rol === "admin",
+  );
+  const puedeGestionarMiembros = Boolean(
+    esPlataforma || empresaActiva?.permisos.rol === "admin",
   );
 
   useEffect(() => {
     const database = db;
-    if (estadoAcceso !== "listo" || !puedeVerLeads || !database) {
+    if (
+      estadoAcceso !== "listo" ||
+      !puedeVerLeads ||
+      !empresaIdActiva ||
+      !database
+    ) {
       setLeads([]);
       setCursor(null);
       setHayMas(false);
@@ -245,7 +348,7 @@ export default function AdminPanel() {
     setError("");
     const ordenCampo = orden === "fecha" ? "creadoEn" : "ultimoPorcentaje";
     const consulta = query(
-      collection(database, "empresas", EMPRESA_ID, "leads"),
+      collection(database, "empresas", empresaIdActiva, "leads"),
       orderBy(ordenCampo, "desc"),
       limit(100),
     );
@@ -278,11 +381,11 @@ export default function AdminPanel() {
     return () => {
       cancelado = true;
     };
-  }, [estadoAcceso, puedeVerLeads, orden]);
+  }, [estadoAcceso, puedeVerLeads, empresaIdActiva, orden]);
 
   const cargarMas = useCallback(async () => {
     const database = db;
-    if (!database || !cursor || !puedeVerLeads) {
+    if (!database || !cursor || !puedeVerLeads || !empresaIdActiva) {
       return;
     }
     setCargandoMas(true);
@@ -290,7 +393,7 @@ export default function AdminPanel() {
     try {
       const ordenCampo = orden === "fecha" ? "creadoEn" : "ultimoPorcentaje";
       const consulta = query(
-        collection(database, "empresas", EMPRESA_ID, "leads"),
+        collection(database, "empresas", empresaIdActiva, "leads"),
         orderBy(ordenCampo, "desc"),
         startAfter(cursor),
         limit(100),
@@ -313,7 +416,7 @@ export default function AdminPanel() {
     } finally {
       setCargandoMas(false);
     }
-  }, [cursor, orden, puedeVerLeads]);
+  }, [cursor, orden, puedeVerLeads, empresaIdActiva]);
 
   const leadsVisibles = useMemo(
     () => filtrarOrdenarLeads(leads, {
@@ -406,7 +509,21 @@ export default function AdminPanel() {
     );
   }
 
-  if (estadoAcceso !== "listo" || !permisos) {
+  if (rutaPlataforma) {
+    if (!esPlataforma) {
+      return (
+        <main className="admin-page">
+          <p>Esta cuenta no tiene acceso.</p>
+        </main>
+      );
+    }
+    return <ConsolaPlataforma onVolver={() => window.location.assign("/admin")} />;
+  }
+
+  if (
+    estadoAcceso !== "listo" ||
+    (!esPlataforma && empresas.length === 0)
+  ) {
     return (
       <main className="admin-page">
         <header className="admin-header">
@@ -419,6 +536,47 @@ export default function AdminPanel() {
           <p className="admin-error" role="alert">{error}</p>
         ) : (
           <p role="status">Esta cuenta no tiene acceso.</p>
+        )}
+      </main>
+    );
+  }
+
+  if (!empresaActiva) {
+    return (
+      <main className="admin-page">
+        <header className="admin-header">
+          <div>
+            <h1>Panel de administración</h1>
+            <p>{usuario.email}</p>
+          </div>
+          <button className="secondary-button" onClick={() => void cerrarSesion()}>
+            Cerrar sesión
+          </button>
+        </header>
+        {empresas.length > 1 ? (
+          <section className="admin-card">
+            <h2>Selecciona una empresa</h2>
+            <ul className="admin-company-picker">
+              {empresas.map((empresa) => (
+                <li key={empresa.id}>
+                  <button
+                    className="admin-lead-link"
+                    onClick={() => setEmpresaIdActiva(empresa.id)}
+                  >
+                    {empresa.nombre}
+                  </button>
+                  <span>{empresa.estado} · {empresa.planId} · {empresa.id}</span>
+                </li>
+              ))}
+            </ul>
+          </section>
+        ) : (
+          <p>No hay empresas disponibles para esta cuenta.</p>
+        )}
+        {esPlataforma && (
+          <a className="secondary-button admin-platform-link" href="/admin/plataforma">
+            Abrir consola de plataforma
+          </a>
         )}
       </main>
     );
@@ -442,19 +600,51 @@ export default function AdminPanel() {
     <main className="admin-page">
       <header className="admin-header">
         <div>
-          <p className="eyebrow">Clear-IA</p>
+          <p className="eyebrow">{empresaActiva.nombre}</p>
           <h1>Panel de leads</h1>
           <p>{usuario.email}</p>
+          <p className="admin-company-status">
+            Empresa: {empresaActiva.nombre} · {empresaActiva.estado} ·{" "}
+            {empresaActiva.planId}
+          </p>
+          {empresas.length > 1 && (
+            <label className="admin-company-select">
+              Cambiar empresa
+              <select
+                onChange={(evento) => {
+                  setLeadSeleccionado(null);
+                  setEmpresaIdActiva(evento.target.value);
+                  setCursor(null);
+                  setLeads([]);
+                }}
+                value={empresaIdActiva}
+              >
+                {empresas.map((empresa) => (
+                  <option key={empresa.id} value={empresa.id}>
+                    {empresa.nombre} · {empresa.estado}
+                  </option>
+                ))}
+              </select>
+            </label>
+          )}
         </div>
-        <button className="secondary-button" onClick={() => void cerrarSesion()}>
-          Cerrar sesión
-        </button>
+        <div className="admin-header-actions">
+          {esPlataforma && (
+            <a className="secondary-button" href="/admin/plataforma">
+              Consola de plataforma
+            </a>
+          )}
+          <button className="secondary-button" onClick={() => void cerrarSesion()}>
+            Cerrar sesión
+          </button>
+        </div>
       </header>
 
       {error && <p className="admin-error" role="alert">{error}</p>}
 
       {leadSeleccionado ? (
         <DetalleLead
+          empresaId={empresaIdActiva}
           lead={leadSeleccionado}
           puedeEliminar={puedeEliminar}
           puedeGestionar={puedeGestionarLeads}
@@ -567,11 +757,18 @@ export default function AdminPanel() {
           )}
         </>
       )}
+      {puedeGestionarMiembros && (
+        <GestorMiembros
+          empresaId={empresaIdActiva}
+          empresaNombre={empresaActiva.nombre}
+        />
+      )}
     </main>
   );
 }
 
 interface DetalleLeadProps {
+  empresaId: string;
   lead: LeadAdmin;
   puedeEliminar: boolean;
   puedeGestionar: boolean;
@@ -582,6 +779,7 @@ interface DetalleLeadProps {
 }
 
 function DetalleLead({
+  empresaId,
   lead,
   puedeEliminar,
   puedeGestionar,
@@ -613,7 +811,7 @@ function DetalleLead({
     setCargando(true);
     void Promise.all([
       getDocs(query(
-        collection(database, "empresas", EMPRESA_ID, "diagnosticos"),
+        collection(database, "empresas", empresaId, "diagnosticos"),
         where("leadId", "==", lead.id),
         limit(1),
       )),
@@ -621,7 +819,7 @@ function DetalleLead({
         collection(
           database,
           "empresas",
-          EMPRESA_ID,
+          empresaId,
           "leads",
           lead.id,
           "seguimientos",
@@ -662,7 +860,7 @@ function DetalleLead({
     return () => {
       cancelado = true;
     };
-  }, [lead.id]);
+  }, [empresaId, lead.id]);
 
   async function cambiarEstado() {
     const database = db;
@@ -682,7 +880,7 @@ function DetalleLead({
 
     try {
       await updateDoc(
-        doc(database, "empresas", EMPRESA_ID, "leads", lead.id),
+        doc(database, "empresas", empresaId, "leads", lead.id),
         cambios,
       );
       onActualizar(lead.id, {
@@ -712,7 +910,7 @@ function DetalleLead({
         collection(
           database,
           "empresas",
-          EMPRESA_ID,
+          empresaId,
           "leads",
           lead.id,
           "seguimientos",
@@ -761,7 +959,7 @@ function DetalleLead({
       const seguimientosSnapshot = await getDocs(collection(
         database,
         "empresas",
-        EMPRESA_ID,
+        empresaId,
         "leads",
         lead.id,
         "seguimientos",
@@ -778,14 +976,14 @@ function DetalleLead({
       loteFinal.delete(doc(
         database,
         "empresas",
-        EMPRESA_ID,
+        empresaId,
         "diagnosticos",
         lead.id,
       ));
       loteFinal.delete(doc(
         database,
         "empresas",
-        EMPRESA_ID,
+        empresaId,
         "leads",
         lead.id,
       ));

@@ -35,3 +35,11 @@ sin modificar sus diez reglas.
     pasar a un servidor.
 11. **Calificación comercial:** permanece vacía hasta que Carlos defina qué
     caracteriza a un prospecto prioritario.
+12. **Identidad de membresía:** una membresía se identifica mediante el correo
+     verificado y normalizado en minúsculas; el documento de miembro conserva
+     ese mismo valor en su campo `correo`.
+13. **Empresas suspendidas:** una empresa con estado `suspendida` no acepta
+     envíos públicos de diagnósticos.
+14. **Puntaje enviado por el cliente:** el puntaje calculado y enviado desde
+     el navegador no está verificado por el servidor mientras el guardado siga
+     ejecutándose en el cliente.

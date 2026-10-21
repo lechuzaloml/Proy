@@ -1,9 +1,9 @@
 import { doc, serverTimestamp, writeBatch } from "firebase/firestore";
-import { EMPRESA_ID } from "../config/firebaseDatos";
 import type { DocumentosDiagnostico } from "./construirDocumentosDiagnostico";
 import { db } from "./firebase";
 
 export async function guardarDiagnostico(
+  empresaId: string,
   id: string,
   documentos: DocumentosDiagnostico,
 ): Promise<boolean> {
@@ -13,7 +13,7 @@ export async function guardarDiagnostico(
 
   const lote = writeBatch(db);
   const marcaServidor = serverTimestamp();
-  lote.set(doc(db, "empresas", EMPRESA_ID, "leads", id), {
+  lote.set(doc(db, "empresas", empresaId, "leads", id), {
     ...documentos.lead,
     consentimiento: {
       ...documentos.lead.consentimiento,
@@ -22,7 +22,7 @@ export async function guardarDiagnostico(
     ultimaActividadEn: marcaServidor,
     creadoEn: marcaServidor,
   });
-  lote.set(doc(db, "empresas", EMPRESA_ID, "diagnosticos", id), {
+  lote.set(doc(db, "empresas", empresaId, "diagnosticos", id), {
     ...documentos.diagnostico,
     completadoEn: marcaServidor,
   });
