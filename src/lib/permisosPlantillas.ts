@@ -4,6 +4,7 @@ export interface UsuarioPlantillas {
 }
 
 export interface MembresiaPlantillas {
+  empresaId: string;
   correo?: unknown;
   estado?: unknown;
   rol?: unknown;
@@ -13,6 +14,7 @@ export interface MembresiaPlantillas {
 export function puedeCrearCopiasPlantilla(
   usuario: UsuarioPlantillas | null,
   esAdminPlataforma: boolean,
+  empresaId: string,
   membresias: MembresiaPlantillas[],
 ): boolean {
   const correo = usuario?.correo?.toLowerCase();
@@ -31,7 +33,8 @@ export function puedeCrearCopiasPlantilla(
       return false;
     }
     const permisos = membresia.permisos as Record<string, unknown>;
-    return membresia.correo === correo &&
+    return membresia.empresaId === empresaId &&
+      membresia.correo === correo &&
       membresia.estado === "activo" &&
       (membresia.rol === "admin" || permisos.editarCuestionarios === true);
   });

@@ -1,5 +1,6 @@
 import type { Cuestionario, Lead } from "../types/model";
 import type { RespuestasCuestionario } from "../logic/calcularResultado";
+import type { ResultadoCalculado } from "../logic/calcularResultado";
 import { calcularPerfilSecciones } from "../logic/calcularPerfilSecciones";
 import {
   VERSION_AVISO_PRIVACIDAD,
@@ -35,6 +36,17 @@ export interface EntradaDocumentosDiagnostico {
 export interface DocumentosDiagnostico {
   lead: DocumentoLeadEmpresa;
   diagnostico: DocumentoDiagnostico;
+}
+
+export interface EntradaDocumentosCopia {
+  id: string;
+  contacto: Pick<Lead, "nombre" | "correo" | "telefono">;
+  cuestionario: Cuestionario;
+  respuestas: RespuestasCuestionario;
+  calculo: Extract<ResultadoCalculado, { estado: "ok" }>;
+  contenidoPersonalizado: string | null;
+  consentimientoAceptado: boolean;
+  fecha: MarcaTiempoFirestore;
 }
 
 function respuestaLegible(
@@ -183,5 +195,90 @@ export function construirDocumentosDiagnostico(
   return {
     lead: construirDocumentoLeadEmpresa(entrada),
     diagnostico: construirDocumentoDiagnostico(entrada),
+  };
+}
+
+export function construirDocumentosCopia(
+  entrada: EntradaDocumentosCopia,
+): DocumentosDiagnostico {
+  if (entrada.consentimientoAceptado !== true) {
+    throw new Error("Se requiere consentimiento para construir el documento.");
+  }
+  if (!entrada.cuestionario.id.startsWith("personalizado-")) {
+    throw new Error("Solo se pueden guardar envíos de copias personalizadas.");
+  }
+
+  const resultadoGuardado = entrada.calculo.tipo === "segmentado"
+    ? {
+        tipo: "por_segmento" as const,
+        resultados: [{
+          ...entrada.calculo.resultado,
+          contenido: entrada.contenidoPersonalizado ??
+            entrada.calculo.resultado.contenido,
+        }],
+      }
+    : {
+        tipo: "fijo" as const,
+        contenido: entrada.contenidoPersonalizado ??
+          entrada.calculo.resultado.contenido,
+        ...("cta" in entrada.calculo.resultado && entrada.calculo.resultado.cta
+          ? { cta: entrada.calculo.resultado.cta }
+          : {}),
+      };
+  const puntajeTotal = entrada.calculo.tipo === "segmentado"
+    ? entrada.calculo.puntajeTotal
+    : undefined;
+  const puntajeMaximo = entrada.calculo.tipo === "segmentado"
+    ? obtenerPuntajeMaximo(entrada.cuestionario)
+    : 0;
+  const porcentaje = puntajeMaximo > 0 && puntajeTotal !== undefined
+    ? Math.min(100, Math.max(0, Math.round((puntajeTotal / puntajeMaximo) * 100)))
+    : undefined;
+  const puntajePorDimension = entrada.calculo.tipo === "segmentado"
+    ? Object.fromEntries(
+        calcularPerfilSecciones(entrada.cuestionario, entrada.respuestas)
+          .filter(({ modo }) => modo === "puntaje")
+          .map(({ nombre, porcentaje: valor }) => [nombre, valor]),
+      )
+    : undefined;
+
+  return {
+    lead: {
+      nombre: entrada.contacto.nombre.trim(),
+      correo: entrada.contacto.correo.trim().toLowerCase(),
+      telefono: entrada.contacto.telefono.trim(),
+      consentimiento: {
+        aceptado: true,
+        version: VERSION_AVISO_PRIVACIDAD,
+        fecha: entrada.fecha,
+      },
+      origen: "copia-clear-ia",
+      estado: "nuevo",
+      ultimaActividadEn: entrada.fecha,
+      ultimoDiagnosticoId: entrada.id,
+      ...(porcentaje !== undefined ? { ultimoPorcentaje: porcentaje } : {}),
+      ...(entrada.calculo.tipo === "segmentado"
+        ? { ultimoSegmento: entrada.calculo.segmento }
+        : {}),
+      creadoEn: entrada.fecha,
+    },
+    diagnostico: {
+      leadId: entrada.id,
+      cuestionarioId: entrada.cuestionario.id,
+      respuestas: respuestaLegible(entrada.cuestionario, entrada.respuestas),
+      resultado: resultadoGuardado,
+      ...(puntajeTotal !== undefined
+        ? { puntajeTotal }
+        : {}),
+      ...(puntajeMaximo > 0 ? { puntajeMaximo } : {}),
+      ...(porcentaje !== undefined ? { porcentaje } : {}),
+      ...(entrada.calculo.tipo === "segmentado"
+        ? { segmento: entrada.calculo.segmento }
+        : {}),
+      ...(puntajePorDimension && Object.keys(puntajePorDimension).length > 0
+        ? { puntajePorDimension }
+        : {}),
+      completadoEn: entrada.fecha,
+    },
   };
 }

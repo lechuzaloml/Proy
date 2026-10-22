@@ -44,6 +44,75 @@ service cloud.firestore {
         && exists(/databases/$(database)/documents/empresas/$(emp)/cuestionarios/$(cid))
         && get(/databases/$(database)/documents/empresas/$(emp)/cuestionarios/$(cid)).data.estado == 'publicado';
     }
+    function puedeLeerVersionPublicada(emp, cid, vid) {
+      return empresaActiva(emp)
+        && exists(/databases/$(database)/documents/empresas/$(emp)/cuestionarios/$(cid))
+        && get(/databases/$(database)/documents/empresas/$(emp)/cuestionarios/$(cid)).data.publicacion.estado == 'publicado'
+        && get(/databases/$(database)/documents/empresas/$(emp)/cuestionarios/$(cid)).data.publicacion.versionId == vid;
+    }
+    function copiaAutorizada(emp, cid) {
+      return empresaActiva(emp)
+        && puedeEditarCuestionarios(emp)
+        && cid.matches('^personalizado-[A-Za-z0-9_-]{1,120}$')
+        && exists(/databases/$(database)/documents/empresas/$(emp)/cuestionarios/$(cid))
+        && get(/databases/$(database)/documents/empresas/$(emp)/cuestionarios/$(cid)).data.estado == 'borrador'
+        && get(/databases/$(database)/documents/empresas/$(emp)/cuestionarios/$(cid)).data.id == cid
+        && get(/databases/$(database)/documents/empresas/$(emp)/cuestionarios/$(cid)).data.configuracion.id == cid;
+    }
+    function ctaValida(cta) {
+      return cta is map
+        && cta.keys().hasAll(['texto','accion'])
+        && cta.keys().hasOnly(['texto','accion'])
+        && texto(cta.texto, 1, 300)
+        && texto(cta.accion, 1, 500);
+    }
+    function resultadoCopiaValido(resultado, segmentado) {
+      return resultado is map
+        && (
+          (!segmentado
+            && resultado.keys().hasAll(['tipo','contenido'])
+            && resultado.keys().hasOnly(['tipo','contenido','cta'])
+            && resultado.tipo == 'fijo'
+            && texto(resultado.contenido, 1, 5000)
+            && (!('cta' in resultado) || ctaValida(resultado.cta)))
+          ||
+          (segmentado
+            && resultado.keys().hasAll(['tipo','resultados'])
+            && resultado.keys().hasOnly(['tipo','resultados'])
+            && resultado.tipo == 'por_segmento'
+            && resultado.resultados is list
+            && resultado.resultados.size() == 1
+            && resultado.resultados[0] is map
+            && resultado.resultados[0].keys().hasAll(['segmento','contenido'])
+            && resultado.resultados[0].keys().hasOnly(['segmento','contenido','cta'])
+            && texto(resultado.resultados[0].segmento, 1, 80)
+            && texto(resultado.resultados[0].contenido, 1, 5000)
+            && (!('cta' in resultado.resultados[0]) || ctaValida(resultado.resultados[0].cta)))
+        );
+    }
+    function envioCopiaValido(emp, did) {
+      let diagnostico = getAfter(/databases/$(database)/documents/empresas/$(emp)/diagnosticos/$(did)).data;
+      let lead = getAfter(/databases/$(database)/documents/empresas/$(emp)/leads/$(did)).data;
+      let cuestionario = get(/databases/$(database)/documents/empresas/$(emp)/cuestionarios/$(diagnostico.cuestionarioId)).data;
+      return copiaAutorizada(emp, diagnostico.cuestionarioId)
+        && diagnostico.leadId == did
+        && !('versionId' in diagnostico)
+        && 'resultado' in diagnostico
+        && resultadoCopiaValido(diagnostico.resultado, cuestionario.configuracion.usa_scoring)
+        && (
+          (cuestionario.configuracion.usa_scoring == true
+            && diagnostico.keys().hasAll(['puntajeTotal','segmento'])
+            && texto(diagnostico.segmento, 1, 80)
+            && diagnostico.resultado.resultados[0].segmento == diagnostico.segmento
+            && (!('ultimoSegmento' in lead) || lead.ultimoSegmento == diagnostico.segmento))
+          ||
+          (cuestionario.configuracion.usa_scoring == false
+            && !diagnostico.keys().hasAny(['puntajeTotal','puntajeMaximo','porcentaje','segmento','puntajePorDimension'])
+            && !lead.keys().hasAny(['ultimoPorcentaje','ultimoSegmento']))
+        )
+        && existsAfter(/databases/$(database)/documents/empresas/$(emp)/leads/$(did))
+        && lead.origen == 'copia-clear-ia';
+    }
     function versionActual(emp, cid) {
       return get(/databases/$(database)/documents/empresas/$(emp)/cuestionarios/$(cid)).data.versionActualId;
     }
@@ -79,13 +148,20 @@ service cloud.firestore {
       match /cuestionarios/{cid} {
         allow get: if (resource.data.estado == 'publicado' && empresaActiva(emp)) || puedeEditarCuestionarios(emp);
         allow list: if puedeEditarCuestionarios(emp);
-        allow write: if puedeEditarCuestionarios(emp);
+        allow create: if puedeEditarCuestionarios(emp)
+          && nuevo().keys().hasOnly(['id','nombre','estado','configuracion','creadoPor','creadoEn','actualizadoEn'])
+          && nuevo().estado == 'borrador';
+        allow update: if puedeEditarCuestionarios(emp)
+          && nuevo().diff(resource.data).affectedKeys()
+            .hasOnly(['nombre','estado','configuracion','actualizadoEn'])
+          && nuevo().estado == 'borrador';
+        allow delete: if puedeEditarCuestionarios(emp);
 
         match /versiones/{vid} {
-          allow get: if cuestionarioPublicado(emp, cid) || puedeEditarCuestionarios(emp);
+          allow get: if puedeLeerVersionPublicada(emp, cid, vid)
+            || puedeEditarCuestionarios(emp);
           allow list: if puedeEditarCuestionarios(emp);
-          allow create: if puedeEditarCuestionarios(emp);
-          allow update, delete: if false;
+          allow write: if false;
         }
       }
 
@@ -112,7 +188,9 @@ service cloud.firestore {
           && (!('ultimoPorcentaje' in nuevo()) || (nuevo().ultimoPorcentaje is number && nuevo().ultimoPorcentaje >= 0 && nuevo().ultimoPorcentaje <= 100))
           && (!('ultimoSegmento' in nuevo()) || texto(nuevo().ultimoSegmento, 1, 80))
           && (!('ultimaCalificacion' in nuevo()) || texto(nuevo().ultimaCalificacion, 1, 40))
-          && existsAfter(/databases/$(database)/documents/empresas/$(emp)/diagnosticos/$(lid));
+          && existsAfter(/databases/$(database)/documents/empresas/$(emp)/diagnosticos/$(lid))
+          && (!('origen' in nuevo()) || nuevo().origen != 'copia-clear-ia'
+            || copiaAutorizada(emp, getAfter(/databases/$(database)/documents/empresas/$(emp)/diagnosticos/$(lid)).data.cuestionarioId));
 
         allow get, list: if puedeVerLeads(emp);
 
@@ -144,17 +222,21 @@ service cloud.firestore {
 
       match /diagnosticos/{did} {
         allow create: if empresaActiva(emp)
-          && nuevo().keys().hasAll(['leadId','cuestionarioId','versionId','respuestas','completadoEn'])
-          && nuevo().keys().hasOnly(['leadId','cuestionarioId','versionId','respuestas','puntajeTotal','puntajeMaximo','porcentaje','segmento','puntajePorDimension','calificacionComercial','templateRecomendadoId','planRecomendadoId','completadoEn'])
+          && nuevo().keys().hasAll(['leadId','cuestionarioId','respuestas','completadoEn'])
+          && nuevo().keys().hasOnly(['leadId','cuestionarioId','versionId','respuestas','resultado','puntajeTotal','puntajeMaximo','porcentaje','segmento','puntajePorDimension','calificacionComercial','templateRecomendadoId','planRecomendadoId','completadoEn'])
           && nuevo().leadId == did
           && texto(nuevo().cuestionarioId, 1, 100)
-          && cuestionarioPublicado(emp, nuevo().cuestionarioId)
-          && texto(nuevo().versionId, 1, 40)
-          && nuevo().versionId == versionActual(emp, nuevo().cuestionarioId)
+          && (
+            (cuestionarioPublicado(emp, nuevo().cuestionarioId)
+              && 'versionId' in nuevo()
+              && texto(nuevo().versionId, 1, 40)
+              && nuevo().versionId == versionActual(emp, nuevo().cuestionarioId))
+            || envioCopiaValido(emp, did)
+          )
           && nuevo().respuestas is map
           && nuevo().respuestas.size() <= 60
           && nuevo().completadoEn == request.time
-          && (!('puntajeTotal' in nuevo()) || (nuevo().puntajeTotal is number && nuevo().puntajeTotal >= 0))
+          && (!('puntajeTotal' in nuevo()) || (nuevo().puntajeTotal is number && (nuevo().puntajeTotal >= 0 || envioCopiaValido(emp, did))))
           && (!('puntajeMaximo' in nuevo()) || (nuevo().puntajeMaximo is number && nuevo().puntajeMaximo > 0))
           && (!('porcentaje' in nuevo()) || (nuevo().porcentaje is number && nuevo().porcentaje >= 0 && nuevo().porcentaje <= 100))
           && (!('puntajeTotal' in nuevo() && 'puntajeMaximo' in nuevo()) || nuevo().puntajeTotal <= nuevo().puntajeMaximo)

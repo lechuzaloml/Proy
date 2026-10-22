@@ -4,12 +4,8 @@ import {
   type User,
 } from "firebase/auth";
 import {
-  collectionGroup,
   doc,
   getDocFromServer,
-  getDocsFromServer,
-  query,
-  where,
 } from "firebase/firestore";
 import BibliotecaTemplates, {
   type CasoReferencia,
@@ -22,6 +18,7 @@ import PantallaRecomendacion from "./components/PantallaRecomendacion";
 import PantallaPlanes from "./components/PantallaPlanes";
 import PantallaInicioTemplate from "./components/PantallaInicioTemplate";
 import EditorCuestionario from "./components/EditorCuestionario";
+import CuestionarioPublico from "./components/CuestionarioPublico";
 import { catalogoTemplates } from "./templates/catalogo";
 import { recomendaciones } from "./config/recomendaciones";
 import { obtenerPresentacionTemplate } from "./config/presentacionTemplates";
@@ -37,13 +34,28 @@ import type { Lead } from "./types/model";
 import { validarCuestionario } from "./validation/validarCuestionario";
 import type { EstadoFlujoCuestionario } from "./components/RenderizadorCuestionario";
 import { serverTimestamp } from "firebase/firestore";
-import { construirDocumentosDiagnostico } from "./lib/construirDocumentosDiagnostico";
+import {
+  construirDocumentosCopia,
+  construirDocumentosDiagnostico,
+} from "./lib/construirDocumentosDiagnostico";
 import { guardarDiagnostico } from "./lib/guardarDiagnostico";
 import { CUESTIONARIO_ID, EMPRESA_ID, VERSION_ID } from "./config/firebaseDatos";
 import { crearCopiaPlantilla } from "./templates/crearCopiaPlantilla";
 import { auth } from "./lib/firebaseAuth";
 import { db } from "./lib/firebase";
 import { puedeCrearCopiasPlantilla } from "./lib/permisosPlantillas";
+import {
+  actualizarCuestionarioGuardado,
+  crearCuestionarioGuardado,
+  eliminarCuestionarioGuardado,
+  leerCuestionarioGuardado,
+  listarCuestionariosGuardados,
+} from "./lib/cuestionariosGuardados";
+import type { DocumentoCuestionarioGuardado } from "./lib/documentoCuestionario";
+import {
+  gestionarPublicacionCopia,
+  urlCopiaPublicada,
+} from "./lib/publicacionCuestionarios";
 
 interface SeleccionCuestionario {
   id: string;
@@ -57,6 +69,7 @@ interface EstadoAplicacion {
   bienvenidaCompletada: boolean;
   seleccion: SeleccionCuestionario | null;
   editandoCopia: boolean;
+  copiaGuardada: boolean;
   mostrarPlanes: boolean;
   origenIntroduccionTemplate: "biblioteca" | "recomendacion" | null;
   envio: {
@@ -91,18 +104,21 @@ async function puedeEditarCuestionarios(usuario: User): Promise<boolean> {
     return puedeCrearCopiasPlantilla(
       { correo, correoVerificado: usuario.emailVerified },
       true,
+      EMPRESA_ID,
       [],
     );
   }
 
-  const membresias = await getDocsFromServer(query(
-    collectionGroup(database, "miembros"),
-    where("correo", "==", correo),
-  ));
+  const membresia = await getDocFromServer(
+    doc(database, "empresas", EMPRESA_ID, "miembros", correo),
+  );
   return puedeCrearCopiasPlantilla(
     { correo, correoVerificado: usuario.emailVerified },
     false,
-    membresias.docs.map((membresia) => membresia.data()),
+    EMPRESA_ID,
+    membresia.exists()
+      ? [{ ...membresia.data(), empresaId: EMPRESA_ID }]
+      : [],
   );
 }
 
@@ -147,6 +163,7 @@ function obtenerEstadoInicial(): EstadoAplicacion {
     bienvenidaCompletada: false,
     seleccion: null,
     editandoCopia: false,
+    copiaGuardada: false,
     mostrarPlanes: false,
     origenIntroduccionTemplate: null,
     envio: null,
@@ -185,6 +202,11 @@ export default function App() {
   const [puedeCrearCopias, setPuedeCrearCopias] = useState(false);
   const [usuarioSesion, setUsuarioSesion] = useState<User | null>(null);
   const [authListo, setAuthListo] = useState(false);
+  const [copiasGuardadas, setCopiasGuardadas] = useState<
+    DocumentoCuestionarioGuardado[]
+  >([]);
+  const [cargandoCopias, setCargandoCopias] = useState(false);
+  const [errorBiblioteca, setErrorBiblioteca] = useState("");
   const estadoAppRef = useRef(estadoApp);
   const intentosGuardadosRef = useRef(new Set<string>());
   const { seleccion, bienvenidaCompletada, mostrarPlanes, envio } = estadoApp;
@@ -208,7 +230,14 @@ export default function App() {
   }, []);
 
   const rutaActual = window.location.pathname.replace(/\/+$/, "");
+  const segmentosPublicos = rutaActual.split("/").filter(Boolean);
+  const rutaPublicaCopia = segmentosPublicos.length === 4 &&
+    segmentosPublicos[0] === "c";
   useEffect(() => {
+    if (rutaPublicaCopia) {
+      setAuthListo(true);
+      return;
+    }
     if (rutaActual === "/admin" || rutaActual.startsWith("/admin/")) {
       return;
     }
@@ -255,7 +284,54 @@ export default function App() {
       revision += 1;
       cancelarAuth();
     };
-  }, [rutaActual]);
+  }, [rutaActual, rutaPublicaCopia]);
+
+  useEffect(() => {
+    let cancelado = false;
+    if (!puedeCrearCopias) {
+      setCopiasGuardadas([]);
+      setCargandoCopias(false);
+      return;
+    }
+
+    setCargandoCopias(true);
+    setErrorBiblioteca("");
+    void listarCuestionariosGuardados()
+      .then((copias) => {
+        if (!cancelado) {
+          setCopiasGuardadas(copias);
+        }
+      })
+      .catch((error: unknown) => {
+        if (!cancelado) {
+          setCopiasGuardadas([]);
+          setErrorBiblioteca(
+            error instanceof Error
+              ? `No se pudieron cargar las copias guardadas: ${error.message}`
+              : "No se pudieron cargar las copias guardadas.",
+          );
+        }
+      })
+      .finally(() => {
+        if (!cancelado) {
+          setCargandoCopias(false);
+        }
+      });
+
+    return () => {
+      cancelado = true;
+    };
+  }, [puedeCrearCopias, usuarioSesion?.uid]);
+
+  if (rutaPublicaCopia) {
+    return (
+      <CuestionarioPublico
+        empresaId={segmentosPublicos[1]}
+        cuestionarioId={segmentosPublicos[2]}
+        versionId={segmentosPublicos[3]}
+      />
+    );
+  }
 
   if (rutaActual === "/admin" || rutaActual.startsWith("/admin/")) {
     return (
@@ -318,13 +394,17 @@ export default function App() {
     configuracion: unknown,
     origenIntroduccionTemplate: "biblioteca" | "recomendacion" | null = null,
     editandoCopia = false,
+    copiaGuardada = false,
   ) {
     navegar({
       ...estadoAppRef.current,
       bienvenidaCompletada: true,
-      idIntento: null,
+      idIntento: id.startsWith("personalizado-")
+        ? crypto.randomUUID()
+        : null,
       seleccion: { id, nombre, configuracion },
       editandoCopia,
+      copiaGuardada,
       envio: null,
       mostrarPlanes: false,
       origenIntroduccionTemplate,
@@ -338,12 +418,24 @@ export default function App() {
   ) {
     try {
       const usuario = auth?.currentUser;
-      if (!usuario || !(await puedeEditarCuestionarios(usuario))) {
+      let permitido = false;
+      try {
+        permitido = Boolean(
+          usuario &&
+          usuario.email &&
+          await puedeEditarCuestionarios(usuario),
+        );
+      } catch {
         setPuedeCrearCopias(false);
-        return;
+        throw new Error("No se pudo verificar tu permiso para crear copias.");
+      }
+      if (!usuario?.email || !permitido) {
+        setPuedeCrearCopias(false);
+        throw new Error("No tienes permiso para crear copias en Clear-IA.");
       }
 
       const copia = crearCopiaPlantilla(nombre, configuracion);
+      setErrorBiblioteca("");
       seleccionarCuestionario(
         copia.id,
         copia.nombre,
@@ -352,12 +444,87 @@ export default function App() {
         true,
       );
     } catch (error: unknown) {
-      setPuedeCrearCopias(false);
-      console.error("No se pudo verificar el permiso para crear la copia.", error);
+      setErrorBiblioteca(
+        error instanceof Error
+          ? `No se pudo crear la copia: ${error.message}`
+          : "No se pudo crear la copia.",
+      );
     }
   }
 
-  function actualizarCopiaPlantilla(
+  async function abrirCopiaGuardada(id: string) {
+    try {
+      const usuario = auth?.currentUser;
+      if (!usuario || !await puedeEditarCuestionarios(usuario)) {
+        setPuedeCrearCopias(false);
+        throw new Error("No tienes permiso para editar copias de Clear-IA.");
+      }
+      const copia = await leerCuestionarioGuardado(id);
+      if (!copia) {
+        throw new Error("La copia guardada ya no existe.");
+      }
+      seleccionarCuestionario(
+        copia.id,
+        copia.nombre,
+        copia.configuracion,
+        null,
+        true,
+        true,
+      );
+    } catch (error: unknown) {
+      setErrorBiblioteca(
+        error instanceof Error
+          ? `No se pudo abrir la copia: ${error.message}`
+          : "No se pudo abrir la copia.",
+      );
+    }
+  }
+
+  async function eliminarCopiaPlantilla(id: string) {
+    if (!window.confirm("¿Eliminar esta copia guardada? Esta acción no se puede deshacer.")) {
+      return;
+    }
+    const usuario = auth?.currentUser;
+    let permitido = false;
+    try {
+      permitido = Boolean(usuario && await puedeEditarCuestionarios(usuario));
+    } catch {
+      setPuedeCrearCopias(false);
+      throw new Error("No se pudo verificar tu permiso para eliminar copias.");
+    }
+    if (!usuario || !permitido) {
+      setPuedeCrearCopias(false);
+      throw new Error("No tienes permiso para eliminar copias de Clear-IA.");
+    }
+    await eliminarCuestionarioGuardado(id);
+    setCopiasGuardadas((actuales) => actuales.filter((copia) => copia.id !== id));
+    setErrorBiblioteca("");
+    if (estadoAppRef.current.seleccion?.id === id) {
+      regresarBiblioteca();
+    }
+  }
+
+  function descartarCopiaNueva() {
+    const actual = estadoAppRef.current;
+    const siguiente: EstadoAplicacion = {
+      ...actual,
+      seleccion: null,
+      editandoCopia: false,
+      copiaGuardada: false,
+      envio: null,
+      mostrarPlanes: false,
+      origenIntroduccionTemplate: null,
+      estadoCuestionario: null,
+    };
+    window.history.replaceState(
+      { ...(window.history.state ?? {}), [CLAVE_HISTORIAL]: siguiente },
+      "",
+    );
+    estadoAppRef.current = siguiente;
+    setEstadoApp(siguiente);
+  }
+
+  async function actualizarCopiaPlantilla(
     nombre: string,
     configuracion: unknown,
     previsualizar: boolean,
@@ -366,10 +533,47 @@ export default function App() {
     if (!actual.seleccion) {
       return;
     }
+
+    if (!previsualizar) {
+      const usuario = auth?.currentUser;
+      let permitido = false;
+      try {
+        permitido = Boolean(
+          usuario && await puedeEditarCuestionarios(usuario),
+        );
+      } catch {
+        setPuedeCrearCopias(false);
+        throw new Error("No se pudo verificar tu permiso para guardar cambios.");
+      }
+      if (!usuario?.email || !permitido) {
+        setPuedeCrearCopias(false);
+        throw new Error("No tienes permiso para editar copias de Clear-IA.");
+      }
+      const copiaGuardada = actual.copiaGuardada ??
+        copiasGuardadas.some((copia) => copia.id === actual.seleccion?.id);
+      const guardada = copiaGuardada
+        ? await actualizarCuestionarioGuardado(
+          actual.seleccion.id,
+          nombre,
+          configuracion,
+        )
+        : await crearCuestionarioGuardado(
+          actual.seleccion.id,
+          nombre,
+          configuracion,
+          usuario.email.toLowerCase(),
+        );
+      configuracion = guardada.configuracion;
+      setCopiasGuardadas((actuales) => [
+        guardada,
+        ...actuales.filter((copia) => copia.id !== guardada.id),
+      ]);
+    }
     const siguiente = {
       ...actual,
       seleccion: { ...actual.seleccion, nombre, configuracion },
       editandoCopia: !previsualizar,
+      copiaGuardada: previsualizar ? actual.copiaGuardada : true,
       estadoCuestionario: null,
       envio: null,
     };
@@ -383,6 +587,58 @@ export default function App() {
     );
     estadoAppRef.current = siguiente;
     setEstadoApp(siguiente);
+  }
+
+  async function publicarCopiaPlantilla(
+    nombre: string,
+    configuracion: unknown,
+  ): Promise<string> {
+    const seleccionActual = estadoAppRef.current.seleccion;
+    if (!seleccionActual || !seleccionActual.id.startsWith("personalizado-")) {
+      throw new Error("Solo se pueden publicar copias guardadas.");
+    }
+    const usuario = auth?.currentUser;
+    if (!usuario || !await puedeEditarCuestionarios(usuario)) {
+      setPuedeCrearCopias(false);
+      throw new Error("No tienes permiso para publicar copias en esta empresa.");
+    }
+    await actualizarCopiaPlantilla(nombre, configuracion, false);
+    const resultado = await gestionarPublicacionCopia(
+      EMPRESA_ID,
+      seleccionActual.id,
+      "publicar",
+    );
+    if (resultado.estado !== "publicado") {
+      throw new Error("No se pudo publicar la copia.");
+    }
+    const actualizada = await leerCuestionarioGuardado(seleccionActual.id);
+    if (actualizada) {
+      setCopiasGuardadas((copias) => [
+        actualizada,
+        ...copias.filter(({ id }) => id !== actualizada.id),
+      ]);
+    }
+    return urlCopiaPublicada(
+      EMPRESA_ID,
+      seleccionActual.id,
+      resultado.versionId,
+    );
+  }
+
+  async function despublicarCopiaPlantilla(id: string): Promise<void> {
+    const usuario = auth?.currentUser;
+    if (!usuario || !await puedeEditarCuestionarios(usuario)) {
+      setPuedeCrearCopias(false);
+      throw new Error("No tienes permiso para despublicar copias en esta empresa.");
+    }
+    await gestionarPublicacionCopia(EMPRESA_ID, id, "despublicar");
+    const actualizada = await leerCuestionarioGuardado(id);
+    if (actualizada) {
+      setCopiasGuardadas((copias) => [
+        actualizada,
+        ...copias.filter(({ id: copiaId }) => copiaId !== actualizada.id),
+      ]);
+    }
   }
 
   function regresarBiblioteca() {
@@ -432,6 +688,21 @@ export default function App() {
           <AccesoCuenta authListo={authListo} usuario={usuarioSesion} />
         }
         casosReferencia={casosReferencia}
+        copiasGuardadas={copiasGuardadas}
+        cargandoCopias={cargandoCopias}
+        errorBiblioteca={errorBiblioteca}
+        onAbrirCopia={abrirCopiaGuardada}
+        onEliminarCopia={
+          puedeCrearCopias
+            ? (id) => void eliminarCopiaPlantilla(id).catch((error: unknown) => {
+              setErrorBiblioteca(
+                error instanceof Error
+                  ? `No se pudo eliminar la copia: ${error.message}`
+                  : "No se pudo eliminar la copia.",
+              );
+            })
+            : undefined
+        }
         onCrearCopia={puedeCrearCopias ? seleccionarCopiaPlantilla : undefined}
         onSeleccionar={seleccionarCuestionario}
         templates={catalogoTemplates}
@@ -509,12 +780,24 @@ export default function App() {
     seleccion.id.startsWith("personalizado-") &&
     estadoApp.editandoCopia
   ) {
+    if (!puedeCrearCopias) {
+      return (
+        <>
+          {navegacion}
+          <main className="validation-errors" role="alert">
+            <h1>Sin permiso para editar copias</h1>
+            <p>Inicia sesión con una cuenta autorizada de Clear-IA.</p>
+          </main>
+        </>
+      );
+    }
     return (
       <>
         {navegacion}
         <EditorCuestionario
           id={seleccion.id}
           key={seleccion.id}
+          copiaGuardada={estadoApp.copiaGuardada}
           nombre={seleccion.nombre}
           cuestionario={resultadoValidacion.data}
           onGuardar={(nombre, cuestionario) =>
@@ -523,6 +806,29 @@ export default function App() {
           onPrevisualizar={(nombre, cuestionario) =>
             actualizarCopiaPlantilla(nombre, cuestionario, true)
           }
+          onDescartar={
+            estadoApp.copiaGuardada ? undefined : descartarCopiaNueva
+          }
+          onEliminar={
+            estadoApp.copiaGuardada
+              ? () => eliminarCopiaPlantilla(seleccion.id)
+              : undefined
+          }
+          publicacionActiva={copiasGuardadas.find(
+            ({ id }) => id === seleccion.id,
+          )?.publicacion?.estado === "publicado"}
+          urlPublica={(() => {
+            const publicacion = copiasGuardadas.find(
+              ({ id }) => id === seleccion.id,
+            )?.publicacion;
+            return publicacion?.estado === "publicado" && publicacion.versionId
+              ? urlCopiaPublicada(EMPRESA_ID, seleccion.id, publicacion.versionId)
+              : undefined;
+          })()}
+          onPublicar={(nombre, configuracion) =>
+            publicarCopiaPlantilla(nombre, configuracion)
+          }
+          onDespublicar={() => despublicarCopiaPlantilla(seleccion.id)}
         />
       </>
     );
@@ -741,6 +1047,73 @@ export default function App() {
                   });
               }
             }
+          } else if (
+            seleccion.id.startsWith("personalizado-") &&
+            resultadoValidacion.data.id === seleccion.id &&
+            resultado.estado === "ok" &&
+            estadoActual.idIntento &&
+            estadoActual.estadoCuestionario?.consentimientoAceptado === true
+          ) {
+            const usuario = auth?.currentUser;
+            const idIntento = estadoActual.idIntento;
+            if (!usuario) {
+              console.error(
+                "Se requiere una sesión autorizada para guardar el envío de una copia.",
+              );
+            }
+            if (
+              usuario &&
+              !intentosGuardadosRef.current.has(idIntento) &&
+              !intentoMarcadoComoGuardado(idIntento)
+            ) {
+              intentosGuardadosRef.current.add(idIntento);
+              void puedeEditarCuestionarios(usuario)
+                .then((permitido) => {
+                  if (!permitido) {
+                    throw new Error(
+                      "No tienes permiso para guardar envíos de copias en esta empresa.",
+                    );
+                  }
+                  const documentos = construirDocumentosCopia({
+                    id: idIntento,
+                    contacto: lead,
+                    cuestionario: resultadoValidacion.data,
+                    respuestas,
+                    calculo: resultado,
+                    contenidoPersonalizado,
+                    consentimientoAceptado: true,
+                    fecha: serverTimestamp(),
+                  });
+                  return guardarDiagnostico(EMPRESA_ID, idIntento, documentos);
+                })
+                .then((guardado) => {
+                  if (guardado) {
+                    marcarIntentoGuardado(idIntento);
+                  } else {
+                    intentosGuardadosRef.current.delete(idIntento);
+                    console.error(
+                      "No se pudo guardar el envío de la copia porque Firestore no está configurado.",
+                    );
+                  }
+                })
+                .catch((error: unknown) => {
+                  intentosGuardadosRef.current.delete(idIntento);
+                  const codigo =
+                    typeof error === "object" &&
+                    error !== null &&
+                    "code" in error
+                      ? error.code
+                      : "";
+                  if (codigo === "already-exists") {
+                    marcarIntentoGuardado(idIntento);
+                    return;
+                  }
+                  console.error(
+                    "No se pudo guardar el envío de la copia personalizada.",
+                    error,
+                  );
+                });
+            }
           }
           navegar({
             ...estadoActual,
@@ -754,7 +1127,10 @@ export default function App() {
           });
         }}
         onEstadoChange={actualizarEstadoCuestionario}
-        requiereConsentimiento={seleccion.id === "diagnostico-inicial"}
+        requiereConsentimiento={
+          seleccion.id === "diagnostico-inicial" ||
+          seleccion.id.startsWith("personalizado-")
+        }
         presentacion={
           seleccion.id === "diagnostico-inicial"
             ? undefined

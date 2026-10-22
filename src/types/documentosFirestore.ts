@@ -1,4 +1,5 @@
 import type { FieldValue, Timestamp } from "firebase/firestore";
+import type { Resultado } from "./model";
 
 export type MarcaTiempoFirestore = FieldValue | Timestamp;
 
@@ -31,13 +32,14 @@ export interface RespuestaDiagnostico {
 export interface DocumentoDiagnostico {
   leadId: string;
   cuestionarioId: string;
-  versionId: string;
+  versionId?: string;
   respuestas: Record<string, RespuestaDiagnostico>;
-  puntajeTotal: number;
-  puntajeMaximo: number;
-  porcentaje: number;
-  segmento: string;
-  puntajePorDimension: Record<string, number>;
+  resultado?: Resultado;
+  puntajeTotal?: number;
+  puntajeMaximo?: number;
+  porcentaje?: number;
+  segmento?: string;
+  puntajePorDimension?: Record<string, number>;
   templateRecomendadoId?: string;
   planRecomendadoId?: string;
   completadoEn: MarcaTiempoFirestore;

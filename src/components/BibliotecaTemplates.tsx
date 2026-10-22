@@ -2,6 +2,7 @@ import type { ReactNode } from "react";
 import TarjetaTemplate from "./TarjetaTemplate";
 import type { TemplateCatalogo } from "../templates/catalogo";
 import { tienePortadaTemplate } from "./PantallaInicioTemplate";
+import type { DocumentoCuestionarioGuardado } from "../lib/documentoCuestionario";
 
 export interface CasoReferencia {
   id: string;
@@ -13,8 +14,13 @@ export interface CasoReferencia {
 interface BibliotecaTemplatesProps {
   templates: TemplateCatalogo[];
   casosReferencia: CasoReferencia[];
+  copiasGuardadas: DocumentoCuestionarioGuardado[];
+  cargandoCopias: boolean;
+  errorBiblioteca: string;
   accesoCuenta: ReactNode;
   onCrearCopia?: (nombre: string, configuracion: unknown) => void | Promise<void>;
+  onAbrirCopia: (id: string) => void | Promise<void>;
+  onEliminarCopia?: (id: string) => void | Promise<void>;
   onSeleccionar: (
     id: string,
     nombre: string,
@@ -26,8 +32,13 @@ interface BibliotecaTemplatesProps {
 export default function BibliotecaTemplates({
   templates,
   casosReferencia,
+  copiasGuardadas,
+  cargandoCopias,
+  errorBiblioteca,
   accesoCuenta,
   onCrearCopia,
+  onAbrirCopia,
+  onEliminarCopia,
   onSeleccionar,
 }: BibliotecaTemplatesProps) {
   return (
@@ -41,6 +52,45 @@ export default function BibliotecaTemplates({
         cuestionario y adaptar sus preguntas, puntuación y resultados.
         </p>
       </header>
+
+      {errorBiblioteca && (
+        <p className="admin-error" role="alert">{errorBiblioteca}</p>
+      )}
+
+      {onCrearCopia && (
+        <section aria-labelledby="saved-questionnaires-heading">
+          <h2 id="saved-questionnaires-heading">Mis copias guardadas</h2>
+          {cargandoCopias ? (
+            <p role="status">Cargando copias guardadas…</p>
+          ) : copiasGuardadas.length === 0 ? (
+            <p>Aún no tienes copias guardadas.</p>
+          ) : (
+            <ul className="saved-questionnaire-list">
+              {copiasGuardadas.map((copia) => (
+                <li key={copia.id}>
+                  <span>{copia.nombre}</span>
+                  <button
+                    className="secondary-button"
+                    onClick={() => void onAbrirCopia(copia.id)}
+                    type="button"
+                  >
+                    Abrir y editar
+                  </button>
+                  {onEliminarCopia && (
+                    <button
+                      className="secondary-button"
+                      onClick={() => void onEliminarCopia(copia.id)}
+                      type="button"
+                    >
+                      Eliminar
+                    </button>
+                  )}
+                </li>
+              ))}
+            </ul>
+          )}
+        </section>
+      )}
 
       <section aria-labelledby="templates-heading">
         <h2 id="templates-heading">Templates demostrativos</h2>

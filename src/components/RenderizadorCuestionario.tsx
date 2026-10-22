@@ -29,7 +29,7 @@ interface RenderizadorCuestionarioProps {
     respuestas: RespuestasCuestionario,
     contenidoPersonalizado: string | null,
     errorPersonalizacion: string | null,
-  ) => void;
+  ) => void | Promise<void>;
   estadoInicial?: EstadoFlujoCuestionario | null;
   onEstadoChange?: (
     estado: EstadoFlujoCuestionario,
@@ -38,6 +38,7 @@ interface RenderizadorCuestionarioProps {
   unaPreguntaPorVista?: boolean;
   requiereConsentimiento?: boolean;
   presentacion?: Presentacion;
+  personalizarResultados?: boolean;
 }
 
 interface EntradaPregunta {
@@ -53,6 +54,7 @@ export default function RenderizadorCuestionario({
   unaPreguntaPorVista = false,
   requiereConsentimiento = false,
   presentacion,
+  personalizarResultados = true,
 }: RenderizadorCuestionarioProps) {
   const [respuestas, setRespuestas] = useState<RespuestasCuestionario>(
     () => estadoInicial?.respuestas ?? {},
@@ -104,11 +106,24 @@ export default function RenderizadorCuestionario({
     };
     const calculo = calcularResultado(cuestionario, respuestas);
     if (calculo.estado !== "ok") {
-      onEnvio(lead, calculo, respuestas, null, null);
+      try {
+        await onEnvio(lead, calculo, respuestas, null, null);
+      } finally {
+        setGenerandoResultado(false);
+      }
       return;
     }
 
     setGenerandoResultado(true);
+    if (!personalizarResultados) {
+      try {
+        await onEnvio(lead, calculo, respuestas, null, null);
+      } finally {
+        setGenerandoResultado(false);
+      }
+      return;
+    }
+
     let contenidoPersonalizado: string | null = null;
     let errorPersonalizacion: string | null = null;
 
@@ -165,13 +180,17 @@ export default function RenderizadorCuestionario({
           : "No se pudo personalizar el resultado con Gemini.";
     }
 
-    onEnvio(
-      lead,
-      calculo,
-      respuestas,
-      contenidoPersonalizado,
-      errorPersonalizacion,
-    );
+    try {
+      await onEnvio(
+        lead,
+        calculo,
+        respuestas,
+        contenidoPersonalizado,
+        errorPersonalizacion,
+      );
+    } finally {
+      setGenerandoResultado(false);
+    }
   }
 
   function actualizarRespuesta(indice: number, respuesta: Respuesta) {

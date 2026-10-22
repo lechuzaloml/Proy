@@ -21,8 +21,12 @@ function renderBiblioteca(onCrearCopia?: (nombre: string, configuracion: unknown
   return renderToStaticMarkup(createElement(BibliotecaTemplates, {
     templates,
     casosReferencia: [],
+    copiasGuardadas: [],
+    cargandoCopias: false,
+    errorBiblioteca: "",
     accesoCuenta: null,
     onCrearCopia,
+    onAbrirCopia: vi.fn(),
     onSeleccionar: vi.fn(),
   }));
 }
