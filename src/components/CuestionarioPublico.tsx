@@ -141,7 +141,6 @@ export default function CuestionarioPublico({
         contenidoPersonalizado={null}
         cuestionario={cuestionario}
         errorPersonalizacion={null}
-        mostrarPerfil={false}
         respuestas={resultadoFinal.respuestas}
       />
     );

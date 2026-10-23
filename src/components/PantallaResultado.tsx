@@ -172,6 +172,9 @@ export default function PantallaResultado({
               ))}
             </ol>
           </div>
+          <p className="result-profile-note">
+            Este perfil es un resumen orientativo.
+          </p>
         </section>
       )}
     </main>

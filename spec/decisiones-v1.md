@@ -44,3 +44,5 @@ sin modificar sus diez reglas.
 14. **Puntaje enviado por el cliente:** el puntaje calculado y enviado desde
      el navegador no está verificado por el servidor mientras el guardado siga
      ejecutándose en el cliente.
+15. **Perfil en cuestionarios públicos:** en cuestionarios públicos se muestra
+     el perfil por sección, no el puntaje total ni el segmento.
