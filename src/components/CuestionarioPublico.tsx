@@ -151,6 +151,7 @@ export default function CuestionarioPublico({
       {error && <p className="validation-errors" role="alert">{error}</p>}
       <RenderizadorCuestionario
         cuestionario={cuestionario}
+        unaPreguntaPorVista
         personalizarResultados={false}
         requiereConsentimiento
         onEnvio={async (lead, calculo, respuestas) => {
