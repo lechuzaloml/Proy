@@ -34,6 +34,11 @@ export default function CuestionarioPublico({
   useEffect(() => {
     let cancelado = false;
     async function cargar() {
+      if (!empresaId || !cuestionarioId) {
+        setError("Este cuestionario no está disponible.");
+        setCargando(false);
+        return;
+      }
       if (!db) {
         setError("El cuestionario no está disponible.");
         setCargando(false);
@@ -175,6 +180,7 @@ export default function CuestionarioPublico({
                     : {}),
                 };
             const documentos = construirDocumentosDiagnostico({
+              empresaId,
               id: submissionId,
               contacto: {
                 nombre: lead.nombre,

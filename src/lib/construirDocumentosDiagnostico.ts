@@ -5,10 +5,6 @@ import { calcularPerfilSecciones } from "../logic/calcularPerfilSecciones";
 import {
   VERSION_AVISO_PRIVACIDAD,
 } from "../config/privacidad";
-import {
-  CUESTIONARIO_ID,
-  VERSION_ID,
-} from "../config/firebaseDatos";
 import type {
   DocumentoDiagnostico,
   DocumentoLeadEmpresa,
@@ -19,11 +15,12 @@ import type { Resultado } from "../types/model";
 
 
 export interface EntradaDocumentosDiagnostico {
+  empresaId: string;
   id: string;
   contacto: Pick<Lead, "nombre" | "correo" | "telefono">;
   cuestionario: Cuestionario;
-  cuestionarioId?: string;
-  versionId?: string;
+  cuestionarioId: string;
+  versionId: string;
   respuestas: RespuestasCuestionario;
   puntajeTotal?: number;
   segmento?: string;
@@ -42,6 +39,7 @@ export interface DocumentosDiagnostico {
 }
 
 export interface EntradaDocumentosCopia {
+  empresaId: string;
   id: string;
   contacto: Pick<Lead, "nombre" | "correo" | "telefono">;
   cuestionario: Cuestionario;
@@ -128,6 +126,9 @@ function obtenerPuntajeMaximo(cuestionario: Cuestionario): number {
 export function construirDocumentoLeadEmpresa(
   entrada: EntradaDocumentosDiagnostico,
 ): DocumentoLeadEmpresa {
+  if (!entrada.empresaId.trim()) {
+    throw new Error("Se requiere una empresa para construir el documento.");
+  }
   if (entrada.consentimientoAceptado !== true) {
     throw new Error("Se requiere consentimiento para construir el documento.");
   }
@@ -166,6 +167,9 @@ export function construirDocumentoLeadEmpresa(
 export function construirDocumentoDiagnostico(
   entrada: EntradaDocumentosDiagnostico,
 ): DocumentoDiagnostico {
+  if (!entrada.empresaId.trim()) {
+    throw new Error("Se requiere una empresa para construir el documento.");
+  }
   if (entrada.consentimientoAceptado !== true) {
     throw new Error("Se requiere consentimiento para construir el documento.");
   }
@@ -187,8 +191,8 @@ export function construirDocumentoDiagnostico(
 
   return {
     leadId: entrada.id,
-    cuestionarioId: entrada.cuestionarioId ?? CUESTIONARIO_ID,
-    versionId: entrada.versionId ?? VERSION_ID, 
+    cuestionarioId: entrada.cuestionarioId,
+    versionId: entrada.versionId,
     respuestas: respuestaLegible(entrada.cuestionario, entrada.respuestas),
     ...(entrada.resultado ? { resultado: entrada.resultado } : {}),
     ...(puntajeTotal !== undefined ? { puntajeTotal } : {}),
@@ -223,6 +227,9 @@ export function construirDocumentosDiagnostico(
 export function construirDocumentosCopia(
   entrada: EntradaDocumentosCopia,
 ): DocumentosDiagnostico {
+  if (!entrada.empresaId.trim()) {
+    throw new Error("Se requiere una empresa para construir el documento.");
+  }
   if (entrada.consentimientoAceptado !== true) {
     throw new Error("Se requiere consentimiento para construir el documento.");
   }

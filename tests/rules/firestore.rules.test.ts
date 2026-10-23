@@ -32,6 +32,8 @@ const DRAFT_QUESTIONNAIRE_ID = "synthetic-draft-questionnaire";
 const PERSONALIZED_QUESTIONNAIRE_ID = "personalizado-emulator-copy";
 const COMPANY_CLEARIA = "clearia";
 const COMPANY_B = "demo-b";
+const COMPANY_DEMO_A = "demo-a";
+const DEMO_A_MEMBER_EMAIL = "demo-a-only@example.invalid";
 
 let environment: RulesTestEnvironment;
 type TestFirestore = ReturnType<RulesTestContext["firestore"]>;
@@ -339,6 +341,130 @@ it("permite a una cuenta autorizada guardar el envío atómico de una copia sin 
     expect(snapshot.data()).not.toHaveProperty("puntajeTotal");
     expect(snapshot.data()).not.toHaveProperty("segmento");
     expect(snapshot.data()?.resultado.tipo).toBe("fijo");
+  });
+});
+
+it("permite a un miembro solo de demo-a copiar, publicar y recibir un envío en demo-a", async () => {
+    await environment.withSecurityRulesDisabled(async (context) => {
+      const database = context.firestore();
+      await setDoc(doc(database, `empresas/${COMPANY_DEMO_A}`), {
+        nombre: "Empresa sintética demo-a",
+        estado: "activa",
+        planId: "test",
+      });
+      await setDoc(
+        doc(database, `empresas/${COMPANY_DEMO_A}/miembros/${DEMO_A_MEMBER_EMAIL}`),
+        {
+          correo: DEMO_A_MEMBER_EMAIL,
+          rol: "admin",
+          permisos: {},
+          estado: "activo",
+        },
+      );
+    });
+
+    const member = environment.authenticatedContext(DEMO_A_MEMBER_EMAIL, {
+      email: DEMO_A_MEMBER_EMAIL,
+      email_verified: true,
+    }).firestore();
+    const questionnaireRef = doc(
+      member,
+      `empresas/${COMPANY_DEMO_A}/cuestionarios/${PERSONALIZED_QUESTIONNAIRE_ID}`,
+    );
+    await assertSucceeds(setDoc(questionnaireRef, documentoCopia()));
+    const versionId = "demo-a-published-v1";
+    const publish = writeBatch(member);
+    publish.set(doc(
+      member,
+      `empresas/${COMPANY_DEMO_A}/cuestionarios/${PERSONALIZED_QUESTIONNAIRE_ID}/versiones/${versionId}`,
+    ), {
+      numero: 1,
+      configuracion: documentoCopia().configuracion,
+      publicadaEn: serverTimestamp(),
+      creadoPor: DEMO_A_MEMBER_EMAIL,
+    });
+    publish.update(questionnaireRef, {
+      estado: "publicado",
+      versionActualId: versionId,
+      actualizadoEn: serverTimestamp(),
+    });
+    await assertSucceeds(publish.commit());
+    await assertSucceeds(getDocs(collection(
+      member,
+      `empresas/${COMPANY_DEMO_A}/cuestionarios`,
+    )));
+
+    const submissionId = "synthetic-demo-a-public-submission";
+    const visitor = environment.unauthenticatedContext().firestore();
+    const submission = writeBatch(visitor);
+    submission.set(doc(
+      visitor,
+      `empresas/${COMPANY_DEMO_A}/leads/${submissionId}`,
+    ), {
+      nombre: "Prospecto sintético",
+      correo: "prospecto@example.invalid",
+      telefono: "5550000000",
+      consentimiento: {
+        aceptado: true,
+        version: "synthetic-v1",
+        fecha: serverTimestamp(),
+      },
+      origen: "formulario-publico",
+      estado: "nuevo",
+      ultimaActividadEn: serverTimestamp(),
+      ultimoDiagnosticoId: submissionId,
+      creadoEn: serverTimestamp(),
+    });
+    submission.set(doc(
+      visitor,
+      `empresas/${COMPANY_DEMO_A}/diagnosticos/${submissionId}`,
+    ), {
+      leadId: submissionId,
+      cuestionarioId: PERSONALIZED_QUESTIONNAIRE_ID,
+      versionId,
+      respuestas: {},
+      completadoEn: serverTimestamp(),
+    });
+    await assertSucceeds(submission.commit());
+    await assertSucceeds(updateDoc(questionnaireRef, {
+      estado: "borrador",
+      actualizadoEn: serverTimestamp(),
+    }));
+    await assertSucceeds(getDocs(collection(
+      member,
+      `empresas/${COMPANY_DEMO_A}/leads`,
+    )));
+    await assertFails(getDocs(collection(
+      member,
+      `empresas/${COMPANY_CLEARIA}/leads`,
+    )));
+
+    await environment.withSecurityRulesDisabled(async (context) => {
+      const database = context.firestore();
+      const [
+        leadDemoA,
+        diagnosticoDemoA,
+        cuestionarioDemoA,
+        leadClearIa,
+        diagnosticoClearIa,
+        cuestionarioClearIa,
+      ] =
+        await Promise.all([
+          getDoc(doc(database, `empresas/${COMPANY_DEMO_A}/leads/${submissionId}`)),
+          getDoc(doc(database, `empresas/${COMPANY_DEMO_A}/diagnosticos/${submissionId}`)),
+          getDoc(doc(database, `empresas/${COMPANY_DEMO_A}/cuestionarios/${PERSONALIZED_QUESTIONNAIRE_ID}`)),
+          getDoc(doc(database, `empresas/${COMPANY_CLEARIA}/leads/${submissionId}`)),
+          getDoc(doc(database, `empresas/${COMPANY_CLEARIA}/diagnosticos/${submissionId}`)),
+          getDoc(doc(database, `empresas/${COMPANY_CLEARIA}/cuestionarios/${PERSONALIZED_QUESTIONNAIRE_ID}`)),
+        ]);
+      expect(leadDemoA.exists()).toBe(true);
+      expect(diagnosticoDemoA.data()?.cuestionarioId)
+        .toBe(PERSONALIZED_QUESTIONNAIRE_ID);
+      expect(leadClearIa.exists()).toBe(false);
+      expect(diagnosticoClearIa.exists()).toBe(false);
+      expect(cuestionarioDemoA.data()?.estado).toBe("borrador");
+      expect(cuestionarioClearIa.data()?.estado).toBe("borrador");
+      expect(cuestionarioClearIa.data()).not.toHaveProperty("versionActualId");
   });
 });
 

@@ -5,6 +5,8 @@ export interface LeadParaLista {
   nombre: string;
   correo: string;
   estado: string;
+  cuestionarioId?: string;
+  cuestionarioNombre?: string;
   ultimoSegmento?: string;
   ultimoPorcentaje?: number;
   creadoEn?: unknown;
@@ -14,6 +16,7 @@ export interface FiltrosLeads {
   busqueda: string;
   segmento: string;
   estado: string;
+  cuestionario: string;
   orden: OrdenLeads;
 }
 
@@ -47,7 +50,11 @@ export function filtrarOrdenarLeads(
       const coincideSegmento =
         !filtros.segmento || lead.ultimoSegmento === filtros.segmento;
       const coincideEstado = !filtros.estado || lead.estado === filtros.estado;
-      return coincideBusqueda && coincideSegmento && coincideEstado;
+      const coincideCuestionario =
+        !filtros.cuestionario ||
+        lead.cuestionarioId === filtros.cuestionario;
+      return coincideBusqueda && coincideSegmento && coincideEstado &&
+        coincideCuestionario;
     })
     .sort((primero, segundo) => {
       if (filtros.orden === "madurez") {

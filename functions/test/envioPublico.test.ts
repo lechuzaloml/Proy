@@ -5,6 +5,7 @@ import { getFirestore } from "firebase-admin/firestore";
 import { crearDocumentosEnvioAtomico } from "../src/registroEnvio";
 
 const PROJECT_ID = "demo-clear-ia-rules";
+const EMPRESA_ID = "demo-a";
 let database: ReturnType<typeof getFirestore>;
 let app: ReturnType<typeof initializeApp>;
 
@@ -25,8 +26,8 @@ afterAll(async () => {
 describe("persistencia atómica del endpoint público", () => {
   it("crea el par lead/diagnóstico una sola vez y no deja escrituras parciales ante duplicados", async () => {
     const id = randomUUID();
-    const leadRef = database.doc(`empresas/clearia/leads/${id}`);
-    const diagnosticoRef = database.doc(`empresas/clearia/diagnosticos/${id}`);
+    const leadRef = database.doc(`empresas/${EMPRESA_ID}/leads/${id}`);
+    const diagnosticoRef = database.doc(`empresas/${EMPRESA_ID}/diagnosticos/${id}`);
     const lead = { nombre: "Persona sintética", consentimiento: { aceptado: true } };
     const diagnostico = { leadId: id, respuestas: {}, resultado: { tipo: "fijo" } };
 
@@ -57,9 +58,9 @@ describe("persistencia atómica del endpoint público", () => {
     expect(diagnosticoGuardado.data()?.leadId).toBe(id);
 
     const idConLeadPrevio = randomUUID();
-    const leadPrevioRef = database.doc(`empresas/clearia/leads/${idConLeadPrevio}`);
+    const leadPrevioRef = database.doc(`empresas/${EMPRESA_ID}/leads/${idConLeadPrevio}`);
     const diagnosticoParcialRef = database.doc(
-      `empresas/clearia/diagnosticos/${idConLeadPrevio}`,
+      `empresas/${EMPRESA_ID}/diagnosticos/${idConLeadPrevio}`,
     );
     await leadPrevioRef.create(lead);
     await expect(database.runTransaction(async (transaction) => {

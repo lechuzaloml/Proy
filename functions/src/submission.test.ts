@@ -35,7 +35,7 @@ const formulario: Cuestionario = {
 
 function solicitud(overrides: Record<string, unknown> = {}) {
   return {
-    empresaId: "clearia",
+    empresaId: "demo-a",
     cuestionarioId: formulario.id,
     versionId: "pub-sintetica",
     submissionId: "00000000-0000-4000-8000-000000000001",

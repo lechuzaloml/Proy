@@ -18,9 +18,12 @@ const fecha = Timestamp.fromDate(new Date("2026-10-16T12:00:00.000Z"));
 describe("construirDocumentosDiagnostico", () => {
   it("construye únicamente los campos autorizados y normaliza el correo", () => {
     const documentos = construirDocumentosDiagnostico({
+      empresaId: "clearia",
       id: "intento-1",
       contacto,
       cuestionario,
+      cuestionarioId: "clear-ia-diagnostico-inicial",
+      versionId: "v1",
       respuestas: {
         0: { tipo: "opcion_multiple", indiceOpcion: 0 },
         1: { tipo: "opcion_multiple", indiceOpcion: 3 },
@@ -97,9 +100,12 @@ describe("construirDocumentosDiagnostico", () => {
   it("no construye documentos sin consentimiento afirmativo", () => {
     expect(() =>
       construirDocumentosDiagnostico({
+        empresaId: "clearia",
         id: "intento-1",
         contacto,
         cuestionario,
+        cuestionarioId: "clear-ia-diagnostico-inicial",
+        versionId: "v1",
         respuestas: {},
         puntajeTotal: 0,
         segmento: "proceso_por_construir",
@@ -124,6 +130,7 @@ describe("construirDocumentosDiagnostico", () => {
       throw new Error("El cuestionario sin scoring debe dar un resultado fijo.");
     }
     const documentos = construirDocumentosDiagnostico({
+      empresaId: "demo-a",
       id: "intento-publico",
       contacto,
       cuestionario: cuestionarioSinScoring,
@@ -166,6 +173,7 @@ describe("construirDocumentosDiagnostico", () => {
       throw new Error("El cuestionario con scoring debe dar un resultado segmentado.");
     }
     const documentos = construirDocumentosDiagnostico({
+      empresaId: "demo-a",
       id: "intento-publico-scoring",
       contacto,
       cuestionario,
@@ -204,9 +212,12 @@ describe("construirDocumentosDiagnostico", () => {
 
   it("omite respuestas no válidas y campos recomendados vacíos", () => {
     const documentos = construirDocumentosDiagnostico({
+      empresaId: "clearia",
       id: "intento-2",
       contacto,
       cuestionario,
+      cuestionarioId: "clear-ia-diagnostico-inicial",
+      versionId: "v1",
       respuestas: {
         0: { tipo: "opcion_multiple", indiceOpcion: 99 },
       },
@@ -237,6 +248,7 @@ describe("construirDocumentosDiagnostico", () => {
       throw new Error("El fixture debe producir un resultado válido.");
     }
     const documentos = construirDocumentosCopia({
+      empresaId: "demo-a",
       id: "intento-copia-score",
       contacto,
       cuestionario: copia,
@@ -280,6 +292,7 @@ describe("construirDocumentosDiagnostico", () => {
       throw new Error("El fixture sin scoring debe producir un resultado fijo.");
     }
     const documentos = construirDocumentosCopia({
+      empresaId: "demo-a",
       id: "intento-copia-sin-score",
       contacto,
       cuestionario: copia,
@@ -319,6 +332,7 @@ describe("construirDocumentosDiagnostico", () => {
     }
 
     expect(() => construirDocumentosCopia({
+      empresaId: "demo-a",
       id: "intento-sin-consentimiento",
       contacto,
       cuestionario: copia,
@@ -329,6 +343,7 @@ describe("construirDocumentosDiagnostico", () => {
       fecha,
     })).toThrow("Se requiere consentimiento");
     expect(() => construirDocumentosCopia({
+      empresaId: "demo-a",
       id: "intento-no-copia",
       contacto,
       cuestionario: { ...copia, id: "diagnostico-inicial" },

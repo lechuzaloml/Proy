@@ -3,16 +3,16 @@ import { puedeCrearCopiasPlantilla } from "./permisosPlantillas";
 
 describe("puedeCrearCopiasPlantilla", () => {
   it("deniega a visitantes sin sesión", () => {
-    expect(puedeCrearCopiasPlantilla(null, false, "clearia", [])).toBe(false);
+    expect(puedeCrearCopiasPlantilla(null, false, "demo-a", [])).toBe(false);
   });
 
   it("permite a un miembro activo con permiso editarCuestionarios", () => {
     expect(puedeCrearCopiasPlantilla(
       { correo: "editor@example.test", correoVerificado: true },
       false,
-      "clearia",
+      "demo-a",
       [{
-        empresaId: "clearia",
+        empresaId: "demo-a",
         correo: "editor@example.test",
         estado: "activo",
         rol: "usuario",
@@ -25,9 +25,9 @@ describe("puedeCrearCopiasPlantilla", () => {
     expect(puedeCrearCopiasPlantilla(
       { correo: "lector@example.test", correoVerificado: true },
       false,
-      "clearia",
+      "demo-a",
       [{
-        empresaId: "clearia",
+        empresaId: "demo-a",
         correo: "lector@example.test",
         estado: "activo",
         rol: "usuario",
@@ -40,16 +40,31 @@ describe("puedeCrearCopiasPlantilla", () => {
     expect(puedeCrearCopiasPlantilla(
       { correo: "admin@example.test", correoVerificado: false },
       true,
-      "clearia",
+      "demo-a",
       [],
     )).toBe(false);
   });
 
-  it("deniega al administrador de otra empresa si no tiene membresía en clearia", () => {
+  it("permite al administrador de demo-a sin membresía en Clear-IA", () => {
     expect(puedeCrearCopiasPlantilla(
       { correo: "admin@example.test", correoVerificado: true },
       false,
-      "clearia",
+      "demo-a",
+      [{
+        empresaId: "demo-a",
+        correo: "admin@example.test",
+        estado: "activo",
+        rol: "admin",
+        permisos: {},
+      }],
+    )).toBe(true);
+  });
+
+  it("deniega al administrador de otra empresa si no tiene membresía en demo-a", () => {
+    expect(puedeCrearCopiasPlantilla(
+      { correo: "admin@example.test", correoVerificado: true },
+      false,
+      "demo-a",
       [{
         empresaId: "otra-empresa",
         correo: "admin@example.test",
@@ -60,26 +75,11 @@ describe("puedeCrearCopiasPlantilla", () => {
     )).toBe(false);
   });
 
-  it("permite al administrador de clearia por la membresía de esa empresa", () => {
-    expect(puedeCrearCopiasPlantilla(
-      { correo: "admin@example.test", correoVerificado: true },
-      false,
-      "clearia",
-      [{
-        empresaId: "clearia",
-        correo: "admin@example.test",
-        estado: "activo",
-        rol: "admin",
-        permisos: {},
-      }],
-    )).toBe(true);
-  });
-
   it("mantiene el permiso explícito de plataforma reconocido por las reglas", () => {
     expect(puedeCrearCopiasPlantilla(
       { correo: "plataforma@example.test", correoVerificado: true },
       true,
-      "clearia",
+      "demo-a",
       [],
     )).toBe(true);
   });

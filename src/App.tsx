@@ -44,6 +44,10 @@ import {
 } from "./lib/construirDocumentosDiagnostico";
 import { guardarDiagnostico } from "./lib/guardarDiagnostico";
 import { CUESTIONARIO_ID, EMPRESA_ID, VERSION_ID } from "./config/firebaseDatos";
+import {
+  CLAVE_EMPRESA_ACTIVA,
+  obtenerEmpresaActivaInicial,
+} from "./config/empresaActiva";
 import { crearCopiaPlantilla } from "./templates/crearCopiaPlantilla";
 import { auth } from "./lib/firebaseAuth";
 import { db } from "./lib/firebase";
@@ -93,10 +97,13 @@ const CLAVE_HISTORIAL = "clearIaNavigation";
 const CLAVE_INTENTOS_GUARDADOS = "clearIaDiagnosticosGuardados";
 const PanelAdmin = lazy(() => import("./admin/AdminPanel"));
 
-async function puedeEditarCuestionarios(usuario: User): Promise<boolean> {
+async function puedeEditarCuestionarios(
+  usuario: User,
+  empresaId: string,
+): Promise<boolean> {
   const database = db;
   const correo = usuario.email?.toLowerCase();
-  if (!database || !usuario.emailVerified || !correo) {
+  if (!database || !usuario.emailVerified || !correo || !empresaId) {
     return false;
   }
 
@@ -107,20 +114,20 @@ async function puedeEditarCuestionarios(usuario: User): Promise<boolean> {
     return puedeCrearCopiasPlantilla(
       { correo, correoVerificado: usuario.emailVerified },
       true,
-      EMPRESA_ID,
+      empresaId,
       [],
     );
   }
 
   const membresia = await getDocFromServer(
-    doc(database, "empresas", EMPRESA_ID, "miembros", correo),
+    doc(database, "empresas", empresaId, "miembros", correo),
   );
   return puedeCrearCopiasPlantilla(
     { correo, correoVerificado: usuario.emailVerified },
     false,
-    EMPRESA_ID,
+    empresaId,
     membresia.exists()
-      ? [{ ...membresia.data(), empresaId: EMPRESA_ID }]
+      ? [{ ...membresia.data(), empresaId }]
       : [],
   );
 }
@@ -201,6 +208,9 @@ const casosReferencia: CasoReferencia[] = [
 ];
 
 export default function App() {
+  const [empresaActivaId, setEmpresaActivaId] = useState(
+    obtenerEmpresaActivaInicial,
+  );
   const [estadoApp, setEstadoApp] = useState(obtenerEstadoInicial);
   const [puedeCrearCopias, setPuedeCrearCopias] = useState(false);
   const [usuarioSesion, setUsuarioSesion] = useState<User | null>(null);
@@ -233,9 +243,27 @@ export default function App() {
   }, []);
 
   const rutaActual = window.location.pathname.replace(/\/+$/, "");
-  const segmentosPublicos = rutaActual.split("/").filter(Boolean);
-  const rutaPublicaCopia = segmentosPublicos.length === 3 &&
-    segmentosPublicos[0] === "c";
+  const segmentosPublicos = rutaActual.split("/");
+  const rutaPublicaCopia = rutaActual === "/c" ||
+    rutaActual.startsWith("/c/");
+  const empresaPublicaId = segmentosPublicos[2] ?? "";
+  const cuestionarioPublicoId = segmentosPublicos[3] ?? "";
+  const enlacePublicoValido = rutaPublicaCopia &&
+    segmentosPublicos.length === 4 &&
+    Boolean(empresaPublicaId && cuestionarioPublicoId);
+
+  useEffect(() => {
+    function actualizarEmpresaActiva(evento: StorageEvent) {
+      if (
+        evento.key === CLAVE_EMPRESA_ACTIVA &&
+        !new URLSearchParams(window.location.search).has("empresa")
+      ) {
+        setEmpresaActivaId(evento.newValue?.trim() ?? "");
+      }
+    }
+    window.addEventListener("storage", actualizarEmpresaActiva);
+    return () => window.removeEventListener("storage", actualizarEmpresaActiva);
+  }, []);
   useEffect(() => {
     if (rutaPublicaCopia) {
       setAuthListo(true);
@@ -263,7 +291,7 @@ export default function App() {
         if (!usuario) {
           return;
         }
-        void puedeEditarCuestionarios(usuario)
+        void puedeEditarCuestionarios(usuario, empresaActivaId)
           .then((permitido) => {
             if (!cancelado && revisionActual === revision) {
               setPuedeCrearCopias(permitido);
@@ -287,7 +315,7 @@ export default function App() {
       revision += 1;
       cancelarAuth();
     };
-  }, [rutaActual, rutaPublicaCopia]);
+  }, [rutaActual, rutaPublicaCopia, empresaActivaId]);
 
   useEffect(() => {
     let cancelado = false;
@@ -299,7 +327,7 @@ export default function App() {
 
     setCargandoCopias(true);
     setErrorBiblioteca("");
-    void listarCuestionariosGuardados()
+    void listarCuestionariosGuardados(empresaActivaId)
       .then((copias) => {
         if (!cancelado) {
           setCopiasGuardadas(copias);
@@ -324,13 +352,13 @@ export default function App() {
     return () => {
       cancelado = true;
     };
-  }, [puedeCrearCopias, usuarioSesion?.uid]);
+  }, [puedeCrearCopias, usuarioSesion?.uid, empresaActivaId]);
 
   if (rutaPublicaCopia) {
     return (
       <CuestionarioPublico
-        empresaId={segmentosPublicos[1]}
-        cuestionarioId={segmentosPublicos[2]}
+        empresaId={enlacePublicoValido ? empresaPublicaId : ""}
+        cuestionarioId={enlacePublicoValido ? cuestionarioPublicoId : ""}
       />
     );
   }
@@ -425,7 +453,7 @@ export default function App() {
         permitido = Boolean(
           usuario &&
           usuario.email &&
-          await puedeEditarCuestionarios(usuario),
+          await puedeEditarCuestionarios(usuario, empresaActivaId),
         );
       } catch {
         setPuedeCrearCopias(false);
@@ -433,7 +461,7 @@ export default function App() {
       }
       if (!usuario?.email || !permitido) {
         setPuedeCrearCopias(false);
-        throw new Error("No tienes permiso para crear copias en Clear-IA.");
+        throw new Error("No tienes permiso para crear copias en esta empresa.");
       }
 
       const copia = crearCopiaPlantilla(nombre, configuracion);
@@ -457,11 +485,11 @@ export default function App() {
   async function abrirCopiaGuardada(id: string) {
     try {
       const usuario = auth?.currentUser;
-      if (!usuario || !await puedeEditarCuestionarios(usuario)) {
+      if (!usuario || !await puedeEditarCuestionarios(usuario, empresaActivaId)) {
         setPuedeCrearCopias(false);
-        throw new Error("No tienes permiso para editar copias de Clear-IA.");
+        throw new Error("No tienes permiso para editar copias en esta empresa.");
       }
-      const copia = await leerCuestionarioGuardado(id);
+      const copia = await leerCuestionarioGuardado(empresaActivaId, id);
       if (!copia) {
         throw new Error("La copia guardada ya no existe.");
       }
@@ -489,16 +517,18 @@ export default function App() {
     const usuario = auth?.currentUser;
     let permitido = false;
     try {
-      permitido = Boolean(usuario && await puedeEditarCuestionarios(usuario));
+      permitido = Boolean(
+        usuario && await puedeEditarCuestionarios(usuario, empresaActivaId),
+      );
     } catch {
       setPuedeCrearCopias(false);
       throw new Error("No se pudo verificar tu permiso para eliminar copias.");
     }
     if (!usuario || !permitido) {
       setPuedeCrearCopias(false);
-      throw new Error("No tienes permiso para eliminar copias de Clear-IA.");
+      throw new Error("No tienes permiso para eliminar copias en esta empresa.");
     }
-    await eliminarCuestionarioGuardado(id);
+    await eliminarCuestionarioGuardado(empresaActivaId, id);
     setCopiasGuardadas((actuales) => actuales.filter((copia) => copia.id !== id));
     setErrorBiblioteca("");
     if (estadoAppRef.current.seleccion?.id === id) {
@@ -541,7 +571,7 @@ export default function App() {
       let permitido = false;
       try {
         permitido = Boolean(
-          usuario && await puedeEditarCuestionarios(usuario),
+          usuario && await puedeEditarCuestionarios(usuario, empresaActivaId),
         );
       } catch {
         setPuedeCrearCopias(false);
@@ -549,17 +579,19 @@ export default function App() {
       }
       if (!usuario?.email || !permitido) {
         setPuedeCrearCopias(false);
-        throw new Error("No tienes permiso para editar copias de Clear-IA.");
+        throw new Error("No tienes permiso para editar copias en esta empresa.");
       }
       const copiaGuardada = actual.copiaGuardada ??
         copiasGuardadas.some((copia) => copia.id === actual.seleccion?.id);
       const guardada = copiaGuardada
         ? await actualizarCuestionarioGuardado(
+          empresaActivaId,
           actual.seleccion.id,
           nombre,
           configuracion,
         )
         : await crearCuestionarioGuardado(
+          empresaActivaId,
           actual.seleccion.id,
           nombre,
           configuracion,
@@ -600,12 +632,18 @@ export default function App() {
       throw new Error("Solo se pueden publicar copias guardadas.");
     }
     const usuario = auth?.currentUser;
-    if (!usuario?.email || !await puedeEditarCuestionarios(usuario)) {
+    if (
+      !usuario?.email ||
+      !await puedeEditarCuestionarios(usuario, empresaActivaId)
+    ) {
       setPuedeCrearCopias(false);
       throw new Error("No tienes permiso para publicar copias en esta empresa.");
     }
     await actualizarCopiaPlantilla(nombre, configuracion, false);
-    const copiaGuardada = await leerCuestionarioGuardado(seleccionActual.id);
+    const copiaGuardada = await leerCuestionarioGuardado(
+      empresaActivaId,
+      seleccionActual.id,
+    );
     if (!copiaGuardada) {
       throw new Error("La copia guardada ya no existe.");
     }
@@ -615,7 +653,7 @@ export default function App() {
     const cuestionarioRef = doc(
       db,
       "empresas",
-      EMPRESA_ID,
+      empresaActivaId,
       "cuestionarios",
       seleccionActual.id,
     );
@@ -643,7 +681,10 @@ export default function App() {
       actualizadoEn: serverTimestamp(),
     });
     await batch.commit();
-    const actualizada = await leerCuestionarioGuardado(seleccionActual.id);
+    const actualizada = await leerCuestionarioGuardado(
+      empresaActivaId,
+      seleccionActual.id,
+    );
     if (actualizada) {
       setCopiasGuardadas((copias) => [
         actualizada,
@@ -651,14 +692,14 @@ export default function App() {
       ]);
     }
     return urlCopiaPublicada(
-      EMPRESA_ID,
+      empresaActivaId,
       seleccionActual.id,
     );
   }
 
   async function despublicarCopiaPlantilla(id: string): Promise<void> {
     const usuario = auth?.currentUser;
-    if (!usuario || !await puedeEditarCuestionarios(usuario)) {
+    if (!usuario || !await puedeEditarCuestionarios(usuario, empresaActivaId)) {
       setPuedeCrearCopias(false);
       throw new Error("No tienes permiso para despublicar copias en esta empresa.");
     }
@@ -666,10 +707,10 @@ export default function App() {
       throw new Error("Firebase no está configurado.");
     }
     await updateDoc(
-      doc(db, "empresas", EMPRESA_ID, "cuestionarios", id),
+      doc(db, "empresas", empresaActivaId, "cuestionarios", id),
       { estado: "borrador", actualizadoEn: serverTimestamp() },
     );
-    const actualizada = await leerCuestionarioGuardado(id);
+    const actualizada = await leerCuestionarioGuardado(empresaActivaId, id);
     if (actualizada) {
       setCopiasGuardadas((copias) => [
         actualizada,
@@ -859,7 +900,7 @@ export default function App() {
               ({ id }) => id === seleccion.id,
             );
             return cuestionario?.estado === "publicado"
-              ? urlCopiaPublicada(EMPRESA_ID, seleccion.id)
+              ? urlCopiaPublicada(empresaActivaId, seleccion.id)
               : undefined;
           })()}
           onPublicar={(nombre, configuracion) =>
@@ -1031,6 +1072,7 @@ export default function App() {
             const recomendacion = recomendaciones[resultado.segmento];
             if (recomendacion) {
               const documentos = construirDocumentosDiagnostico({
+                empresaId: EMPRESA_ID,
                 cuestionarioId: resultadoValidacion.data.id,
                 versionId: VERSION_ID,
                 id: estadoActual.idIntento,
@@ -1104,7 +1146,7 @@ export default function App() {
               !intentoMarcadoComoGuardado(idIntento)
             ) {
               intentosGuardadosRef.current.add(idIntento);
-              void puedeEditarCuestionarios(usuario)
+              void puedeEditarCuestionarios(usuario, empresaActivaId)
                 .then((permitido) => {
                   if (!permitido) {
                     throw new Error(
@@ -1112,6 +1154,7 @@ export default function App() {
                     );
                   }
                   const documentos = construirDocumentosCopia({
+                    empresaId: empresaActivaId,
                     id: idIntento,
                     contacto: lead,
                     cuestionario: resultadoValidacion.data,
@@ -1121,7 +1164,11 @@ export default function App() {
                     consentimientoAceptado: true,
                     fecha: serverTimestamp(),
                   });
-                  return guardarDiagnostico(EMPRESA_ID, idIntento, documentos);
+                  return guardarDiagnostico(
+                    empresaActivaId,
+                    idIntento,
+                    documentos,
+                  );
                 })
                 .then((guardado) => {
                   if (guardado) {

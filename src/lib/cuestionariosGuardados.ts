@@ -8,7 +8,6 @@ import {
   setDoc,
   updateDoc,
 } from "firebase/firestore";
-import { EMPRESA_ID } from "../config/firebaseDatos";
 import { db } from "./firebase";
 import {
   construirDocumentoCuestionarioGuardado,
@@ -23,8 +22,20 @@ function obtenerBaseDatos() {
   return db;
 }
 
-function referenciaColeccion() {
-  return collection(obtenerBaseDatos(), "empresas", EMPRESA_ID, "cuestionarios");
+function validarEmpresaId(empresaId: string): string {
+  if (!empresaId.trim()) {
+    throw new Error("Se requiere una empresa activa para gestionar copias.");
+  }
+  return empresaId;
+}
+
+function referenciaColeccion(empresaId: string) {
+  return collection(
+    obtenerBaseDatos(),
+    "empresas",
+    validarEmpresaId(empresaId),
+    "cuestionarios",
+  );
 }
 
 function validarDocumentoFirestore(
@@ -41,12 +52,13 @@ function validarDocumentoFirestore(
 }
 
 export async function crearCuestionarioGuardado(
+  empresaId: string,
   id: string,
   nombre: string,
   configuracion: unknown,
   creadoPor: string,
 ): Promise<DocumentoCuestionarioGuardado> {
-  const referencia = doc(referenciaColeccion(), id);
+  const referencia = doc(referenciaColeccion(empresaId), id);
   const resultado = construirDocumentoCuestionarioGuardado({
     id,
     nombre,
@@ -63,9 +75,11 @@ export async function crearCuestionarioGuardado(
   return resultado.data;
 }
 
-export async function listarCuestionariosGuardados():
+export async function listarCuestionariosGuardados(
+  empresaId: string,
+):
 Promise<DocumentoCuestionarioGuardado[]> {
-  const snapshot = await getDocsFromServer(referenciaColeccion());
+  const snapshot = await getDocsFromServer(referenciaColeccion(empresaId));
   return snapshot.docs
     .filter(({ id }) => id.startsWith("personalizado-"))
     .map((documento) => validarDocumentoFirestore(
@@ -75,9 +89,10 @@ Promise<DocumentoCuestionarioGuardado[]> {
 }
 
 export async function leerCuestionarioGuardado(
+  empresaId: string,
   id: string,
 ): Promise<DocumentoCuestionarioGuardado | null> {
-  const referencia = doc(referenciaColeccion(), id);
+  const referencia = doc(referenciaColeccion(empresaId), id);
   const snapshot = await getDocFromServer(referencia);
   if (!snapshot.exists()) {
     return null;
@@ -86,12 +101,19 @@ export async function leerCuestionarioGuardado(
 }
 
 export async function actualizarCuestionarioGuardado(
+  empresaId: string,
   id: string,
   nombre: string,
   configuracion: unknown,
 ): Promise<DocumentoCuestionarioGuardado> {
   const database = obtenerBaseDatos();
-  const referencia = doc(database, "empresas", EMPRESA_ID, "cuestionarios", id);
+  const referencia = doc(
+    database,
+    "empresas",
+    validarEmpresaId(empresaId),
+    "cuestionarios",
+    id,
+  );
   const existente = await getDocFromServer(referencia);
   if (!existente.exists()) {
     throw new Error("La copia que intentas guardar ya no existe.");
@@ -126,14 +148,17 @@ export async function actualizarCuestionarioGuardado(
   };
 }
 
-export async function eliminarCuestionarioGuardado(id: string): Promise<void> {
+export async function eliminarCuestionarioGuardado(
+  empresaId: string,
+  id: string,
+): Promise<void> {
   if (!id.startsWith("personalizado-")) {
     throw new Error("Solo se pueden eliminar copias personalizadas.");
   }
   await deleteDoc(doc(
     obtenerBaseDatos(),
     "empresas",
-    EMPRESA_ID,
+    validarEmpresaId(empresaId),
     "cuestionarios",
     id,
   ));

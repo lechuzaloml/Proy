@@ -93,6 +93,7 @@ export const enviarCopiaPublicada = onCall({ region }, async (request) => {
       }
       const fecha = Timestamp.now();
       const documentos = construirDocumentosCopia({
+        empresaId,
         id: submissionId,
         contacto: entrada.contacto,
         cuestionario: configuracion.data,

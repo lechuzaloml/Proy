@@ -25,8 +25,9 @@ sin modificar sus diez reglas.
 7. **Familia de respuesta por template:** cada template de la biblioteca usa
    una sola familia de respuesta.
 8. **Aislamiento multiempresa:** los leads, diagnósticos, miembros y
-   cuestionarios se almacenan bajo la ruta de su empresa; el panel de Clear-IA
-   opera en `empresas/clearia`.
+   cuestionarios se almacenan bajo la ruta de su empresa. La biblioteca, el
+   editor y el panel usan la empresa activa; solo el diagnóstico inicial de
+   Clear-IA se guarda explícitamente en `empresas/clearia`.
 9. **Puntaje para el panel:** el panel administrativo puede mostrar puntaje y
    segmento del diagnóstico. La Decisión 5 aplica únicamente a quien responde.
 10. **Confianza en el puntaje:** por ahora el navegador guarda directamente

@@ -27,10 +27,13 @@ import {
   where,
   writeBatch,
   type DocumentData,
+  type Firestore,
   type QueryDocumentSnapshot,
 } from "firebase/firestore";
 import { auth } from "../lib/firebaseAuth";
 import { db } from "../lib/firebase";
+import { CLAVE_EMPRESA_ACTIVA } from "../config/empresaActiva";
+import { CUESTIONARIO_ID } from "../config/firebaseDatos";
 import {
   filtrarOrdenarLeads,
   type LeadParaLista,
@@ -118,6 +121,91 @@ function crearLeadAdmin(
   };
 }
 
+async function agregarTitulosCuestionarios(
+  database: Firestore,
+  empresaId: string,
+  leads: LeadAdmin[],
+): Promise<LeadAdmin[]> {
+  const diagnosticos = await Promise.all(leads.map(async (lead) => {
+    const diagnosticoId = texto(lead.datos.ultimoDiagnosticoId);
+    if (!diagnosticoId) {
+      return [lead.id, ""] as const;
+    }
+    const snapshot = await getDoc(doc(
+      database,
+      "empresas",
+      empresaId,
+      "diagnosticos",
+      diagnosticoId,
+    ));
+    return [
+      lead.id,
+      snapshot.exists() ? texto(snapshot.data().cuestionarioId) : "",
+    ] as const;
+  }));
+  const cuestionariosPorLead = new Map(diagnosticos);
+  const idsCuestionarios = [...new Set(
+    diagnosticos.map(([, cuestionarioId]) => cuestionarioId)
+      .filter(Boolean),
+  )];
+  const nombresCuestionarios = new Map<string, string>();
+
+  await Promise.all(idsCuestionarios.map(async (cuestionarioId) => {
+    if (cuestionarioId === CUESTIONARIO_ID) {
+      nombresCuestionarios.set(
+        cuestionarioId,
+        "Diagnóstico inicial de crecimiento",
+      );
+      return;
+    }
+    try {
+      const snapshot = await getDoc(doc(
+        database,
+        "empresas",
+        empresaId,
+        "cuestionarios",
+        cuestionarioId,
+      ));
+      if (!snapshot.exists()) {
+        nombresCuestionarios.set(cuestionarioId, cuestionarioId);
+        return;
+      }
+      const datos = snapshot.data();
+      const configuracion = datos.configuracion as DocumentData | undefined;
+      nombresCuestionarios.set(
+        cuestionarioId,
+        texto(datos.nombre) || texto(configuracion?.cliente) || cuestionarioId,
+      );
+    } catch (error: unknown) {
+      const codigo = typeof error === "object" && error !== null &&
+          "code" in error
+        ? error.code
+        : "";
+      if (codigo !== "permission-denied") {
+        throw error;
+      }
+      console.warn(
+        `No se pudo leer el título del cuestionario "${cuestionarioId}" con las reglas actuales.`,
+      );
+      nombresCuestionarios.set(cuestionarioId, cuestionarioId);
+    }
+  }));
+
+  return leads.map((lead) => {
+    const cuestionarioId = cuestionariosPorLead.get(lead.id) ?? "";
+    return {
+      ...lead,
+      ...(cuestionarioId
+        ? {
+            cuestionarioId,
+            cuestionarioNombre:
+              nombresCuestionarios.get(cuestionarioId) ?? cuestionarioId,
+          }
+        : {}),
+    };
+  });
+}
+
 function fechaLegible(valor: unknown): string {
   if (valor instanceof Date) {
     return valor.toLocaleString();
@@ -156,6 +244,7 @@ export default function AdminPanel() {
   const [busqueda, setBusqueda] = useState("");
   const [filtroSegmento, setFiltroSegmento] = useState("");
   const [filtroEstado, setFiltroEstado] = useState("");
+  const [filtroCuestionario, setFiltroCuestionario] = useState("");
   const rutaPlataforma =
     window.location.pathname.replace(/\/+$/, "") === "/admin/plataforma";
   const empresaActiva =
@@ -286,9 +375,9 @@ export default function AdminPanel() {
         setEmpresaIdActiva((actual) =>
           accesibles.some(({ id }) => id === actual)
             ? actual
-            : accesibles.length === 1
-              ? accesibles[0].id
-              : "",
+            : accesibles.find(({ id }) =>
+                id === window.localStorage.getItem(CLAVE_EMPRESA_ACTIVA),
+              )?.id ?? (accesibles.length === 1 ? accesibles[0].id : ""),
         );
         if (plataforma) {
           setEstadoAcceso("listo");
@@ -313,6 +402,12 @@ export default function AdminPanel() {
       cancelado = true;
     };
   }, [usuario, authListo]);
+
+  useEffect(() => {
+    if (empresaIdActiva) {
+      window.localStorage.setItem(CLAVE_EMPRESA_ACTIVA, empresaIdActiva);
+    }
+  }, [empresaIdActiva]);
 
   const puedeVerLeads = Boolean(
     esPlataforma ||
@@ -353,13 +448,22 @@ export default function AdminPanel() {
       limit(100),
     );
     void getDocs(consulta)
-      .then((resultado) => {
+      .then(async (resultado) => {
         if (cancelado) {
           return;
         }
-        setLeads(resultado.docs.map((snapshot) =>
+        const leadsCargados = resultado.docs.map((snapshot) =>
           crearLeadAdmin(snapshot.id, snapshot.data()),
-        ));
+        );
+        const leadsConCuestionario = await agregarTitulosCuestionarios(
+          database,
+          empresaIdActiva,
+          leadsCargados,
+        );
+        if (cancelado) {
+          return;
+        }
+        setLeads(leadsConCuestionario);
         setCursor(resultado.docs.at(-1) ?? null);
         setHayMas(resultado.docs.length === 100);
       })
@@ -399,12 +503,15 @@ export default function AdminPanel() {
         limit(100),
       );
       const resultado = await getDocs(consulta);
-      setLeads((actuales) => [
-        ...actuales,
-        ...resultado.docs
-          .filter((snapshot) => !actuales.some(({ id }) => id === snapshot.id))
-          .map((snapshot) => crearLeadAdmin(snapshot.id, snapshot.data())),
-      ]);
+      const leadsCargados = resultado.docs
+        .filter((snapshot) => !leads.some(({ id }) => id === snapshot.id))
+        .map((snapshot) => crearLeadAdmin(snapshot.id, snapshot.data()));
+      const leadsConCuestionario = await agregarTitulosCuestionarios(
+        database,
+        empresaIdActiva,
+        leadsCargados,
+      );
+      setLeads((actuales) => [...actuales, ...leadsConCuestionario]);
       setCursor(resultado.docs.at(-1) ?? cursor);
       setHayMas(resultado.docs.length === 100);
     } catch (consultaError) {
@@ -416,16 +523,30 @@ export default function AdminPanel() {
     } finally {
       setCargandoMas(false);
     }
-  }, [cursor, orden, puedeVerLeads, empresaIdActiva]);
+  }, [cursor, orden, puedeVerLeads, empresaIdActiva, leads]);
 
   const leadsVisibles = useMemo(
     () => filtrarOrdenarLeads(leads, {
       busqueda,
       segmento: filtroSegmento,
       estado: filtroEstado,
+      cuestionario: filtroCuestionario,
       orden,
     }),
-    [leads, busqueda, filtroSegmento, filtroEstado, orden],
+    [leads, busqueda, filtroSegmento, filtroEstado, filtroCuestionario, orden],
+  );
+  const cuestionarios = useMemo(
+    () => [...new Map(leads.flatMap((lead) =>
+      lead.cuestionarioId
+        ? [[
+            lead.cuestionarioId,
+            lead.cuestionarioNombre ?? lead.cuestionarioId,
+          ] as const]
+        : [],
+    )).entries()].sort((primero, segundo) =>
+      primero[1].localeCompare(segundo[1]),
+    ),
+    [leads],
   );
   const segmentos = useMemo(
     () => [...new Set(leads.map(({ ultimoSegmento }) => ultimoSegmento)
@@ -467,7 +588,17 @@ export default function AdminPanel() {
   }
 
   function actualizarLeadActual(id: string, datos: DocumentData) {
-    const lead = crearLeadAdmin(id, datos);
+    const existente = leads.find((actual) => actual.id === id) ??
+      leadSeleccionado;
+    const lead: LeadAdmin = {
+      ...crearLeadAdmin(id, datos),
+      ...(existente?.cuestionarioId
+        ? {
+            cuestionarioId: existente.cuestionarioId,
+            cuestionarioNombre: existente.cuestionarioNombre,
+          }
+        : {}),
+    };
     setLeads((actuales) =>
       actuales.map((actual) => actual.id === id ? lead : actual),
     );
@@ -616,6 +747,7 @@ export default function AdminPanel() {
                   setEmpresaIdActiva(evento.target.value);
                   setCursor(null);
                   setLeads([]);
+                  setFiltroCuestionario("");
                 }}
                 value={empresaIdActiva}
               >
@@ -690,6 +822,20 @@ export default function AdminPanel() {
               </select>
             </label>
             <label>
+              Cuestionario
+              <select
+                onChange={(evento) =>
+                  setFiltroCuestionario(evento.target.value)
+                }
+                value={filtroCuestionario}
+              >
+                <option value="">Todos</option>
+                {cuestionarios.map(([id, nombre]) => (
+                  <option key={id} value={id}>{nombre}</option>
+                ))}
+              </select>
+            </label>
+            <label>
               Ordenar por
               <select
                 onChange={(evento) => setOrden(evento.target.value as OrdenLeads)}
@@ -712,6 +858,7 @@ export default function AdminPanel() {
                   <tr>
                     <th>Nombre</th>
                     <th>Correo</th>
+                    <th>Cuestionario</th>
                     <th>Estado</th>
                     <th>Segmento</th>
                     <th>Madurez del proceso</th>
@@ -732,6 +879,7 @@ export default function AdminPanel() {
                         </button>
                       </td>
                       <td>{lead.correo}</td>
+                      <td>{lead.cuestionarioNombre ?? "—"}</td>
                       <td>{lead.estado}</td>
                       <td>{lead.ultimoSegmento ?? "—"}</td>
                       <td>
