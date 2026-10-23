@@ -32,7 +32,7 @@ interface EditorCuestionarioProps {
   onPrevisualizar: (nombre: string, cuestionario: Cuestionario) => void;
   onDescartar?: () => void;
   onEliminar?: () => void | Promise<void>;
-  publicacionActiva?: boolean;
+  publicado?: boolean;
   urlPublica?: string;
   onPublicar?: (nombre: string, cuestionario: Cuestionario) => Promise<string>;
   onDespublicar?: () => Promise<void>;
@@ -53,7 +53,7 @@ export default function EditorCuestionario({
   onPrevisualizar,
   onDescartar,
   onEliminar,
-  publicacionActiva = false,
+  publicado = false,
   urlPublica,
   onPublicar,
   onDespublicar,
@@ -577,10 +577,10 @@ export default function EditorCuestionario({
             })}
             type="button"
           >
-            {publicacionActiva ? "Publicar cambios" : "Publicar"}
+            {publicado ? "Publicar cambios" : "Publicar"}
           </button>
         )}
-        {copiaGuardada && publicacionActiva && onDespublicar && (
+        {copiaGuardada && publicado && onDespublicar && (
           <button
             className="secondary-button"
             disabled={guardando}

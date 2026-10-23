@@ -20,44 +20,18 @@ export interface DatosEnvioPublico {
 }
 
 export function versionPublicadaCoincide(
-  empresaId: string,
   cuestionarioId: string,
   versionId: string,
   empresa: unknown,
   cuestionario: unknown,
-  version: unknown,
 ): boolean {
-  if (!esObjeto(empresa) || !esObjeto(cuestionario) || !esObjeto(version)) {
+  if (!esObjeto(empresa) || !esObjeto(cuestionario)) {
     return false;
   }
-  const publicacion = cuestionario.publicacion;
   return empresa.estado === "activa" &&
-    cuestionario.estado === "borrador" &&
+    cuestionario.estado === "publicado" &&
     cuestionario.id === cuestionarioId &&
-    esObjeto(publicacion) &&
-    publicacion.estado === "publicado" &&
-    publicacion.versionId === versionId &&
-    version.empresaId === empresaId &&
-    version.cuestionarioId === cuestionarioId &&
-    version.versionId === versionId;
-}
-
-export function usuarioPuedeEditarCuestionario(
-  empresaActiva: boolean,
-  administradorPlataforma: boolean,
-  miembro: unknown,
-): boolean {
-  if (!empresaActiva) {
-    return false;
-  }
-  if (administradorPlataforma) {
-    return true;
-  }
-  if (!esObjeto(miembro) || miembro.estado !== "activo") {
-    return false;
-  }
-  return miembro.rol === "admin" ||
-    (esObjeto(miembro.permisos) && miembro.permisos.editarCuestionarios === true);
+    cuestionario.versionActualId === versionId;
 }
 
 export function envioCompletoYaRegistrado(

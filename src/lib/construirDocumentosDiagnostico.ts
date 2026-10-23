@@ -15,6 +15,7 @@ import type {
   MarcaTiempoFirestore,
   RespuestaDiagnostico,
 } from "../types/documentosFirestore";
+import type { Resultado } from "../types/model";
 
 
 export interface EntradaDocumentosDiagnostico {
@@ -24,10 +25,12 @@ export interface EntradaDocumentosDiagnostico {
   cuestionarioId?: string;
   versionId?: string;
   respuestas: RespuestasCuestionario;
-  puntajeTotal: number;
-  segmento: string;
+  puntajeTotal?: number;
+  segmento?: string;
   templateRecomendadoId: string;
   planRecomendadoId: string;
+  origen?: string;
+  resultado?: Resultado;
   consentimientoAceptado: boolean;
   fecha: MarcaTiempoFirestore;
 }
@@ -129,9 +132,15 @@ export function construirDocumentoLeadEmpresa(
     throw new Error("Se requiere consentimiento para construir el documento.");
   }
 
-  const porcentaje = entrada.puntajeTotal > 0
-    ? Math.round((entrada.puntajeTotal / obtenerPuntajeMaximo(entrada.cuestionario)) * 100)
+  const puntajeTotal = entrada.cuestionario.usa_scoring
+    ? entrada.puntajeTotal
+    : undefined;
+  const puntajeMaximo = entrada.cuestionario.usa_scoring
+    ? obtenerPuntajeMaximo(entrada.cuestionario)
     : 0;
+  const porcentaje = puntajeTotal !== undefined && puntajeMaximo > 0
+    ? Math.min(100, Math.max(0, Math.round((puntajeTotal / puntajeMaximo) * 100)))
+    : undefined;
 
   return {
     nombre: entrada.contacto.nombre.trim(),
@@ -142,12 +151,14 @@ export function construirDocumentoLeadEmpresa(
       version: VERSION_AVISO_PRIVACIDAD,
       fecha: entrada.fecha,
     },
-    origen: "diagnostico-inicial",
+    origen: entrada.origen ?? "diagnostico-inicial",
     estado: "nuevo",
     ultimaActividadEn: entrada.fecha,
     ultimoDiagnosticoId: entrada.id,
-    ultimoPorcentaje: Math.min(100, Math.max(0, porcentaje)),
-    ultimoSegmento: entrada.segmento,
+    ...(porcentaje !== undefined ? { ultimoPorcentaje: porcentaje } : {}),
+    ...(entrada.cuestionario.usa_scoring && entrada.segmento
+      ? { ultimoSegmento: entrada.segmento }
+      : {}),
     creadoEn: entrada.fecha,
   };
 }
@@ -159,10 +170,15 @@ export function construirDocumentoDiagnostico(
     throw new Error("Se requiere consentimiento para construir el documento.");
   }
 
-  const puntajeMaximo = obtenerPuntajeMaximo(entrada.cuestionario);
-  const porcentaje = puntajeMaximo > 0
-    ? Math.round((entrada.puntajeTotal / puntajeMaximo) * 100)
+  const puntajeTotal = entrada.cuestionario.usa_scoring
+    ? entrada.puntajeTotal
+    : undefined;
+  const puntajeMaximo = entrada.cuestionario.usa_scoring
+    ? obtenerPuntajeMaximo(entrada.cuestionario)
     : 0;
+  const porcentaje = puntajeTotal !== undefined && puntajeMaximo > 0
+    ? Math.min(100, Math.max(0, Math.round((puntajeTotal / puntajeMaximo) * 100)))
+    : undefined;
   const puntajePorDimension = Object.fromEntries(
     calcularPerfilSecciones(entrada.cuestionario, entrada.respuestas)
       .filter(({ modo }) => modo === "puntaje")
@@ -174,11 +190,17 @@ export function construirDocumentoDiagnostico(
     cuestionarioId: entrada.cuestionarioId ?? CUESTIONARIO_ID,
     versionId: entrada.versionId ?? VERSION_ID, 
     respuestas: respuestaLegible(entrada.cuestionario, entrada.respuestas),
-    puntajeTotal: entrada.puntajeTotal,
-    puntajeMaximo,
-    porcentaje: Math.min(100, Math.max(0, porcentaje)),
-    segmento: entrada.segmento,
-    puntajePorDimension,
+    ...(entrada.resultado ? { resultado: entrada.resultado } : {}),
+    ...(puntajeTotal !== undefined ? { puntajeTotal } : {}),
+    ...(puntajeMaximo > 0 ? { puntajeMaximo } : {}),
+    ...(porcentaje !== undefined ? { porcentaje } : {}),
+    ...(entrada.cuestionario.usa_scoring && entrada.segmento
+      ? { segmento: entrada.segmento }
+      : {}),
+    ...(entrada.cuestionario.usa_scoring &&
+      Object.keys(puntajePorDimension).length > 0
+      ? { puntajePorDimension }
+      : {}),
     ...(entrada.templateRecomendadoId
       ? { templateRecomendadoId: entrada.templateRecomendadoId }
       : {}),

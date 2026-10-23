@@ -3,7 +3,6 @@ import type { Cuestionario } from "../../src/types/model";
 import { calcularResultado } from "../../src/logic/calcularResultado";
 import {
   envioCompletoYaRegistrado,
-  usuarioPuedeEditarCuestionario,
   validarDatosEnvioPublico,
   versionPublicadaCoincide,
 } from "./submission";
@@ -122,28 +121,29 @@ describe("validación de envíos anónimos de versiones publicadas", () => {
     const empresa = { estado: "activa" };
     const copia = {
       id: formulario.id,
-      estado: "borrador",
-      publicacion: { estado: "publicado", versionId: "pub-v1" },
-    };
-    const version = {
-      empresaId: "clearia",
-      cuestionarioId: formulario.id,
-      versionId: "pub-v1",
+      estado: "publicado",
+      versionActualId: "pub-v1",
     };
     expect(versionPublicadaCoincide(
-      "clearia", formulario.id, "pub-v1", empresa, copia, version,
+      formulario.id, "pub-v1", empresa, copia,
     )).toBe(true);
     expect(versionPublicadaCoincide(
-      "clearia", formulario.id, "pub-v1", empresa, {
+      formulario.id, "pub-v1", empresa, {
         ...copia,
-        publicacion: { estado: "borrador" },
-      }, version,
+        estado: "borrador",
+      },
     )).toBe(false);
     expect(versionPublicadaCoincide(
-      "otra-empresa", formulario.id, "pub-v1", empresa, copia, version,
+      "personalizado-otro", "pub-v1", empresa, copia,
     )).toBe(false);
     expect(versionPublicadaCoincide(
-      "clearia", formulario.id, "pub-v2", empresa, copia, version,
+      formulario.id, "pub-v2", empresa, copia,
+    )).toBe(false);
+    expect(versionPublicadaCoincide(
+      formulario.id, "pub-v1", empresa, {
+        ...copia,
+        id: "personalizado-otro",
+      },
     )).toBe(false);
   });
 
@@ -151,33 +151,5 @@ describe("validación de envíos anónimos de versiones publicadas", () => {
     expect(envioCompletoYaRegistrado(true, true)).toBe(true);
     expect(envioCompletoYaRegistrado(false, false)).toBe(false);
     expect(() => envioCompletoYaRegistrado(true, false)).toThrow(/incompleta/i);
-  });
-
-  it("autoriza publicación solo a miembros habilitados de una empresa activa", () => {
-    expect(usuarioPuedeEditarCuestionario(
-      true,
-      false,
-      { estado: "activo", rol: "usuario", permisos: { editarCuestionarios: true } },
-    )).toBe(true);
-    expect(usuarioPuedeEditarCuestionario(
-      true,
-      false,
-      { estado: "activo", rol: "admin", permisos: {} },
-    )).toBe(true);
-    expect(usuarioPuedeEditarCuestionario(
-      false,
-      true,
-      null,
-    )).toBe(false);
-    expect(usuarioPuedeEditarCuestionario(
-      true,
-      false,
-      { estado: "inactivo", rol: "admin", permisos: {} },
-    )).toBe(false);
-    expect(usuarioPuedeEditarCuestionario(
-      true,
-      false,
-      { estado: "activo", rol: "usuario", permisos: { editarCuestionarios: false } },
-    )).toBe(false);
   });
 });

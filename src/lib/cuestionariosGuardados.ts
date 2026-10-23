@@ -114,14 +114,14 @@ export async function actualizarCuestionarioGuardado(
 
   await updateDoc(referencia, {
     nombre: resultado.data.nombre,
-    estado: resultado.data.estado,
     configuracion: resultado.data.configuracion,
     actualizadoEn: resultado.data.actualizadoEn,
   });
   return {
     ...resultado.data,
-    ...(documentoExistente.publicacion
-      ? { publicacion: documentoExistente.publicacion }
+    estado: documentoExistente.estado,
+    ...(documentoExistente.versionActualId
+      ? { versionActualId: documentoExistente.versionActualId }
       : {}),
   };
 }

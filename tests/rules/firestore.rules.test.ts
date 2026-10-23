@@ -261,10 +261,11 @@ function assertPermissionDenied(operacion: Promise<unknown>) {
 function crearDocumentosDePrueba(
   database: TestFirestore,
   questionnaireId: string,
+  usaScoring = false,
 ) {
   const id = `synthetic-attempt-${questionnaireId}`;
   const batch = writeBatch(database);
-  batch.set(doc(database, `empresas/demo-public/leads/${id}`), {
+  const lead: Record<string, unknown> = {
     nombre: "Persona de prueba sintética",
     correo: "visitor@example.invalid",
     telefono: "5550000000",
@@ -273,28 +274,39 @@ function crearDocumentosDePrueba(
       version: "synthetic-v1",
       fecha: serverTimestamp(),
     },
-    origen: "prueba-emulador",
+    origen: "formulario-publico",
     estado: "nuevo",
     ultimaActividadEn: serverTimestamp(),
     ultimoDiagnosticoId: id,
-    ultimoPorcentaje: 0,
-    ultimoSegmento: "sintetico",
     creadoEn: serverTimestamp(),
-  });
-  batch.set(doc(database, `empresas/demo-public/diagnosticos/${id}`), {
+  };
+  const diagnostico: Record<string, unknown> = {
     leadId: id,
     cuestionarioId: questionnaireId,
     versionId: "v1",
     respuestas: {},
-    puntajeTotal: 0,
-    puntajeMaximo: 10,
-    porcentaje: 0,
-    segmento: "sintetico",
-    puntajePorDimension: {},
-    templateRecomendadoId: "synthetic-template",
-    planRecomendadoId: "synthetic-plan",
+    resultado: usaScoring
+      ? {
+          tipo: "por_segmento",
+          resultados: [{
+            segmento: "sintetico",
+            contenido: "Resultado sintético",
+          }],
+        }
+      : { tipo: "fijo", contenido: "Resultado sintético" },
     completadoEn: serverTimestamp(),
-  });
+  };
+  if (usaScoring) {
+    lead.ultimoPorcentaje = 0;
+    lead.ultimoSegmento = "sintetico";
+    diagnostico.puntajeTotal = 0;
+    diagnostico.puntajeMaximo = 10;
+    diagnostico.porcentaje = 0;
+    diagnostico.segmento = "sintetico";
+    diagnostico.puntajePorDimension = {};
+  }
+  batch.set(doc(database, `empresas/demo-public/leads/${id}`), lead);
+  batch.set(doc(database, `empresas/demo-public/diagnosticos/${id}`), diagnostico);
   return batch.commit();
 }
 
@@ -492,13 +504,58 @@ describe("reglas locales de Firestore", () => {
       expect(lead.exists()).toBe(true);
       expect(diagnostico.exists()).toBe(true);
       expect(lead.id).toBe(diagnostico.id);
+      expect(lead.data()?.origen).toBe("formulario-publico");
+      expect(Object.keys(lead.data() ?? {}).sort()).toEqual([
+        "nombre",
+        "correo",
+        "telefono",
+        "consentimiento",
+        "origen",
+        "estado",
+        "ultimaActividadEn",
+        "ultimoDiagnosticoId",
+        "creadoEn",
+      ].sort());
+      expect(diagnostico.data()?.versionId).toBe("v1");
+      expect(diagnostico.data()?.resultado).toEqual({
+        tipo: "fijo",
+        contenido: "Resultado sintético",
+      });
+      expect(diagnostico.data()).not.toHaveProperty("puntajeTotal");
+      expect(diagnostico.data()).not.toHaveProperty("segmento");
+      expect((await getDoc(doc(
+        adminDatabase,
+        `empresas/demo-b/leads/${id}`,
+      ))).exists()).toBe(false);
+    });
+  });
+
+  it("permite un lote público con los campos opcionales de scoring autorizados", async () => {
+    const database = environment.unauthenticatedContext().firestore();
+    await assertSucceeds(crearDocumentosDePrueba(
+      database,
+      PUBLISHED_QUESTIONNAIRE_ID,
+      true,
+    ));
+
+    await environment.withSecurityRulesDisabled(async (context) => {
+      const diagnostico = await getDoc(doc(
+        context.firestore(),
+        `empresas/demo-public/diagnosticos/synthetic-attempt-${PUBLISHED_QUESTIONNAIRE_ID}`,
+      ));
+      expect(diagnostico.data()).toMatchObject({
+        puntajeTotal: 0,
+        puntajeMaximo: 10,
+        porcentaje: 0,
+        segmento: "sintetico",
+      });
     });
   });
 
   it("solo permite leer la versión publicada actual de una copia; los borradores y leads siguen privados", async () => {
     const versionId = "pub-synthetic-v1";
     const visitante = environment.unauthenticatedContext().firestore();
-    const publicacionRef = doc(
+    const cuestionarioRef = doc(
       visitante,
       `empresas/${COMPANY_CLEARIA}/cuestionarios/${PERSONALIZED_QUESTIONNAIRE_ID}`,
     );
@@ -512,25 +569,21 @@ describe("reglas locales de Firestore", () => {
         `empresas/${COMPANY_CLEARIA}/cuestionarios/${PERSONALIZED_QUESTIONNAIRE_ID}`,
       );
       await updateDoc(base, {
-        publicacion: {
-          estado: "publicado",
-          versionId,
-          publicadoPor: PLATFORM_ADMIN_EMAIL,
-          publicadoEn: serverTimestamp(),
-        },
+        estado: "publicado",
+        versionActualId: versionId,
       });
       await setDoc(doc(
         context.firestore(),
         `empresas/${COMPANY_CLEARIA}/cuestionarios/${PERSONALIZED_QUESTIONNAIRE_ID}/versiones/${versionId}`,
       ), {
-        empresaId: COMPANY_CLEARIA,
-        cuestionarioId: PERSONALIZED_QUESTIONNAIRE_ID,
-        versionId,
+        numero: 1,
         configuracion: documentoCopia().configuracion,
+        publicadaEn: serverTimestamp(),
+        creadoPor: PLATFORM_ADMIN_EMAIL,
       });
     });
     await assertSucceeds(getDoc(versionRef));
-    await assertFails(getDoc(publicacionRef));
+    await assertSucceeds(getDoc(cuestionarioRef));
     await assertFails(getDoc(doc(
       visitante,
       `empresas/${COMPANY_CLEARIA}/cuestionarios/${PERSONALIZED_QUESTIONNAIRE_ID}/versiones/borrador`,
@@ -545,8 +598,9 @@ describe("reglas locales de Firestore", () => {
       await updateDoc(doc(
         context.firestore(),
         `empresas/${COMPANY_CLEARIA}/cuestionarios/${PERSONALIZED_QUESTIONNAIRE_ID}`,
-      ), { publicacion: { estado: "borrador" } });
+      ), { estado: "borrador" });
     });
+    await assertFails(getDoc(cuestionarioRef));
     await assertFails(getDoc(versionRef));
   });
 
@@ -600,18 +654,14 @@ describe("reglas locales de Firestore", () => {
 
     await assertSucceeds(setDoc(referencia, documentoCopia()));
     await assertFails(updateDoc(referencia, {
-      publicacion: {
-        estado: "publicado",
-        versionId: "pub-client-forged",
-      },
+      estado: "publicado",
     }));
     await assertFails(setDoc(doc(
       database,
       `empresas/${COMPANY_CLEARIA}/cuestionarios/${PERSONALIZED_QUESTIONNAIRE_ID}/versiones/pub-client-forged`,
     ), {
-      empresaId: COMPANY_CLEARIA,
-      cuestionarioId: PERSONALIZED_QUESTIONNAIRE_ID,
-      versionId: "pub-client-forged",
+      numero: 1,
+      configuracion: documentoCopia().configuracion,
     }));
 
     const lista = await getDocs(
@@ -632,6 +682,56 @@ describe("reglas locales de Firestore", () => {
     expect((await getDoc(referencia)).data()?.nombre).toBe(
       "Copia sintética actualizada",
     );
+  });
+
+  it("permite publicar y despublicar con lotes atómicos desde el cliente", async () => {
+    await establecerPermisoEdicion(MEMBER_EMAIL, true);
+    const database = contextoMiembro().firestore();
+    const cuestionarioRef = doc(
+      database,
+      `empresas/${COMPANY_CLEARIA}/cuestionarios/${PERSONALIZED_QUESTIONNAIRE_ID}`,
+    );
+    const versionId = "client-published-v1";
+    const versionRef = doc(
+      database,
+      `empresas/${COMPANY_CLEARIA}/cuestionarios/${PERSONALIZED_QUESTIONNAIRE_ID}/versiones/${versionId}`,
+    );
+    const publicar = writeBatch(database);
+    publicar.set(versionRef, {
+      numero: 1,
+      configuracion: documentoCopia().configuracion,
+      publicadaEn: serverTimestamp(),
+      creadoPor: MEMBER_EMAIL,
+    });
+    publicar.update(cuestionarioRef, {
+      estado: "publicado",
+      versionActualId: versionId,
+      actualizadoEn: serverTimestamp(),
+    });
+    await assertSucceeds(publicar.commit());
+
+    const visitante = environment.unauthenticatedContext().firestore();
+    await assertSucceeds(getDoc(doc(
+      visitante,
+      `empresas/${COMPANY_CLEARIA}/cuestionarios/${PERSONALIZED_QUESTIONNAIRE_ID}`,
+    )));
+    await assertSucceeds(getDoc(doc(
+      visitante,
+      `empresas/${COMPANY_CLEARIA}/cuestionarios/${PERSONALIZED_QUESTIONNAIRE_ID}/versiones/${versionId}`,
+    )));
+
+    await assertSucceeds(updateDoc(cuestionarioRef, {
+      estado: "borrador",
+      actualizadoEn: serverTimestamp(),
+    }));
+    await assertFails(getDoc(doc(
+      visitante,
+      `empresas/${COMPANY_CLEARIA}/cuestionarios/${PERSONALIZED_QUESTIONNAIRE_ID}`,
+    )));
+    await assertFails(getDoc(doc(
+      visitante,
+      `empresas/${COMPANY_CLEARIA}/cuestionarios/${PERSONALIZED_QUESTIONNAIRE_ID}/versiones/${versionId}`,
+    )));
   });
 
   it("deniega crear, listar, leer y actualizar en clearia si el permiso solo existe en otra empresa", async () => {

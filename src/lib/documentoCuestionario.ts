@@ -5,17 +5,12 @@ import type { MarcaTiempoFirestore } from "../types/documentosFirestore";
 export interface DocumentoCuestionarioGuardado {
   id: string;
   nombre: string;
-  estado: "borrador";
+  estado: "borrador" | "publicado";
+  versionActualId?: string;
   configuracion: Cuestionario;
   creadoPor: string;
   creadoEn: MarcaTiempoFirestore;
   actualizadoEn: MarcaTiempoFirestore;
-  publicacion?: {
-    estado: "publicado" | "borrador";
-    versionId?: string;
-    publicadoEn?: MarcaTiempoFirestore;
-    publicadoPor?: string;
-  };
 }
 
 export interface ResultadoDocumentoCuestionario {
@@ -49,8 +44,24 @@ export function validarDocumentoCuestionarioGuardado(
   ) {
     errores.push("El nombre debe contener entre 1 y 120 caracteres.");
   }
-  if (valor.estado !== "borrador") {
-    errores.push("Las copias nuevas deben permanecer en estado borrador.");
+  if (valor.estado !== "borrador" && valor.estado !== "publicado") {
+    errores.push("El estado de la copia no es válido.");
+  }
+  if (
+    valor.versionActualId !== undefined &&
+    (typeof valor.versionActualId !== "string" ||
+      valor.versionActualId.length < 1 ||
+      valor.versionActualId.length > 60)
+  ) {
+    errores.push("El ID de la versión actual no es válido.");
+  }
+  if (
+    valor.estado === "publicado" &&
+    (typeof valor.versionActualId !== "string" ||
+      valor.versionActualId.length < 1 ||
+      valor.versionActualId.length > 60)
+  ) {
+    errores.push("Un cuestionario publicado requiere una versión actual válida.");
   }
   if (typeof valor.creadoPor !== "string" || !valor.creadoPor.trim()) {
     errores.push("El creador es obligatorio.");
@@ -61,25 +72,6 @@ export function validarDocumentoCuestionarioGuardado(
   if (valor.actualizadoEn === undefined || valor.actualizadoEn === null) {
     errores.push("La fecha de actualización es obligatoria.");
   }
-  let publicacion: DocumentoCuestionarioGuardado["publicacion"];
-  if (valor.publicacion !== undefined) {
-    if (!esObjeto(valor.publicacion) ||
-      (valor.publicacion.estado !== "publicado" &&
-        valor.publicacion.estado !== "borrador")) {
-      errores.push("El estado de publicación no es válido.");
-    } else if (
-      valor.publicacion.estado === "publicado" &&
-      (typeof valor.publicacion.versionId !== "string" ||
-        !valor.publicacion.versionId ||
-        valor.publicacion.publicadoEn == null ||
-        typeof valor.publicacion.publicadoPor !== "string")
-    ) {
-      errores.push("La publicación requiere versión, fecha y autor.");
-    } else {
-      publicacion = valor.publicacion as DocumentoCuestionarioGuardado["publicacion"];
-    }
-  }
-
   const validacion = validarCuestionario(valor.configuracion);
   if (!validacion.valido) {
     errores.push(...validacion.errores);
@@ -97,12 +89,14 @@ export function validarDocumentoCuestionarioGuardado(
     data: {
       id: valor.id as string,
       nombre: (valor.nombre as string).trim(),
-      estado: "borrador",
+      estado: valor.estado === "publicado" ? "publicado" : "borrador",
+      ...(typeof valor.versionActualId === "string"
+        ? { versionActualId: valor.versionActualId }
+        : {}),
       configuracion: validacion.data,
       creadoPor: (valor.creadoPor as string).trim(),
       creadoEn: valor.creadoEn as MarcaTiempoFirestore,
       actualizadoEn: valor.actualizadoEn as MarcaTiempoFirestore,
-      ...(publicacion ? { publicacion } : {}),
     },
   };
 }

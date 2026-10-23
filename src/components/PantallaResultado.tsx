@@ -11,6 +11,7 @@ interface PantallaResultadoProps {
   respuestas: RespuestasCuestionario;
   contenidoPersonalizado: string | null;
   errorPersonalizacion: string | null;
+  mostrarPerfil?: boolean;
 }
 
 const CENTRO = 160;
@@ -22,6 +23,7 @@ export default function PantallaResultado({
   respuestas,
   contenidoPersonalizado,
   errorPersonalizacion,
+  mostrarPerfil = true,
 }: PantallaResultadoProps) {
   const dimensiones = calcularPerfilSecciones(
     cuestionario,
@@ -65,7 +67,7 @@ export default function PantallaResultado({
           </div>
         )}
       </article>
-      {dimensiones.length >= 2 && (
+      {mostrarPerfil && dimensiones.length >= 2 && (
         <section
           aria-labelledby="result-profile-title"
           className="result-profile"

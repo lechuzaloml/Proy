@@ -1,0 +1,55 @@
+[1mdiff --git a/firestore.rules b/firestore.rules[m
+[1mindex 5f25048..a01349e 100644[m
+[1m--- a/firestore.rules[m
+[1m+++ b/firestore.rules[m
+[36m@@ -47,8 +47,8 @@[m [mservice cloud.firestore {[m
+     function puedeLeerVersionPublicada(emp, cid, vid) {[m
+       return empresaActiva(emp)[m
+         && exists(/databases/$(database)/documents/empresas/$(emp)/cuestionarios/$(cid))[m
+[31m-        && get(/databases/$(database)/documents/empresas/$(emp)/cuestionarios/$(cid)).data.publicacion.estado == 'publicado'[m
+[31m-        && get(/databases/$(database)/documents/empresas/$(emp)/cuestionarios/$(cid)).data.publicacion.versionId == vid;[m
+[32m+[m[32m        && get(/databases/$(database)/documents/empresas/$(emp)/cuestionarios/$(cid)).data.estado == 'publicado'[m
+[32m+[m[32m        && get(/databases/$(database)/documents/empresas/$(emp)/cuestionarios/$(cid)).data.versionActualId == vid;[m
+     }[m
+     function copiaAutorizada(emp, cid) {[m
+       return empresaActiva(emp)[m
+[36m@@ -153,15 +153,27 @@[m [mservice cloud.firestore {[m
+           && nuevo().estado == 'borrador';[m
+         allow update: if puedeEditarCuestionarios(emp)[m
+           && nuevo().diff(resource.data).affectedKeys()[m
+[31m-            .hasOnly(['nombre','estado','configuracion','actualizadoEn'])[m
+[31m-          && nuevo().estado == 'borrador';[m
+[32m+[m[32m            .hasOnly(['nombre','estado','configuracion','versionActualId','actualizadoEn'])[m
+[32m+[m[32m          && nuevo().estado in ['borrador','publicado'][m
+[32m+[m[32m          && (nuevo().estado == 'borrador'[m
+[32m+[m[32m              || (empresaActiva(emp)[m
+[32m+[m[32m                  && texto(nuevo().versionActualId, 1, 60)[m
+[32m+[m[32m                  && existsAfter(/databases/$(database)/documents/empresas/$(emp)/cuestionarios/$(cid)/versiones/$(nuevo().versionActualId))));[m
+         allow delete: if puedeEditarCuestionarios(emp);[m
+ [m
+         match /versiones/{vid} {[m
+           allow get: if puedeLeerVersionPublicada(emp, cid, vid)[m
+             || puedeEditarCuestionarios(emp);[m
+           allow list: if puedeEditarCuestionarios(emp);[m
+[31m-          allow write: if false;[m
+[32m+[m[32m          allow create: if puedeEditarCuestionarios(emp)[m
+[32m+[m[32m            && empresaActiva(emp)[m
+[32m+[m[32m            && nuevo().keys().hasAll(['numero','configuracion','publicadaEn','creadoPor'])[m
+[32m+[m[32m            && nuevo().keys().hasOnly(['numero','configuracion','publicadaEn','creadoPor'])[m
+[32m+[m[32m            && nuevo().numero is number[m
+[32m+[m[32m            && nuevo().configuracion is map[m
+[32m+[m[32m            && nuevo().publicadaEn == request.time[m
+[32m+[m[32m            && texto(nuevo().creadoPor, 3, 200);[m
+[32m+[m[32m          allow update, delete: if false;[m
+         }[m
+       }[m
+ [m
+[36m@@ -194,7 +206,7 @@[m [mservice cloud.firestore {[m
+ [m
+         allow get, list: if puedeVerLeads(emp);[m
+ [m
+[31m-                allow update: if puedeGestionarLeads(emp)[m
+[32m+[m[32m        allow update: if puedeGestionarLeads(emp)[m
+           && nuevo().diff(resource.data).affectedKeys().hasOnly(['estado','asignadoA','contactadoEn','ultimaActividadEn'])[m
+           && nuevo().estado in ['nuevo','contactado','interesado','convertido','descartado'][m
+           && (!nuevo().diff(resource.data).affectedKeys().hasAny(['contactadoEn'])[m

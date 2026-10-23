@@ -47,8 +47,8 @@ service cloud.firestore {
     function puedeLeerVersionPublicada(emp, cid, vid) {
       return empresaActiva(emp)
         && exists(/databases/$(database)/documents/empresas/$(emp)/cuestionarios/$(cid))
-        && get(/databases/$(database)/documents/empresas/$(emp)/cuestionarios/$(cid)).data.publicacion.estado == 'publicado'
-        && get(/databases/$(database)/documents/empresas/$(emp)/cuestionarios/$(cid)).data.publicacion.versionId == vid;
+        && get(/databases/$(database)/documents/empresas/$(emp)/cuestionarios/$(cid)).data.estado == 'publicado'
+        && get(/databases/$(database)/documents/empresas/$(emp)/cuestionarios/$(cid)).data.versionActualId == vid;
     }
     function copiaAutorizada(emp, cid) {
       return empresaActiva(emp)
@@ -153,15 +153,27 @@ service cloud.firestore {
           && nuevo().estado == 'borrador';
         allow update: if puedeEditarCuestionarios(emp)
           && nuevo().diff(resource.data).affectedKeys()
-            .hasOnly(['nombre','estado','configuracion','actualizadoEn'])
-          && nuevo().estado == 'borrador';
+            .hasOnly(['nombre','estado','configuracion','versionActualId','actualizadoEn'])
+          && nuevo().estado in ['borrador','publicado']
+          && (nuevo().estado == 'borrador'
+              || (empresaActiva(emp)
+                  && texto(nuevo().versionActualId, 1, 60)
+                  && existsAfter(/databases/$(database)/documents/empresas/$(emp)/cuestionarios/$(cid)/versiones/$(nuevo().versionActualId))));
         allow delete: if puedeEditarCuestionarios(emp);
 
         match /versiones/{vid} {
           allow get: if puedeLeerVersionPublicada(emp, cid, vid)
             || puedeEditarCuestionarios(emp);
           allow list: if puedeEditarCuestionarios(emp);
-          allow write: if false;
+          allow create: if puedeEditarCuestionarios(emp)
+            && empresaActiva(emp)
+            && nuevo().keys().hasAll(['numero','configuracion','publicadaEn','creadoPor'])
+            && nuevo().keys().hasOnly(['numero','configuracion','publicadaEn','creadoPor'])
+            && nuevo().numero is number
+            && nuevo().configuracion is map
+            && nuevo().publicadaEn == request.time
+            && texto(nuevo().creadoPor, 3, 200);
+          allow update, delete: if false;
         }
       }
 
@@ -194,7 +206,7 @@ service cloud.firestore {
 
         allow get, list: if puedeVerLeads(emp);
 
-                allow update: if puedeGestionarLeads(emp)
+        allow update: if puedeGestionarLeads(emp)
           && nuevo().diff(resource.data).affectedKeys().hasOnly(['estado','asignadoA','contactadoEn','ultimaActividadEn'])
           && nuevo().estado in ['nuevo','contactado','interesado','convertido','descartado']
           && (!nuevo().diff(resource.data).affectedKeys().hasAny(['contactadoEn'])

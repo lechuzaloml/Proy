@@ -111,6 +111,97 @@ describe("construirDocumentosDiagnostico", () => {
     ).toThrow("Se requiere consentimiento");
   });
 
+  it("construye el envío público sin campos de scoring cuando no se usa", () => {
+    const cuestionarioSinScoring = cambiarModoScoring(
+      structuredClone(cuestionario),
+      false,
+    );
+    const respuestas = {
+      0: { tipo: "opcion_multiple" as const, indiceOpcion: 1 },
+    };
+    const calculo = calcularResultado(cuestionarioSinScoring, respuestas);
+    if (calculo.estado !== "ok" || calculo.tipo !== "fijo") {
+      throw new Error("El cuestionario sin scoring debe dar un resultado fijo.");
+    }
+    const documentos = construirDocumentosDiagnostico({
+      id: "intento-publico",
+      contacto,
+      cuestionario: cuestionarioSinScoring,
+      cuestionarioId: "publicado",
+      versionId: "version-actual",
+      respuestas,
+      templateRecomendadoId: "",
+      planRecomendadoId: "",
+      origen: "formulario-publico",
+      resultado: calculo.resultado,
+      consentimientoAceptado: true,
+      fecha,
+    });
+
+    expect(documentos.lead.origen).toBe("formulario-publico");
+    expect(documentos.lead).not.toHaveProperty("ultimoPorcentaje");
+    expect(documentos.lead).not.toHaveProperty("ultimoSegmento");
+    expect(documentos.diagnostico).toMatchObject({
+      cuestionarioId: "publicado",
+      versionId: "version-actual",
+      resultado: { tipo: "fijo" },
+    });
+    expect(documentos.diagnostico).not.toHaveProperty("puntajeTotal");
+    expect(documentos.diagnostico).not.toHaveProperty("puntajeMaximo");
+    expect(documentos.diagnostico).not.toHaveProperty("porcentaje");
+    expect(documentos.diagnostico).not.toHaveProperty("segmento");
+    expect(documentos.diagnostico).not.toHaveProperty("puntajePorDimension");
+    expect(JSON.stringify(documentos)).not.toContain("undefined");
+  });
+
+  it("construye el envío público con scoring calculado y versión vigente", () => {
+    const respuestas = {
+      0: { tipo: "opcion_multiple" as const, indiceOpcion: 0 },
+      1: { tipo: "opcion_multiple" as const, indiceOpcion: 3 },
+      2: { tipo: "escala" as const, valor: 4 },
+      6: { tipo: "abierta" as const, valor: "Mejorar captación" },
+    };
+    const calculo = calcularResultado(cuestionario, respuestas);
+    if (calculo.estado !== "ok" || calculo.tipo !== "segmentado") {
+      throw new Error("El cuestionario con scoring debe dar un resultado segmentado.");
+    }
+    const documentos = construirDocumentosDiagnostico({
+      id: "intento-publico-scoring",
+      contacto,
+      cuestionario,
+      cuestionarioId: "publicado",
+      versionId: "version-actual",
+      respuestas,
+      puntajeTotal: calculo.puntajeTotal,
+      segmento: calculo.segmento,
+      templateRecomendadoId: "",
+      planRecomendadoId: "",
+      origen: "formulario-publico",
+      resultado: {
+        tipo: "por_segmento",
+        resultados: [calculo.resultado],
+      },
+      consentimientoAceptado: true,
+      fecha,
+    });
+
+    expect(documentos.lead).toMatchObject({
+      origen: "formulario-publico",
+      ultimoPorcentaje: 30,
+      ultimoSegmento: calculo.segmento,
+    });
+    expect(documentos.diagnostico).toMatchObject({
+      cuestionarioId: "publicado",
+      versionId: "version-actual",
+      puntajeTotal: calculo.puntajeTotal,
+      segmento: calculo.segmento,
+      resultado: {
+        tipo: "por_segmento",
+        resultados: [{ segmento: calculo.segmento }],
+      },
+    });
+  });
+
   it("omite respuestas no válidas y campos recomendados vacíos", () => {
     const documentos = construirDocumentosDiagnostico({
       id: "intento-2",

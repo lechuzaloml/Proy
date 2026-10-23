@@ -4,8 +4,13 @@ import {
   type User,
 } from "firebase/auth";
 import {
+  collection,
   doc,
   getDocFromServer,
+  getDocsFromServer,
+  serverTimestamp,
+  updateDoc,
+  writeBatch,
 } from "firebase/firestore";
 import BibliotecaTemplates, {
   type CasoReferencia,
@@ -33,7 +38,6 @@ import type {
 import type { Lead } from "./types/model";
 import { validarCuestionario } from "./validation/validarCuestionario";
 import type { EstadoFlujoCuestionario } from "./components/RenderizadorCuestionario";
-import { serverTimestamp } from "firebase/firestore";
 import {
   construirDocumentosCopia,
   construirDocumentosDiagnostico,
@@ -53,7 +57,6 @@ import {
 } from "./lib/cuestionariosGuardados";
 import type { DocumentoCuestionarioGuardado } from "./lib/documentoCuestionario";
 import {
-  gestionarPublicacionCopia,
   urlCopiaPublicada,
 } from "./lib/publicacionCuestionarios";
 
@@ -231,7 +234,7 @@ export default function App() {
 
   const rutaActual = window.location.pathname.replace(/\/+$/, "");
   const segmentosPublicos = rutaActual.split("/").filter(Boolean);
-  const rutaPublicaCopia = segmentosPublicos.length === 4 &&
+  const rutaPublicaCopia = segmentosPublicos.length === 3 &&
     segmentosPublicos[0] === "c";
   useEffect(() => {
     if (rutaPublicaCopia) {
@@ -328,7 +331,6 @@ export default function App() {
       <CuestionarioPublico
         empresaId={segmentosPublicos[1]}
         cuestionarioId={segmentosPublicos[2]}
-        versionId={segmentosPublicos[3]}
       />
     );
   }
@@ -598,19 +600,49 @@ export default function App() {
       throw new Error("Solo se pueden publicar copias guardadas.");
     }
     const usuario = auth?.currentUser;
-    if (!usuario || !await puedeEditarCuestionarios(usuario)) {
+    if (!usuario?.email || !await puedeEditarCuestionarios(usuario)) {
       setPuedeCrearCopias(false);
       throw new Error("No tienes permiso para publicar copias en esta empresa.");
     }
     await actualizarCopiaPlantilla(nombre, configuracion, false);
-    const resultado = await gestionarPublicacionCopia(
-      EMPRESA_ID,
-      seleccionActual.id,
-      "publicar",
-    );
-    if (resultado.estado !== "publicado") {
-      throw new Error("No se pudo publicar la copia.");
+    const copiaGuardada = await leerCuestionarioGuardado(seleccionActual.id);
+    if (!copiaGuardada) {
+      throw new Error("La copia guardada ya no existe.");
     }
+    if (!db) {
+      throw new Error("Firebase no está configurado.");
+    }
+    const cuestionarioRef = doc(
+      db,
+      "empresas",
+      EMPRESA_ID,
+      "cuestionarios",
+      seleccionActual.id,
+    );
+    const versiones = await getDocsFromServer(
+      collection(cuestionarioRef, "versiones"),
+    );
+    const numero = versiones.docs.reduce((mayor, version) => {
+      const valor = version.data().numero;
+      return typeof valor === "number" && Number.isFinite(valor)
+        ? Math.max(mayor, valor)
+        : mayor;
+    }, 0) + 1;
+    const versionId = crypto.randomUUID();
+    const versionRef = doc(collection(cuestionarioRef, "versiones"), versionId);
+    const batch = writeBatch(db);
+    batch.set(versionRef, {
+      numero,
+      configuracion: copiaGuardada.configuracion,
+      publicadaEn: serverTimestamp(),
+      creadoPor: usuario.email.toLowerCase(),
+    });
+    batch.update(cuestionarioRef, {
+      estado: "publicado",
+      versionActualId: versionId,
+      actualizadoEn: serverTimestamp(),
+    });
+    await batch.commit();
     const actualizada = await leerCuestionarioGuardado(seleccionActual.id);
     if (actualizada) {
       setCopiasGuardadas((copias) => [
@@ -621,7 +653,6 @@ export default function App() {
     return urlCopiaPublicada(
       EMPRESA_ID,
       seleccionActual.id,
-      resultado.versionId,
     );
   }
 
@@ -631,7 +662,13 @@ export default function App() {
       setPuedeCrearCopias(false);
       throw new Error("No tienes permiso para despublicar copias en esta empresa.");
     }
-    await gestionarPublicacionCopia(EMPRESA_ID, id, "despublicar");
+    if (!db) {
+      throw new Error("Firebase no está configurado.");
+    }
+    await updateDoc(
+      doc(db, "empresas", EMPRESA_ID, "cuestionarios", id),
+      { estado: "borrador", actualizadoEn: serverTimestamp() },
+    );
     const actualizada = await leerCuestionarioGuardado(id);
     if (actualizada) {
       setCopiasGuardadas((copias) => [
@@ -814,15 +851,15 @@ export default function App() {
               ? () => eliminarCopiaPlantilla(seleccion.id)
               : undefined
           }
-          publicacionActiva={copiasGuardadas.find(
+          publicado={copiasGuardadas.find(
             ({ id }) => id === seleccion.id,
-          )?.publicacion?.estado === "publicado"}
+          )?.estado === "publicado"}
           urlPublica={(() => {
-            const publicacion = copiasGuardadas.find(
+            const cuestionario = copiasGuardadas.find(
               ({ id }) => id === seleccion.id,
-            )?.publicacion;
-            return publicacion?.estado === "publicado" && publicacion.versionId
-              ? urlCopiaPublicada(EMPRESA_ID, seleccion.id, publicacion.versionId)
+            );
+            return cuestionario?.estado === "publicado"
+              ? urlCopiaPublicada(EMPRESA_ID, seleccion.id)
               : undefined;
           })()}
           onPublicar={(nombre, configuracion) =>

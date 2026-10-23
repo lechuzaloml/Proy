@@ -92,4 +92,27 @@ describe("documento de cuestionario guardado", () => {
       "La fecha de actualización es obligatoria.",
     );
   });
+
+  it("valida el estado publicado y requiere la versión actual", () => {
+    const borrador = construirDocumentoCuestionarioGuardado(entrada());
+    if (!borrador.valido || !borrador.data) {
+      throw new Error("Se esperaba un documento válido.");
+    }
+    const publicado = validarDocumentoCuestionarioGuardado({
+      ...borrador.data,
+      estado: "publicado",
+      versionActualId: "version-1",
+    });
+    const sinVersion = validarDocumentoCuestionarioGuardado({
+      ...borrador.data,
+      estado: "publicado",
+    });
+
+    expect(publicado.valido).toBe(true);
+    expect(publicado.data?.versionActualId).toBe("version-1");
+    expect(sinVersion.valido).toBe(false);
+    expect(sinVersion.errores).toContain(
+      "Un cuestionario publicado requiere una versión actual válida.",
+    );
+  });
 });
