@@ -19,6 +19,7 @@ interface BibliotecaTemplatesProps {
   errorBiblioteca: string;
   accesoCuenta: ReactNode;
   onCrearCopia?: (nombre: string, configuracion: unknown) => void | Promise<void>;
+  onCrearDesdeCero?: () => void | Promise<void>;
   onAbrirCopia: (id: string) => void | Promise<void>;
   onEliminarCopia?: (id: string) => void | Promise<void>;
   onSeleccionar: (
@@ -37,6 +38,7 @@ export default function BibliotecaTemplates({
   errorBiblioteca,
   accesoCuenta,
   onCrearCopia,
+  onCrearDesdeCero,
   onAbrirCopia,
   onEliminarCopia,
   onSeleccionar,
@@ -59,6 +61,22 @@ export default function BibliotecaTemplates({
 
       {onCrearCopia && (
         <section aria-labelledby="saved-questionnaires-heading">
+          {onCrearDesdeCero && (
+            <div className="create-questionnaire-from-scratch">
+              <h2>Crear un cuestionario desde cero</h2>
+              <p>
+                Empieza con los datos de contacto y agrega tus propias
+                preguntas, sin usar una plantilla.
+              </p>
+              <button
+                className="submit-button"
+                onClick={() => void onCrearDesdeCero()}
+                type="button"
+              >
+                Crear desde cero
+              </button>
+            </div>
+          )}
           <h2 id="saved-questionnaires-heading">Mis copias guardadas</h2>
           {cargandoCopias ? (
             <p role="status">Cargando copias guardadas…</p>

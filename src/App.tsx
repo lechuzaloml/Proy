@@ -49,6 +49,7 @@ import {
   obtenerEmpresaActivaInicial,
 } from "./config/empresaActiva";
 import { crearCopiaPlantilla } from "./templates/crearCopiaPlantilla";
+import { crearCuestionarioDesdeCero } from "./templates/crearCuestionarioDesdeCero";
 import { auth } from "./lib/firebaseAuth";
 import { db } from "./lib/firebase";
 import { puedeCrearCopiasPlantilla } from "./lib/permisosPlantillas";
@@ -68,6 +69,7 @@ interface SeleccionCuestionario {
   id: string;
   nombre: string;
   configuracion: unknown;
+  desdeCero?: boolean;
 }
 
 interface EstadoAplicacion {
@@ -425,6 +427,7 @@ export default function App() {
     origenIntroduccionTemplate: "biblioteca" | "recomendacion" | null = null,
     editandoCopia = false,
     copiaGuardada = false,
+    desdeCero = false,
   ) {
     navegar({
       ...estadoAppRef.current,
@@ -432,7 +435,7 @@ export default function App() {
       idIntento: id.startsWith("personalizado-")
         ? crypto.randomUUID()
         : null,
-      seleccion: { id, nombre, configuracion },
+      seleccion: { id, nombre, configuracion, desdeCero },
       editandoCopia,
       copiaGuardada,
       envio: null,
@@ -478,6 +481,36 @@ export default function App() {
         error instanceof Error
           ? `No se pudo crear la copia: ${error.message}`
           : "No se pudo crear la copia.",
+      );
+    }
+  }
+
+  async function crearCuestionarioEnBlanco() {
+    try {
+      const usuario = auth?.currentUser;
+      if (
+        !usuario ||
+        !await puedeEditarCuestionarios(usuario, empresaActivaId)
+      ) {
+        setPuedeCrearCopias(false);
+        throw new Error("No tienes permiso para crear cuestionarios en esta empresa.");
+      }
+      const cuestionario = crearCuestionarioDesdeCero();
+      setErrorBiblioteca("");
+      seleccionarCuestionario(
+        cuestionario.id,
+        "Mi cuestionario",
+        cuestionario,
+        null,
+        true,
+        false,
+        true,
+      );
+    } catch (error: unknown) {
+      setErrorBiblioteca(
+        error instanceof Error
+          ? `No se pudo iniciar el cuestionario: ${error.message}`
+          : "No se pudo iniciar el cuestionario.",
       );
     }
   }
@@ -770,6 +803,7 @@ export default function App() {
         cargandoCopias={cargandoCopias}
         errorBiblioteca={errorBiblioteca}
         onAbrirCopia={abrirCopiaGuardada}
+        onCrearDesdeCero={puedeCrearCopias ? crearCuestionarioEnBlanco : undefined}
         onEliminarCopia={
           puedeCrearCopias
             ? (id) => void eliminarCopiaPlantilla(id).catch((error: unknown) => {
@@ -876,6 +910,7 @@ export default function App() {
           id={seleccion.id}
           key={seleccion.id}
           copiaGuardada={estadoApp.copiaGuardada}
+          desdeCero={seleccion.desdeCero}
           nombre={seleccion.nombre}
           cuestionario={resultadoValidacion.data}
           onGuardar={(nombre, cuestionario) =>

@@ -15,6 +15,7 @@ import {
   cambiarPuntosEscala,
   cambiarPuntosOpcion,
   cambiarTextoPregunta,
+  agregarPreguntaSiNo,
   eliminarOpcion,
   eliminarPregunta,
   type TipoPregunta,
@@ -36,10 +37,12 @@ interface EditorCuestionarioProps {
   urlPublica?: string;
   onPublicar?: (nombre: string, cuestionario: Cuestionario) => Promise<string>;
   onDespublicar?: () => Promise<void>;
+  desdeCero?: boolean;
 }
 
-const TIPOS_PREGUNTA: { tipo: TipoPregunta; nombre: string }[] = [
+const TIPOS_PREGUNTA: { tipo: TipoPregunta | "si_no"; nombre: string }[] = [
   { tipo: "opcion_multiple", nombre: "Opción múltiple" },
+  { tipo: "si_no", nombre: "Sí o no" },
   { tipo: "escala", nombre: "Escala" },
   { tipo: "abierta", nombre: "Respuesta abierta" },
 ];
@@ -57,11 +60,12 @@ export default function EditorCuestionario({
   urlPublica,
   onPublicar,
   onDespublicar,
+  desdeCero = false,
 }: EditorCuestionarioProps) {
   const [nombre, setNombre] = useState(nombreInicial);
   const [cuestionario, setCuestionario] = useState(cuestionarioInicial);
   const [tipoPregunta, setTipoPregunta] =
-    useState<TipoPregunta>("opcion_multiple");
+    useState<TipoPregunta | "si_no">("opcion_multiple");
   const [errores, setErrores] = useState<string[]>([]);
   const [guardando, setGuardando] = useState(false);
   const [errorGuardado, setErrorGuardado] = useState("");
@@ -71,6 +75,14 @@ export default function EditorCuestionario({
     accion: "publicar" | "despublicar",
   ) {
     setErrorGuardado("");
+    if (
+      accion === "publicar" &&
+      desdeCero &&
+      cuestionario.preguntas.length === 0
+    ) {
+      setErrorGuardado("Agrega al menos una pregunta antes de publicar.");
+      return;
+    }
     setGuardando(true);
     try {
       if (accion === "publicar" && onPublicar) {
@@ -154,12 +166,22 @@ export default function EditorCuestionario({
     <main className="custom-editor">
       <header className="custom-editor-header">
         <p className="eyebrow">
-          {copiaGuardada
+          {desdeCero
+            ? copiaGuardada
+              ? "Cuestionario creado desde cero · cambios guardados en Firestore"
+              : "Cuestionario nuevo · se guardará en Firestore al guardar"
+            : copiaGuardada
             ? "Copia guardada · los cambios se guardan en Firestore"
             : "Copia nueva · se guardará en Firestore al guardar"}
         </p>
-        <h1>Personaliza tu cuestionario</h1>
-        <p>Los cambios se aplican a esta copia, no a la plantilla original.</p>
+        <h1>
+          {desdeCero ? "Crea tu cuestionario" : "Personaliza tu cuestionario"}
+        </h1>
+        <p>
+          {desdeCero
+            ? "Los datos de contacto se solicitarán primero. Agrega las preguntas que quieras."
+            : "Los cambios se aplican a esta copia, no a la plantilla original."}
+        </p>
         <label className="custom-editor-name">
           Nombre del cuestionario
           <input
@@ -196,6 +218,11 @@ export default function EditorCuestionario({
       )}
 
       <section aria-label="Preguntas del cuestionario" className="custom-editor-questions">
+        {cuestionario.preguntas.length === 0 && (
+          <p className="admin-empty">
+            Todavía no hay preguntas. Elige un tipo y agrega la primera.
+          </p>
+        )}
         {cuestionario.preguntas.map((pregunta, indicePregunta) => (
           <article
             className="custom-editor-question"
@@ -367,7 +394,7 @@ export default function EditorCuestionario({
           Tipo de pregunta
           <select
             onChange={(evento) =>
-              setTipoPregunta(evento.target.value as TipoPregunta)
+              setTipoPregunta(evento.target.value as TipoPregunta | "si_no")
             }
             value={tipoPregunta}
           >
@@ -379,7 +406,9 @@ export default function EditorCuestionario({
         <button
           className="secondary-button"
           onClick={() => setCuestionario((actual) =>
-            agregarPregunta(actual, tipoPregunta, `pregunta-${crypto.randomUUID()}`),
+            tipoPregunta === "si_no"
+              ? agregarPreguntaSiNo(actual, `pregunta-${crypto.randomUUID()}`)
+              : agregarPregunta(actual, tipoPregunta, `pregunta-${crypto.randomUUID()}`),
           )}
           type="button"
         >

@@ -15,9 +15,11 @@ import {
   cambiarParticipacionScoring,
   cambiarPuntosOpcion,
   cambiarTextoPregunta,
+  agregarPreguntaSiNo,
   eliminarOpcion,
   eliminarPregunta,
 } from "./editarCuestionario";
+import { crearCuestionarioDesdeCero } from "./crearCuestionarioDesdeCero";
 
 const validacion = validarCuestionario(casoNuevo);
 if (!validacion.valido) {
@@ -27,6 +29,18 @@ const cuestionarioOriginal = validacion.data;
 const originalPreguntaCount = cuestionarioOriginal.preguntas.length;
 
 describe("edición inmutable de cuestionarios", () => {
+  it("crea un cuestionario vacío con el formulario de contacto al inicio", () => {
+    const primero = crearCuestionarioDesdeCero();
+    const segundo = crearCuestionarioDesdeCero();
+
+    expect(primero.id).toMatch(/^personalizado-/);
+    expect(primero.id).not.toBe(segundo.id);
+    expect(primero.posicion_contacto).toBe("inicio");
+    expect(primero.preguntas).toEqual([]);
+    expect(primero.usa_scoring).toBe(false);
+    expect(validarCuestionario(primero).valido).toBe(true);
+  });
+
   it("alterna scoring sin scoring, conserva respuestas y resultado fijo sin clasificar", () => {
     const original = structuredClone(cuestionarioOriginal);
     const sinScoring = cambiarModoScoring(cuestionarioOriginal, false);
@@ -208,6 +222,23 @@ describe("edición inmutable de cuestionarios", () => {
     expect(editado.usa_scoring).toBe(cuestionarioOriginal.usa_scoring);
     expect(editado.resultado).toEqual(cuestionarioOriginal.resultado);
     expect(validarCuestionario(editado).valido).toBe(true);
+  });
+
+  it("añade una pregunta sí/no como opción múltiple con respuestas predeterminadas", () => {
+    const cuestionario = cambiarModoScoring(cuestionarioOriginal, false);
+    const actualizado = agregarPreguntaSiNo(cuestionario, "pregunta-si-no");
+    const pregunta = actualizado.preguntas.at(-1);
+
+    expect(pregunta).toMatchObject({
+      id: "pregunta-si-no",
+      tipo: "opcion_multiple",
+      opciones: [{ texto: "Sí" }, { texto: "No" }],
+      participa_scoring: false,
+    });
+    expect(validarCuestionario(actualizado).valido).toBe(true);
+    expect(cuestionario.preguntas).toHaveLength(
+      actualizado.preguntas.length - 1,
+    );
   });
 
   it("añade y elimina opciones y preguntas mediante nuevas referencias", () => {

@@ -305,6 +305,22 @@ export function agregarPregunta(
   };
 }
 
+export function agregarPreguntaSiNo(
+  cuestionario: Cuestionario,
+  id: string,
+): Cuestionario {
+  const actualizado = agregarPregunta(cuestionario, "opcion_multiple", id);
+  return {
+    ...actualizado,
+    preguntas: actualizado.preguntas.map((pregunta, indice) =>
+      indice === actualizado.preguntas.length - 1 &&
+        pregunta.tipo === "opcion_multiple"
+        ? { ...pregunta, opciones: [{ texto: "Sí" }, { texto: "No" }] }
+        : pregunta,
+    ),
+  };
+}
+
 export function eliminarPregunta(
   cuestionario: Cuestionario,
   indice: number,
