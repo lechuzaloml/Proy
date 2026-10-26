@@ -42,7 +42,9 @@ describe("visibilidad de acciones en la biblioteca", () => {
   it("muestra crear copia cuando se proporciona el callback autorizado", () => {
     const markup = renderBiblioteca(vi.fn());
 
-    expect(markup).toContain(">Probar</button>");
+    expect(markup.indexOf("Usar como plantilla")).toBeLessThan(markup.indexOf(">Probar</button>"));
+    expect(markup).toContain('class="submit-button template-copy-button"');
+    expect(markup).toContain('class="secondary-button template-preview-button"');
     expect(markup).toContain("Usar como plantilla");
   });
 });

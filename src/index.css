@@ -2156,6 +2156,15 @@ textarea {
   background: var(--color-light-gray);
 }
 
+.account-panel-closed {
+  width: auto;
+  gap: 0;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  background: transparent;
+}
+
 .landing-account {
   margin-left: auto;
   letter-spacing: normal;
@@ -2169,16 +2178,13 @@ textarea {
   background: transparent;
 }
 
-.landing-account .account-panel-open {
-  position: absolute;
-  top: calc(100% + 0.75rem);
-  right: 0;
-  z-index: 10;
-  width: min(90vw, 420px);
-  padding: 1rem 1.25rem;
-  border: 1px solid var(--color-divider);
-  background: var(--color-white);
-  box-shadow: 0 8px 24px rgb(0 0 0 / 12%);
+.library-header > .account-panel.account-panel-closed {
+  width: auto;
+  gap: 0;
+  margin: 0 0 1rem;
+  padding: 0;
+  border: 0;
+  background: transparent;
 }
 
 .library-header > .account-panel {
@@ -2190,14 +2196,79 @@ textarea {
   white-space: nowrap;
 }
 
+.account-login-dialog {
+  width: min(100% - 2rem, 440px);
+  max-width: none;
+  max-height: min(90vh, 720px);
+  margin: auto;
+  padding: 1.5rem;
+  overflow-y: auto;
+  border: 1px solid var(--color-divider);
+  border-radius: 12px;
+  background: var(--color-light-gray);
+  color: var(--color-dark-gray);
+  box-shadow: 0 16px 48px rgb(17 17 17 / 24%);
+}
+
+.account-login-dialog::backdrop {
+  background: rgb(17 17 17 / 58%);
+}
+
+.account-login-heading {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+  padding-bottom: 1rem;
+  border-bottom: 1px solid var(--color-divider);
+}
+
+.account-login-eyebrow {
+  margin: 0 0 0.35rem;
+  color: var(--color-coral);
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.account-login-heading h2 {
+  margin: 0;
+  color: var(--color-graphite);
+  font-size: 1.5rem;
+}
+
+.account-login-close {
+  flex: 0 0 auto;
+  padding: 0.45rem 0.7rem;
+}
+
+.account-login-content {
+  display: grid;
+  gap: 1rem;
+  padding: 1.25rem 0;
+}
+
 .account-google-button {
-  justify-self: start;
+  width: 100%;
+  min-height: 2.8rem;
 }
 
 .account-login-divider {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
   margin: 0;
   color: var(--color-dark-gray);
-  font-size: 0.9rem;
+  font-size: 0.85rem;
+  text-align: center;
+}
+
+.account-login-divider::before,
+.account-login-divider::after {
+  flex: 1;
+  border-top: 1px solid var(--color-divider);
+  content: "";
 }
 
 .account-panel > p {
@@ -2210,28 +2281,37 @@ textarea {
 
 .account-login-form {
   display: grid;
-  max-width: 420px;
-  gap: 0.75rem;
+  gap: 1rem;
 }
 
 .account-login-form label {
   display: grid;
-  gap: 0.35rem;
+  gap: 0.45rem;
   font-weight: 700;
 }
 
 .account-login-form input {
   width: 100%;
+  min-height: 2.8rem;
+  padding: 0.65rem 0.75rem;
+  border: 1px solid var(--color-divider);
+  border-radius: 8px;
+  background: var(--color-white);
+  color: var(--color-dark-gray);
 }
 
 .account-login-form .submit-button {
-  justify-self: start;
-  margin: 0.25rem 0 0;
+  width: 100%;
+  margin: 0;
 }
 
 .account-note {
+  margin: 0;
+  padding-top: 1rem;
+  border-top: 1px solid var(--color-divider);
   color: var(--color-dark-gray);
   font-size: 0.9rem;
+  line-height: 1.5;
 }
 
 .saved-questionnaire-list {
@@ -2307,8 +2387,9 @@ textarea {
 
 .template-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(min(100%, 290px), 1fr));
-  gap: 1rem;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 280px), 1fr));
+  gap: 1.25rem;
+  align-items: stretch;
 }
 
 .template-card,
@@ -2321,8 +2402,10 @@ textarea {
 
 .template-card {
   display: flex;
+  min-height: 100%;
   flex-direction: column;
   align-items: flex-start;
+  justify-content: flex-start;
 }
 
 .template-card-heading {
@@ -2331,6 +2414,7 @@ textarea {
   align-items: flex-start;
   justify-content: space-between;
   gap: 0.75rem;
+  margin-bottom: 0.35rem;
 }
 
 .template-card h3,
@@ -2373,18 +2457,26 @@ textarea {
   line-height: 1.55;
 }
 
-.template-card > .submit-button {
+.template-card > p {
+  flex: 1;
+  margin: 0.9rem 0 1rem;
+}
+
+.template-card-actions {
+  display: grid;
+  width: 100%;
+  gap: 0.5rem;
   margin-top: auto;
+  padding-top: 0.85rem;
+  border-top: 1px solid var(--color-divider);
 }
 
-.template-card > .submit-button,
-.template-card > .template-copy-button {
-  width: min(100%, 12rem);
-  margin-left: 0;
-}
-
-.template-card > .template-copy-button {
-  margin-top: 0.5rem;
+.template-card-actions > .submit-button,
+.template-card-actions > .secondary-button {
+  width: 100%;
+  min-height: 2.8rem;
+  margin: 0;
+  font-size: 0.95rem;
 }
 
 .reference-cases {
@@ -2672,6 +2764,18 @@ textarea {
 }
 
 @media (max-width: 520px) {
+  .template-grid {
+    gap: 0.9rem;
+  }
+
+  .template-card {
+    padding: 1rem;
+  }
+
+  .template-card-actions {
+    gap: 0.45rem;
+  }
+
   .result-profile {
     padding: 1rem;
   }

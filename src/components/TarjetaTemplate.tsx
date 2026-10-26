@@ -28,18 +28,24 @@ export default function TarjetaTemplate({
         </div>
       </dl>
       <p>{metadata.descripcion}</p>
-      <button className="submit-button" onClick={onProbar} type="button">
-        Probar
-      </button>
-      {onCrearCopia && (
+      <div className="template-card-actions">
+        {onCrearCopia && (
+          <button
+            className="submit-button template-copy-button"
+            onClick={() => void onCrearCopia()}
+            type="button"
+          >
+            Usar como plantilla
+          </button>
+        )}
         <button
-          className="secondary-button template-copy-button"
-          onClick={() => void onCrearCopia()}
+          className="secondary-button template-preview-button"
+          onClick={onProbar}
           type="button"
         >
-          Usar como plantilla
+          Probar
         </button>
-      )}
+      </div>
     </article>
   );
 }

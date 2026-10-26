@@ -1,4 +1,4 @@
-import { useState, type FormEvent } from "react";
+import { useEffect, useRef, useState, type FormEvent } from "react";
 import {
   browserLocalPersistence,
   GoogleAuthProvider,
@@ -24,6 +24,19 @@ export default function AccesoCuenta({
   const [error, setError] = useState("");
   const [ocupado, setOcupado] = useState(false);
   const [formularioAbierto, setFormularioAbierto] = useState(false);
+  const dialogoRef = useRef<HTMLDialogElement>(null);
+
+  useEffect(() => {
+    const dialogo = dialogoRef.current;
+    if (usuario) {
+      if (dialogo?.open) {
+        dialogo.close();
+      }
+      setFormularioAbierto(false);
+    } else if (formularioAbierto && dialogo && !dialogo.open) {
+      dialogo.showModal();
+    }
+  }, [formularioAbierto, usuario]);
 
   async function prepararInicioSesion() {
     if (!auth) {
@@ -132,19 +145,40 @@ export default function AccesoCuenta({
   return (
     <section
       aria-label="Iniciar sesión"
-      className={`account-panel${formularioAbierto ? " account-panel-open" : ""}`}
+      className="account-panel account-panel-closed"
     >
-      {!formularioAbierto ? (
-        <button
-          className="secondary-button account-login-trigger"
-          onClick={() => setFormularioAbierto(true)}
-          type="button"
-        >
-          Iniciar sesión
-        </button>
-      ) : (
-        <>
-          <h2>Iniciar sesión</h2>
+      <button
+        className="secondary-button account-login-trigger"
+        onClick={() => setFormularioAbierto(true)}
+        type="button"
+      >
+        Iniciar sesión
+      </button>
+      <dialog
+        aria-labelledby="account-login-heading"
+        className="account-login-dialog"
+        onCancel={() => setFormularioAbierto(false)}
+        onClose={() => setFormularioAbierto(false)}
+        ref={dialogoRef}
+      >
+        <div className="account-login-heading">
+          <div>
+            <p className="account-login-eyebrow">Clear-IA</p>
+            <h2 id="account-login-heading">Iniciar sesión</h2>
+          </div>
+          <button
+            aria-label="Cerrar ventana de inicio de sesión"
+            className="secondary-button account-login-close"
+            onClick={() => {
+              dialogoRef.current?.close();
+              setFormularioAbierto(false);
+            }}
+            type="button"
+          >
+            Cerrar
+          </button>
+        </div>
+        <div className="account-login-content">
           <button
             className="secondary-button account-google-button"
             disabled={ocupado}
@@ -153,7 +187,9 @@ export default function AccesoCuenta({
           >
             Continuar con Google
           </button>
-          <p className="account-login-divider">o con correo y contraseña</p>
+          <div className="account-login-divider">
+            <span>o continúa con correo y contraseña</span>
+          </div>
           <form
             className="account-login-form"
             onSubmit={(evento) => void iniciarSesionCorreo(evento)}
@@ -183,11 +219,11 @@ export default function AccesoCuenta({
             </button>
           </form>
           {error && <p className="admin-error" role="alert">{error}</p>}
-          <p className="account-note">
-            No hay registro público. Usa una cuenta existente autorizada.
-          </p>
-        </>
-      )}
+        </div>
+        <p className="account-note">
+          No hay registro público. Usa una cuenta existente autorizada.
+        </p>
+      </dialog>
     </section>
   );
 }
