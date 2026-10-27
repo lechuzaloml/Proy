@@ -1,4 +1,5 @@
 import type { ReactNode } from "react";
+import { useScrollReveal } from "../hooks/useScrollReveal";
 
 interface LandingProps {
   onComenzar: () => void;
@@ -27,6 +28,13 @@ const retosNegocio = [
 ];
 
 export default function Landing({ onComenzar, accesoCuenta }: LandingProps) {
+  const problemReveal = useScrollReveal<HTMLElement>();
+  const sectionHeadingReveal = useScrollReveal<HTMLElement>();
+  const solutionGridReveal = useScrollReveal<HTMLDivElement>({
+    staggerChildren: true,
+  });
+  const nextStepReveal = useScrollReveal<HTMLElement>();
+
   return (
     <main className="landing-page">
       <header className="landing-brand">
@@ -108,7 +116,11 @@ export default function Landing({ onComenzar, accesoCuenta }: LandingProps) {
         </aside>
       </section>
 
-      <section aria-labelledby="landing-problem-title" className="landing-problem">
+      <section
+        aria-labelledby="landing-problem-title"
+        className="landing-problem"
+        ref={problemReveal}
+      >
         <div className="landing-problem-copy">
           <p className="landing-problem-kicker">El problema</p>
           <h2 id="landing-problem-title">
@@ -172,7 +184,7 @@ export default function Landing({ onComenzar, accesoCuenta }: LandingProps) {
       </section>
 
       <section aria-labelledby="landing-solutions-title" className="landing-section">
-        <header className="landing-section-heading">
+        <header className="landing-section-heading" ref={sectionHeadingReveal}>
           <p className="landing-kicker">Tres áreas para entender mejor</p>
           <h2 id="landing-solutions-title">
             ¿Qué puede ayudarte a resolver el diagnóstico?
@@ -183,7 +195,7 @@ export default function Landing({ onComenzar, accesoCuenta }: LandingProps) {
           </p>
         </header>
 
-        <div className="landing-solution-grid">
+        <div className="landing-solution-grid" ref={solutionGridReveal}>
           {retosNegocio.map((reto) => (
             <article className="landing-solution" key={reto.numero}>
               <span aria-hidden="true" className="landing-solution-number">
@@ -197,7 +209,11 @@ export default function Landing({ onComenzar, accesoCuenta }: LandingProps) {
         </div>
       </section>
 
-      <section aria-labelledby="landing-next-step-title" className="landing-next-step">
+      <section
+        aria-labelledby="landing-next-step-title"
+        className="landing-next-step"
+        ref={nextStepReveal}
+      >
         <p className="landing-next-step-kicker">Tu próximo paso</p>
         <h2 id="landing-next-step-title">
           Deja de pensar demasiado en qué construir.

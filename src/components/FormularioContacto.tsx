@@ -47,7 +47,21 @@ export default function FormularioContacto({
 
   return (
     <form className="contact-form" onSubmit={enviar}>
-      <h2>Datos de contacto</h2>
+      <div className="contact-form-heading">
+        <span aria-hidden="true" className="contact-form-icon">
+          <svg fill="none" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+            <circle cx="12" cy="8" r="3.25" />
+            <path d="M5.5 20v-1.4a6.5 6.5 0 0 1 13 0V20z" />
+          </svg>
+        </span>
+        <div>
+          <p className="eyebrow">Un último paso</p>
+          <h2>Datos de contacto</h2>
+          <p className="contact-form-intro">
+            Completa tus datos para continuar con el cuestionario.
+          </p>
+        </div>
+      </div>
       <label>
         Nombre
         <input

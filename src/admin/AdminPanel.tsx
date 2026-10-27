@@ -34,6 +34,7 @@ import { auth } from "../lib/firebaseAuth";
 import { db } from "../lib/firebase";
 import { CLAVE_EMPRESA_ACTIVA } from "../config/empresaActiva";
 import { CUESTIONARIO_ID } from "../config/firebaseDatos";
+import { useScrollReveal } from "../hooks/useScrollReveal";
 import {
   filtrarOrdenarLeads,
   type LeadParaLista,
@@ -226,6 +227,8 @@ function texto(valor: unknown): string {
 }
 
 export default function AdminPanel() {
+  const filtersReveal = useScrollReveal<HTMLElement>();
+  const tableReveal = useScrollReveal<HTMLDivElement>();
   const [usuario, setUsuario] = useState<User | null>(null);
   const [authListo, setAuthListo] = useState(false);
   const [estadoAcceso, setEstadoAcceso] = useState<EstadoAcceso>("cargando");
@@ -787,7 +790,11 @@ export default function AdminPanel() {
         />
       ) : (
         <>
-          <section aria-label="Filtros de leads" className="admin-filters">
+          <section
+            aria-label="Filtros de leads"
+            className="admin-filters"
+            ref={filtersReveal}
+          >
             <label>
               Buscar nombre o correo
               <input
@@ -852,7 +859,7 @@ export default function AdminPanel() {
           ) : leadsVisibles.length === 0 ? (
             <p className="admin-empty">No hay leads que coincidan con los filtros.</p>
           ) : (
-            <div className="admin-table-scroll">
+            <div className="admin-table-scroll" ref={tableReveal}>
               <table className="admin-table">
                 <thead>
                   <tr>
@@ -936,6 +943,9 @@ function DetalleLead({
   onCerrar,
   onEliminado,
 }: DetalleLeadProps) {
+  const detailGridReveal = useScrollReveal<HTMLDivElement>({
+    staggerChildren: true,
+  });
   const [diagnostico, setDiagnostico] = useState<DocumentData | null>(null);
   const [seguimientos, setSeguimientos] = useState<Seguimiento[]>([]);
   const [cargando, setCargando] = useState(true);
@@ -1184,7 +1194,7 @@ function DetalleLead({
         <p role="status">Cargando detalle…</p>
       ) : (
         <>
-          <div className="admin-detail-grid">
+          <div className="admin-detail-grid" ref={detailGridReveal}>
             <section className="admin-card">
               <h3>Contacto</h3>
               <dl>

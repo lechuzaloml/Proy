@@ -62,4 +62,41 @@ describe("acciones del editor de copias", () => {
     expect(markup).not.toContain("Reglas de puntuación");
     expect(markup).not.toContain("Puntos de la opción");
   });
+
+  it("ofrece solo las opciones de contacto que admite el modelo", () => {
+    const markup = renderEditor(true);
+
+    expect(markup).toContain("Momento de solicitud");
+    expect(markup).toContain(">Antes de las preguntas</option>");
+    expect(markup).toContain(">Después de las preguntas</option>");
+    expect(markup).toContain("Nombre <span>Obligatorio</span>");
+    expect(markup).toContain("Correo electrónico <span>Obligatorio</span>");
+    expect(markup).toContain("Teléfono / WhatsApp <span>Obligatorio</span>");
+    expect(markup).toContain("He leído el aviso y consiento el uso de mis datos");
+    expect(markup).not.toContain("Hacer opcional");
+  });
+
+  it("previsualiza el contenido actual sin mostrar datos internos de scoring", () => {
+    const markup = renderEditor(true);
+    const pregunta = validacion.data.preguntas[0];
+
+    expect(markup).toContain("Así lo verá tu audiencia");
+    expect(markup).toContain(pregunta.texto);
+    if (pregunta.tipo === "opcion_multiple") {
+      expect(markup).toContain(pregunta.opciones[0].texto);
+    }
+    expect(markup).toContain("Los puntos de scoring son internos");
+    expect(markup).not.toContain(">0 puntos</span>");
+  });
+
+  it("refleja en la vista previa que el contacto se solicita al final", () => {
+    const markup = renderEditor(true);
+    const indicePregunta = markup.indexOf(validacion.data.preguntas[0].texto);
+    const indiceContacto = markup.indexOf(
+      'aria-label="Vista previa de los datos de contacto"',
+    );
+
+    expect(indicePregunta).toBeGreaterThan(-1);
+    expect(indiceContacto).toBeGreaterThan(indicePregunta);
+  });
 });

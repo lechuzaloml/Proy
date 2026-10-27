@@ -1,5 +1,8 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import type { Cuestionario } from "../types/model";
+import { useScrollReveal } from "../hooks/useScrollReveal";
+import { obtenerPresentacionTemplate } from "../config/presentacionTemplates";
+import { TEXTO_AVISO_PRIVACIDAD } from "../config/privacidad";
 import { validarCuestionario } from "../validation/validarCuestionario";
 import {
   agregarOpcion,
@@ -47,6 +50,17 @@ const TIPOS_PREGUNTA: { tipo: TipoPregunta | "si_no"; nombre: string }[] = [
   { tipo: "abierta", nombre: "Respuesta abierta" },
 ];
 
+function etiquetaTipoPregunta(tipo: TipoPregunta): string {
+  switch (tipo) {
+    case "opcion_multiple":
+      return "Opción múltiple";
+    case "escala":
+      return "Escala";
+    case "abierta":
+      return "Respuesta abierta";
+  }
+}
+
 export default function EditorCuestionario({
   id,
   nombre: nombreInicial,
@@ -62,6 +76,18 @@ export default function EditorCuestionario({
   onDespublicar,
   desdeCero = false,
 }: EditorCuestionarioProps) {
+  const contactReveal = useScrollReveal<HTMLElement>();
+  const questionsReveal = useScrollReveal<HTMLElement>({
+    staggerChildren: true,
+  });
+  const scoringReveal = useScrollReveal<HTMLElement>({
+    staggerChildren: true,
+  });
+  const segmentsReveal = useScrollReveal<HTMLElement>({
+    staggerChildren: true,
+  });
+  const fixedResultReveal = useScrollReveal<HTMLElement>();
+  const previewReveal = useScrollReveal<HTMLElement>();
   const [nombre, setNombre] = useState(nombreInicial);
   const [cuestionario, setCuestionario] = useState(cuestionarioInicial);
   const [tipoPregunta, setTipoPregunta] =
@@ -69,12 +95,62 @@ export default function EditorCuestionario({
   const [errores, setErrores] = useState<string[]>([]);
   const [guardando, setGuardando] = useState(false);
   const [errorGuardado, setErrorGuardado] = useState("");
+  const [mensajeAccion, setMensajeAccion] = useState("");
   const [enlacePublicado, setEnlacePublicado] = useState(urlPublica ?? "");
+  const [indiceVistaPrevia, setIndiceVistaPrevia] = useState(0);
+  useEffect(() => {
+    if (!mensajeAccion) {
+      return;
+    }
+    const timeout = window.setTimeout(() => setMensajeAccion(""), 4000);
+    return () => window.clearTimeout(timeout);
+  }, [mensajeAccion]);
+
+  const indiceVistaPreviaNormalizado = Math.max(
+    0,
+    Math.min(indiceVistaPrevia, cuestionario.preguntas.length - 1),
+  );
+  const preguntaVistaPrevia = cuestionario.preguntas[
+    indiceVistaPreviaNormalizado
+  ];
+  const presentacionVistaPrevia = obtenerPresentacionTemplate(
+    cuestionario.id,
+  );
+  const opcionesVistaPrevia = "opciones" in presentacionVistaPrevia
+    ? presentacionVistaPrevia.opciones
+    : undefined;
+  const escalaVistaPrevia = "escala" in presentacionVistaPrevia
+    ? presentacionVistaPrevia.escala
+    : undefined;
+  const abiertaVistaPrevia = "abierta" in presentacionVistaPrevia
+    ? presentacionVistaPrevia.abierta
+    : undefined;
+
+  const vistaPreviaContacto = (
+    <section aria-label="Vista previa de los datos de contacto" className="editor-preview-contact">
+      <p className="editor-preview-kicker">Datos de contacto</p>
+      <span className="editor-preview-required">Todos los campos son obligatorios</span>
+      <div className="editor-preview-contact-fields">
+        <span>Nombre <strong>*</strong></span>
+        <span>Correo electrónico <strong>*</strong></span>
+        <span>Teléfono / WhatsApp <strong>*</strong></span>
+      </div>
+      <details className="editor-preview-privacy">
+        <summary>Leer aviso de privacidad</summary>
+        <p>{TEXTO_AVISO_PRIVACIDAD}</p>
+      </details>
+      <div className="editor-preview-consent">
+        <span aria-hidden="true" />
+        He leído el aviso y consiento el uso de mis datos para los fines descritos.
+      </div>
+    </section>
+  );
 
   async function cambiarPublicacion(
     accion: "publicar" | "despublicar",
   ) {
     setErrorGuardado("");
+    setMensajeAccion("");
     if (
       accion === "publicar" &&
       desdeCero &&
@@ -87,9 +163,11 @@ export default function EditorCuestionario({
     try {
       if (accion === "publicar" && onPublicar) {
         setEnlacePublicado(await onPublicar(nombre.trim(), cuestionario));
+        setMensajeAccion("Cuestionario publicado correctamente.");
       } else if (accion === "despublicar" && onDespublicar) {
         await onDespublicar();
         setEnlacePublicado("");
+        setMensajeAccion("Cuestionario despublicado.");
       }
     } catch (error: unknown) {
       setErrorGuardado(
@@ -130,7 +208,9 @@ export default function EditorCuestionario({
       nombreEditado: string,
       data: Cuestionario,
     ) => void | Promise<void>,
+    mensajeExito?: string,
   ) {
+    setMensajeAccion("");
     const nombreEditado = nombre.trim();
     const cuestionarioEditado = cambiarNombreCuestionario(
       cuestionario,
@@ -151,6 +231,9 @@ export default function EditorCuestionario({
     setGuardando(true);
     try {
       await continuar(nombreEditado, validacion.data);
+      if (mensajeExito) {
+        setMensajeAccion(mensajeExito);
+      }
     } catch (error: unknown) {
       setErrorGuardado(
         error instanceof Error
@@ -201,7 +284,7 @@ export default function EditorCuestionario({
           Usar puntuación y resultados por segmento
         </label>
         {!cuestionario.usa_scoring && (
-          <p>Las respuestas se conservan y se mostrará el resultado fijo, sin calcular puntuaciones ni clasificaciones.</p>
+          <p className="custom-editor-scoring-note">Las respuestas se conservan y se mostrará el resultado fijo, sin calcular puntuaciones ni clasificaciones.</p>
         )}
       </header>
 
@@ -217,7 +300,58 @@ export default function EditorCuestionario({
         <p className="admin-error" role="alert">{errorGuardado}</p>
       )}
 
-      <section aria-label="Preguntas del cuestionario" className="custom-editor-questions">
+      <div className="custom-editor-workspace">
+        <div className="custom-editor-fields">
+          <section
+            aria-labelledby="editor-contact-heading"
+            className="custom-editor-contact-settings"
+            ref={contactReveal}
+          >
+            <header className="custom-editor-section-heading">
+              <span aria-hidden="true" className="editor-section-number">01</span>
+              <div>
+                <p className="eyebrow">Primer paso</p>
+                <h2 id="editor-contact-heading">Datos de contacto</h2>
+                <p>Elige cuándo pedirlos. El formulario incluye los campos fijos que admite Clear-IA.</p>
+              </div>
+            </header>
+            <div className="custom-editor-contact-body">
+              <label>
+                Momento de solicitud
+                <select
+                  onChange={(evento) => setCuestionario((actual) => ({
+                    ...actual,
+                    posicion_contacto: evento.target.value === "final"
+                      ? "final"
+                      : "inicio",
+                  }))}
+                  value={cuestionario.posicion_contacto}
+                >
+                  <option value="inicio">Antes de las preguntas</option>
+                  <option value="final">Después de las preguntas</option>
+                </select>
+              </label>
+              <ul aria-label="Campos obligatorios incluidos" className="custom-editor-contact-fields">
+                <li>Nombre <span>Obligatorio</span></li>
+                <li>Correo electrónico <span>Obligatorio</span></li>
+                <li>Teléfono / WhatsApp <span>Obligatorio</span></li>
+              </ul>
+            </div>
+          </section>
+
+      <section
+        aria-labelledby="editor-questions-heading"
+        className="custom-editor-questions"
+        ref={questionsReveal}
+      >
+        <header className="custom-editor-section-heading">
+          <span aria-hidden="true" className="editor-section-number">02</span>
+          <div>
+            <p className="eyebrow">Contenido</p>
+            <h2 id="editor-questions-heading">Preguntas</h2>
+            <p>{cuestionario.preguntas.length} {cuestionario.preguntas.length === 1 ? "pregunta configurada" : "preguntas configuradas"}</p>
+          </div>
+        </header>
         {cuestionario.preguntas.length === 0 && (
           <p className="admin-empty">
             Todavía no hay preguntas. Elige un tipo y agrega la primera.
@@ -229,7 +363,15 @@ export default function EditorCuestionario({
             key={`${pregunta.id}-${indicePregunta}`}
           >
             <div className="custom-editor-question-heading">
-              <h2>Pregunta {indicePregunta + 1} · {pregunta.tipo.replace("_", " ")}</h2>
+              <span aria-hidden="true" className="editor-question-number">
+                {String(indicePregunta + 1).padStart(2, "0")}
+              </span>
+              <div className="editor-question-title">
+                <span className="editor-question-type">
+                  {etiquetaTipoPregunta(pregunta.tipo)}
+                </span>
+                <h3>Pregunta {indicePregunta + 1}</h3>
+              </div>
               <button
                 className="secondary-button"
                 disabled={cuestionario.preguntas.length <= 1}
@@ -418,8 +560,19 @@ export default function EditorCuestionario({
 
       {cuestionario.usa_scoring ? (
         <>
-          <section aria-label="Reglas de puntuación" className="custom-editor-questions">
-            <h2>Reglas de puntuación</h2>
+          <section
+            aria-labelledby="editor-scoring-heading"
+            className="custom-editor-questions custom-editor-config-section"
+            ref={scoringReveal}
+          >
+            <header className="custom-editor-section-heading">
+              <span aria-hidden="true" className="editor-section-number">03</span>
+              <div>
+                <p className="eyebrow">Evaluación</p>
+                <h2 id="editor-scoring-heading">Reglas de puntuación</h2>
+                <p>Define los rangos y el segmento de resultado asociado.</p>
+              </div>
+            </header>
             {cuestionario.reglas_scoring.map((regla, indice) => (
               <fieldset className="custom-editor-question" key={`${regla.segmento}-${indice}`}>
                 <legend>Rango {indice + 1}</legend>
@@ -468,8 +621,19 @@ export default function EditorCuestionario({
               </fieldset>
             ))}
           </section>
-          <section aria-label="Resultados por segmento" className="custom-editor-questions">
-            <h2>Resultados por segmento</h2>
+          <section
+            aria-labelledby="editor-segments-heading"
+            className="custom-editor-questions custom-editor-config-section"
+            ref={segmentsReveal}
+          >
+            <header className="custom-editor-section-heading">
+              <span aria-hidden="true" className="editor-section-number">04</span>
+              <div>
+                <p className="eyebrow">Personalización</p>
+                <h2 id="editor-segments-heading">Resultados por segmento</h2>
+                <p>Redacta el contenido que recibirá cada segmento.</p>
+              </div>
+            </header>
             {cuestionario.resultado.resultados.map((resultado, indice) => (
               <fieldset className="custom-editor-question" key={`${resultado.segmento}-${indice}`}>
                 <legend>{resultado.segmento}</legend>
@@ -514,8 +678,19 @@ export default function EditorCuestionario({
           </section>
         </>
       ) : (
-        <section aria-label="Resultado del cuestionario" className="custom-editor-questions">
-          <h2>Resultado fijo</h2>
+        <section
+          aria-labelledby="editor-fixed-result-heading"
+          className="custom-editor-questions custom-editor-config-section"
+          ref={fixedResultReveal}
+        >
+          <header className="custom-editor-section-heading">
+            <span aria-hidden="true" className="editor-section-number">03</span>
+            <div>
+              <p className="eyebrow">Cierre</p>
+              <h2 id="editor-fixed-result-heading">Resultado fijo</h2>
+              <p>Configura el contenido que se mostrará al terminar.</p>
+            </div>
+          </header>
           <label>
             Contenido del resultado
             <textarea
@@ -552,13 +727,184 @@ export default function EditorCuestionario({
           )}
         </section>
       )}
+        </div>
 
-      <footer className="custom-editor-actions">
+        <aside
+          aria-labelledby="editor-preview-heading"
+          className="custom-editor-preview"
+          ref={previewReveal}
+        >
+          <header className="custom-editor-preview-header">
+            <span className="editor-preview-live"><span aria-hidden="true" />Vista previa en vivo</span>
+            <h2 id="editor-preview-heading">Así lo verá tu audiencia</h2>
+            <p>Los cambios se reflejan aquí mientras editas.</p>
+          </header>
+          <div
+            className="editor-preview-canvas questionnaire"
+            data-style={cuestionario.estilo_visual}
+            data-presentation="template"
+            data-presentation-options={opcionesVistaPrevia}
+          >
+            <div className="editor-preview-brand">
+              <img alt="" aria-hidden="true" src="/merkatic-brand-mark.png" />
+              <span>CLEAR-IA</span>
+            </div>
+            <div className="editor-preview-progress">
+              <span
+                style={{
+                  width: preguntaVistaPrevia
+                    ? `${((indiceVistaPreviaNormalizado + 1) / cuestionario.preguntas.length) * 100}%`
+                    : "0%",
+                }}
+              />
+            </div>
+            <p className="editor-preview-step">
+              {preguntaVistaPrevia
+                ? `Pregunta ${indiceVistaPreviaNormalizado + 1} de ${cuestionario.preguntas.length}`
+                : "Sin preguntas"}
+            </p>
+            <div className="editor-preview-flow">
+              {cuestionario.posicion_contacto === "inicio" && vistaPreviaContacto}
+              {preguntaVistaPrevia ? (
+                <article className="editor-preview-question question-card">
+                  {preguntaVistaPrevia.seccion && (
+                    <p className="question-card-section">
+                      {preguntaVistaPrevia.seccion}
+                    </p>
+                  )}
+                  <h3>{preguntaVistaPrevia.texto || "Escribe el texto de tu pregunta"}</h3>
+                  {preguntaVistaPrevia.tipo === "opcion_multiple" && (
+                    <ul className={[
+                      "editor-preview-options",
+                      "option-list",
+                      `option-list-${opcionesVistaPrevia ?? "filas"}`,
+                      preguntaVistaPrevia.opciones.length === 2
+                        ? "option-list-binary"
+                        : "",
+                    ].filter(Boolean).join(" ")}>
+                      {preguntaVistaPrevia.opciones.map((opcion, indice) => (
+                        <li
+                          className={[
+                            "option",
+                            `option-choice-${opcionesVistaPrevia ?? "filas"}`,
+                            cuestionario.estilo_visual
+                              ? `option-${cuestionario.estilo_visual}`
+                              : "",
+                          ].filter(Boolean).join(" ")}
+                          key={`${preguntaVistaPrevia.id}-${indice}`}
+                        >
+                          {opcionesVistaPrevia === "tarjetas" &&
+                            preguntaVistaPrevia.opciones.length !== 2 && (
+                              <span aria-hidden="true" className="option-letter">
+                                {String.fromCharCode(65 + (indice % 26))}
+                              </span>
+                            )}
+                          {opcionesVistaPrevia === "filas" &&
+                            preguntaVistaPrevia.opciones.length !== 2 && (
+                              <span aria-hidden="true" className="option-number">
+                                {String(indice + 1).padStart(2, "0")}
+                              </span>
+                            )}
+                          <span className="option-choice-text">
+                            {opcion.texto || `Opción ${indice + 1}`}
+                          </span>
+                          <span aria-hidden="true" className="editor-preview-radio" />
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+                  {preguntaVistaPrevia.tipo === "escala" && (
+                    escalaVistaPrevia === "deslizador" ? (
+                      <div className="editor-preview-slider">
+                        <input
+                          aria-label="Vista previa del deslizador"
+                          disabled
+                          max={preguntaVistaPrevia.escala.max}
+                          min={preguntaVistaPrevia.escala.min}
+                          type="range"
+                          value={preguntaVistaPrevia.escala.min}
+                        />
+                        <output>{preguntaVistaPrevia.escala.min}</output>
+                        <p>
+                          <span>{preguntaVistaPrevia.escala.etiqueta_min ?? preguntaVistaPrevia.escala.min}</span>
+                          <span>{preguntaVistaPrevia.escala.etiqueta_max ?? preguntaVistaPrevia.escala.max}</span>
+                        </p>
+                      </div>
+                    ) : (
+                      <div className="editor-preview-scale">
+                        <div
+                          aria-hidden="true"
+                          className={`scale-choices scale-choices-${escalaVistaPrevia ?? "circulos"}`}
+                        >
+                          {Array.from(
+                            {
+                              length: preguntaVistaPrevia.escala.max -
+                                preguntaVistaPrevia.escala.min + 1,
+                            },
+                            (_, indice) => preguntaVistaPrevia.escala.min + indice,
+                          ).map((valor) => (
+                            <span className="scale-choice" key={valor}>
+                              <span>{valor}</span>
+                            </span>
+                          ))}
+                        </div>
+                        <p>
+                          <span>{preguntaVistaPrevia.escala.etiqueta_min ?? preguntaVistaPrevia.escala.min}</span>
+                          <span>{preguntaVistaPrevia.escala.etiqueta_max ?? preguntaVistaPrevia.escala.max}</span>
+                        </p>
+                      </div>
+                    )
+                  )}
+                  {preguntaVistaPrevia.tipo === "abierta" && (
+                    <div className={`editor-preview-textarea text-answer${abiertaVistaPrevia ? ` text-answer-${abiertaVistaPrevia}` : ""}`}>
+                      Tu respuesta…
+                    </div>
+                  )}
+                </article>
+              ) : (
+                <p className="editor-preview-empty">Agrega una pregunta para ver cómo aparecerá.</p>
+              )}
+              {cuestionario.posicion_contacto === "final" && vistaPreviaContacto}
+            </div>
+            {preguntaVistaPrevia && (
+              <nav aria-label="Navegación de la vista previa" className="editor-preview-navigation">
+                <button
+                  aria-label="Pregunta anterior en la vista previa"
+                  className="secondary-button"
+                  disabled={indiceVistaPreviaNormalizado === 0}
+                  onClick={() => setIndiceVistaPrevia((indice) => Math.max(0, indice - 1))}
+                  type="button"
+                >
+                  Anterior
+                </button>
+                <span>{String(indiceVistaPreviaNormalizado + 1).padStart(2, "0")} / {String(cuestionario.preguntas.length).padStart(2, "0")}</span>
+                <button
+                  aria-label="Pregunta siguiente en la vista previa"
+                  className="secondary-button"
+                  disabled={indiceVistaPreviaNormalizado >= cuestionario.preguntas.length - 1}
+                  onClick={() => setIndiceVistaPrevia((indice) =>
+                    Math.min(cuestionario.preguntas.length - 1, indice + 1),
+                  )}
+                  type="button"
+                >
+                  Siguiente
+                </button>
+              </nav>
+            )}
+          </div>
+          <p className="editor-preview-note">
+            Los puntos de scoring son internos y no se muestran a quienes responden.
+          </p>
+        </aside>
+      </div>
+
+      <footer aria-busy={guardando} className="custom-editor-actions">
         <button
           className="secondary-button"
           disabled={guardando}
           onClick={() => void validarYContinuar(
             (nombreEditado, data) => onGuardar(nombreEditado, data),
+            "Cuestionario guardado correctamente.",
           )
           }
           type="button"
@@ -603,7 +949,7 @@ export default function EditorCuestionario({
             disabled={guardando}
             onClick={() => void validarYContinuar(async (nombreEditado, data) => {
               setEnlacePublicado(await onPublicar(nombreEditado, data));
-            })}
+            }, "Cuestionario publicado correctamente.")}
             type="button"
           >
             {publicado ? "Publicar cambios" : "Publicar"}
@@ -632,6 +978,9 @@ export default function EditorCuestionario({
           Previsualizar cuestionario
         </button>
       </footer>
+      {mensajeAccion && (
+        <p className="editor-action-status" role="status">{mensajeAccion}</p>
+      )}
       {enlacePublicado && (
         <p className="published-questionnaire-link">
           URL pública: <a href={enlacePublicado}>{enlacePublicado}</a>

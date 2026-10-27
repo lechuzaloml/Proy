@@ -3,6 +3,7 @@ import TarjetaTemplate from "./TarjetaTemplate";
 import type { TemplateCatalogo } from "../templates/catalogo";
 import { tienePortadaTemplate } from "./PantallaInicioTemplate";
 import type { DocumentoCuestionarioGuardado } from "../lib/documentoCuestionario";
+import { useScrollReveal } from "../hooks/useScrollReveal";
 
 export interface CasoReferencia {
   id: string;
@@ -43,6 +44,16 @@ export default function BibliotecaTemplates({
   onEliminarCopia,
   onSeleccionar,
 }: BibliotecaTemplatesProps) {
+  const savedQuestionnairesReveal = useScrollReveal<HTMLElement>({
+    staggerChildren: true,
+  });
+  const templateGridReveal = useScrollReveal<HTMLDivElement>({
+    staggerChildren: true,
+  });
+  const referenceListReveal = useScrollReveal<HTMLDivElement>({
+    staggerChildren: true,
+  });
+
   return (
     <main className="template-library">
       <header className="library-header">
@@ -60,7 +71,10 @@ export default function BibliotecaTemplates({
       )}
 
       {onCrearCopia && (
-        <section aria-labelledby="saved-questionnaires-heading">
+        <section
+          aria-labelledby="saved-questionnaires-heading"
+          ref={savedQuestionnairesReveal}
+        >
           {onCrearDesdeCero && (
             <div className="create-questionnaire-from-scratch">
               <h2>Crear un cuestionario desde cero</h2>
@@ -79,7 +93,12 @@ export default function BibliotecaTemplates({
           )}
           <h2 id="saved-questionnaires-heading">Mis copias guardadas</h2>
           {cargandoCopias ? (
-            <p role="status">Cargando copias guardadas…</p>
+            <div aria-busy="true" className="saved-questionnaire-loading">
+              <p className="sr-only" role="status">Cargando copias guardadas…</p>
+              <span aria-hidden="true" />
+              <span aria-hidden="true" />
+              <span aria-hidden="true" />
+            </div>
           ) : copiasGuardadas.length === 0 ? (
             <p>Aún no tienes copias guardadas.</p>
           ) : (
@@ -112,7 +131,7 @@ export default function BibliotecaTemplates({
 
       <section aria-labelledby="templates-heading">
         <h2 id="templates-heading">Templates demostrativos</h2>
-        <div className="template-grid">
+        <div className="template-grid" ref={templateGridReveal}>
           {templates.map((template) => (
             <TarjetaTemplate
               key={template.id}
@@ -148,7 +167,7 @@ export default function BibliotecaTemplates({
           Ejemplos existentes del proyecto; no forman parte de los templates
           ficticios.
         </p>
-        <div className="reference-list">
+        <div className="reference-list" ref={referenceListReveal}>
           {casosReferencia.map((caso) => (
             <article className="reference-card" key={caso.id}>
               <div>

@@ -124,7 +124,22 @@ export default function CuestionarioPublico({
   }, [empresaId, cuestionarioId]);
 
   if (cargando) {
-    return <main className="questionnaire"><p>Cargando cuestionario…</p></main>;
+    return (
+      <main aria-busy="true" className="questionnaire questionnaire-loading">
+        <p className="sr-only" role="status">Cargando cuestionario…</p>
+        <div aria-hidden="true" className="questionnaire-skeleton-header">
+          <span />
+          <span />
+        </div>
+        <div aria-hidden="true" className="questionnaire-skeleton-progress" />
+        <div aria-hidden="true" className="questionnaire-skeleton-card">
+          <span />
+          <span />
+          <span />
+          <span />
+        </div>
+      </main>
+    );
   }
   if (error || !cuestionario) {
     return (
