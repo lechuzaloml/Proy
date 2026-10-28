@@ -56,9 +56,20 @@ export default function BibliotecaTemplates({
 
   return (
     <main className="template-library">
+      <header className="library-brand">
+        <div className="library-brand-identity">
+          <img
+            alt=""
+            aria-hidden="true"
+            className="landing-brand-mark"
+            src="/merkatic-brand-mark.png"
+          />
+          <span>CLEAR-IA</span>
+        </div>
+        <div className="library-account">{accesoCuenta}</div>
+      </header>
       <header className="library-header">
         <p className="eyebrow">Clear-IA</p>
-        {accesoCuenta}
         <h1>Biblioteca de templates</h1>
         <p>
         Elige una plantilla como punto de partida para crear tu propio

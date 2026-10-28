@@ -22,6 +22,7 @@ import PantallaResultado from "./components/PantallaResultado";
 import PantallaRecomendacion from "./components/PantallaRecomendacion";
 import PantallaPlanes from "./components/PantallaPlanes";
 import PantallaInicioTemplate from "./components/PantallaInicioTemplate";
+import PaginaRegistroEvento from "./components/PaginaRegistroEvento";
 import EditorCuestionario from "./components/EditorCuestionario";
 import CuestionarioPublico from "./components/CuestionarioPublico";
 import { catalogoTemplates } from "./templates/catalogo";
@@ -97,6 +98,7 @@ interface EntradaHistorialAplicacion {
 
 const CLAVE_HISTORIAL = "clearIaNavigation";
 const CLAVE_INTENTOS_GUARDADOS = "clearIaDiagnosticosGuardados";
+const ID_TEMPLATE_REGISTRO_EVENTO = "demo-registro-evento-pagina-completa";
 const PanelAdmin = lazy(() => import("./admin/AdminPanel"));
 
 async function puedeEditarCuestionarios(
@@ -229,6 +231,12 @@ export default function App() {
   const resultadoValidacion = seleccion
     ? validarCuestionario(seleccion.configuracion)
     : null;
+  const esTemplateRegistroEventoActual =
+    !!seleccion &&
+    typeof seleccion.configuracion === "object" &&
+    seleccion.configuracion !== null &&
+    "id" in seleccion.configuracion &&
+    seleccion.configuracion.id === ID_TEMPLATE_REGISTRO_EVENTO;
 
   useEffect(() => {
     function restaurarDesdeHistorial(evento: PopStateEvent) {
@@ -782,11 +790,25 @@ export default function App() {
   }
 
   if (!bienvenidaCompletada) {
+    const templateRegistroEvento = catalogoTemplates.find(({ id }) =>
+      id.endsWith("/registro-evento-pagina-completa.json")
+    );
+
     return (
       <Landing
         accesoCuenta={
           <AccesoCuenta authListo={authListo} usuario={usuarioSesion} />
         }
+        onAbrirRegistroEvento={() => {
+          if (!templateRegistroEvento) {
+            return;
+          }
+          seleccionarCuestionario(
+            templateRegistroEvento.id,
+            templateRegistroEvento.metadata.nombre,
+            templateRegistroEvento.configuracion,
+          );
+        }}
         onComenzar={abrirDiagnostico}
       />
     );
@@ -824,7 +846,7 @@ export default function App() {
 
   const navegacion = (
     <nav aria-label="Navegación del cuestionario" className="flow-navigation">
-      {calculo?.estado === "ok" && (
+      {!esTemplateRegistroEventoActual && calculo?.estado === "ok" && (
         <button
           className="secondary-button"
           onClick={() =>
@@ -842,7 +864,7 @@ export default function App() {
           Ir al inicio
         </button>
       )}
-      {mostrarPlanes ? (
+      {!esTemplateRegistroEventoActual && (mostrarPlanes ? (
         <button
           className="secondary-button"
           onClick={() => window.history.back()}
@@ -866,8 +888,8 @@ export default function App() {
               : "Volver a la biblioteca"
             : "Volver a la biblioteca"}
         </button>
-      )}
-      <span>{seleccion.nombre}</span>
+      ))}
+      {seleccion && <span>{seleccion.nombre}</span>}
     </nav>
   );
 
@@ -942,6 +964,57 @@ export default function App() {
             publicarCopiaPlantilla(nombre, configuracion)
           }
           onDespublicar={() => despublicarCopiaPlantilla(seleccion.id)}
+        />
+      </>
+    );
+  }
+
+  const esTemplateRegistroEvento = esTemplateRegistroEventoActual;
+
+  if (esTemplateRegistroEvento && !envio) {
+    return (
+      <>
+        {navegacion}
+        <PaginaRegistroEvento
+          cuestionario={resultadoValidacion.data}
+          onEnviar={(lead, calculoEnvio, respuestas, contenidoPersonalizado, errorPersonalizacion) => {
+            navegar({
+              ...estadoAppRef.current,
+              envio: {
+                lead,
+                calculo: calculoEnvio,
+                respuestas,
+                contenidoPersonalizado,
+                errorPersonalizacion,
+              },
+            });
+          }}
+          onVolver={regresarBiblioteca}
+        />
+      </>
+    );
+  }
+
+  if (esTemplateRegistroEvento && envio) {
+    return (
+      <>
+        {navegacion}
+        <PaginaRegistroEvento
+          cuestionario={resultadoValidacion.data}
+          envioRealizado
+          onEnviar={(lead, calculoEnvio, respuestas, contenidoPersonalizado, errorPersonalizacion) => {
+            navegar({
+              ...estadoAppRef.current,
+              envio: {
+                lead,
+                calculo: calculoEnvio,
+                respuestas,
+                contenidoPersonalizado,
+                errorPersonalizacion,
+              },
+            });
+          }}
+          onVolver={regresarBiblioteca}
         />
       </>
     );

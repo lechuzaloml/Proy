@@ -25,6 +25,7 @@ export function tienePortadaTemplate(templateId: string): boolean {
     "../../templates/assessments/evaluacion-liderazgo.json",
     "../../templates/assessments/diagnostico-madurez-tecnologica.json",
     "../../templates/events/registro-a-masterclass.json",
+    "../../templates/events/registro-evento-pagina-completa.json",
   ]);
   return idsConPortada.has(templateId);
 }

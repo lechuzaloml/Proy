@@ -1,8 +1,9 @@
-import type { ReactNode } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 import { useScrollReveal } from "../hooks/useScrollReveal";
 
 interface LandingProps {
   onComenzar: () => void;
+  onAbrirRegistroEvento?: () => void;
   accesoCuenta: ReactNode;
 }
 
@@ -27,7 +28,12 @@ const retosNegocio = [
   },
 ];
 
-export default function Landing({ onComenzar, accesoCuenta }: LandingProps) {
+export default function Landing({
+  onComenzar,
+  onAbrirRegistroEvento,
+  accesoCuenta,
+}: LandingProps) {
+  const [modalAbierto, setModalAbierto] = useState(false);
   const problemReveal = useScrollReveal<HTMLElement>();
   const sectionHeadingReveal = useScrollReveal<HTMLElement>();
   const solutionGridReveal = useScrollReveal<HTMLDivElement>({
@@ -35,19 +41,128 @@ export default function Landing({ onComenzar, accesoCuenta }: LandingProps) {
   });
   const nextStepReveal = useScrollReveal<HTMLElement>();
 
+  useEffect(() => {
+    const temporizador = window.setTimeout(() => {
+      setModalAbierto(true);
+    }, 250);
+
+    return () => window.clearTimeout(temporizador);
+  }, []);
+
+  useEffect(() => {
+    if (!modalAbierto) {
+      return;
+    }
+
+    const cerrarAlEscape = (evento: KeyboardEvent) => {
+      if (evento.key === "Escape") {
+        cerrarModal();
+      }
+    };
+
+    const overflowAnterior = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    window.addEventListener("keydown", cerrarAlEscape);
+
+    return () => {
+      document.body.style.overflow = overflowAnterior;
+      window.removeEventListener("keydown", cerrarAlEscape);
+    };
+  }, [modalAbierto]);
+
+  function cerrarModal() {
+    setModalAbierto(false);
+  }
+
+  function manejarAccionPromocional() {
+    if (onAbrirRegistroEvento) {
+      cerrarModal();
+      onAbrirRegistroEvento();
+      return;
+    }
+    console.info("CTA promocional provisional: conectar la acción real del modal aquí.");
+    cerrarModal();
+  }
+
   return (
-    <main className="landing-page">
-      <header className="landing-brand">
-        <img
-          alt=""
-          aria-hidden="true"
-          className="landing-brand-mark"
-          src="/merkatic-brand-mark.png"
-        />
-        <span>CLEAR-IA</span>
-        <div className="landing-account">{accesoCuenta}</div>
-      </header>
-      <section aria-labelledby="landing-title" className="landing-hero">
+    <>
+      {modalAbierto && (
+        <div
+          aria-modal="true"
+          className="promo-modal-backdrop"
+          onClick={(evento) => {
+            if (evento.target === evento.currentTarget) {
+              cerrarModal();
+            }
+          }}
+          role="dialog"
+        >
+          <div className="promo-modal" aria-labelledby="promo-title">
+            <button
+              aria-label="Cerrar promoción"
+              className="promo-modal-close"
+              onClick={cerrarModal}
+              type="button"
+            >
+              ×
+            </button>
+
+            <div className="promo-modal-content">
+              <div className="promo-modal-copy">
+                <p className="promo-modal-kicker">Clear-IA</p>
+                <h2 id="promo-title">
+                  Masterclass en vivo con
+                  <br />
+                  Carlos Torres
+                </h2>
+                <p className="promo-modal-description">
+                  No te pierdas el webinar en vivo del 4 de noviembre. Únete a
+                  esta masterclass gratuita de 90 minutos y aprende cómo generar
+                  mejores leads, generar confianza y convertir más atención en
+                  clientes.
+                </p>
+                <div className="promo-modal-actions">
+                  <button
+                    className="submit-button promo-modal-primary"
+                    onClick={manejarAccionPromocional}
+                    type="button"
+                  >
+                    Reserva tu plaza
+                  </button>
+                  <button
+                    className="promo-modal-secondary"
+                    onClick={cerrarModal}
+                    type="button"
+                  >
+                    No gracias
+                  </button>
+                </div>
+              </div>
+
+              <div aria-label="Imagen del ponente" className="promo-modal-visual">
+                <img
+                  alt="Carlos Torres"
+                  className="promo-modal-visual-inner promo-modal-visual-image"
+                  src="/pasted-image.png"
+                />
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      <main className="landing-page">
+        <header className="landing-brand">
+          <img
+            alt=""
+            aria-hidden="true"
+            className="landing-brand-mark"
+            src="/merkatic-brand-mark.png"
+          />
+          <span>CLEAR-IA</span>
+          <div className="landing-account">{accesoCuenta}</div>
+        </header>
+        <section aria-labelledby="landing-title" className="landing-hero">
         <div className="landing-intro">
           <p className="landing-kicker">Una mirada clara a tu crecimiento</p>
           <h1 id="landing-title">
@@ -244,7 +359,7 @@ export default function Landing({ onComenzar, accesoCuenta }: LandingProps) {
           Toma aproximadamente 2–3 minutos.
         </p>
       </section>
-
     </main>
-  );
+  </>
+);
 }

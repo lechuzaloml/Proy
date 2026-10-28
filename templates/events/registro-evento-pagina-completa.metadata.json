@@ -1,0 +1,8 @@
+{
+  "nombre": "Registro de evento (página completa)",
+  "formato": "Event Registration",
+  "caso_uso": "Events & Webinars",
+  "nicho": "Negocios",
+  "descripcion": "Página completa de registro para una masterclass ficticia de Clear-IA, con formulario, contenido de aprendizaje y confirmación de demostración.",
+  "usa_scoring": false
+}

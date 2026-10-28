@@ -95,6 +95,12 @@ export const presentacionesTemplates: Record<string, PresentacionTemplate> = {
     familia: "opcion_multiple",
     opciones: "pildoras",
   },
+  "demo-registro-evento-pagina-completa": {
+    portada: "imagenFondoSuave",
+    ilustracion: { tipo: "svg", icono: "aprendizaje" },
+    familia: "opcion_multiple",
+    opciones: "pildoras",
+  },
   "demo-onboarding-para-agencia": {
     portada: "imagenFondoSuave",
     ilustracion: {

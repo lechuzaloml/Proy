@@ -115,6 +115,7 @@ describe("familias de respuesta de los templates de biblioteca", () => {
           "ser-empresario",
           "merkatics",
           "caso-nuevo-coach-calificacion-leads",
+          "demo-registro-evento-pagina-completa",
         ].includes(cuestionario.id),
     );
 

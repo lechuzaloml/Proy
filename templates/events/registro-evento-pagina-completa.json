@@ -1,0 +1,34 @@
+{
+  "id": "demo-registro-evento-pagina-completa",
+  "cliente": "Registro de evento (página completa)",
+  "estado": "template_demo_ficticio",
+  "estilo_visual": "masterclass",
+  "landingTitulo": "Masterclass Clear-IA",
+  "landingDescripcion": "Regístrate a una masterclass ficticia para aprender a captar, priorizar y dar seguimiento a tus prospectos con un proceso claro.",
+  "usa_scoring": false,
+  "posicion_contacto": "inicio",
+  "secciones": [
+    "Horario"
+  ],
+  "preguntas": [
+    {
+      "id": "horario",
+      "seccion": "Horario",
+      "texto": "Selecciona tu horario de preferencia",
+      "tipo": "opcion_multiple",
+      "opciones": [
+        { "texto": "9:30 a. m. (hora de Ciudad de México)" },
+        { "texto": "3:30 p. m. (hora de Ciudad de México)" }
+      ],
+      "participa_scoring": false
+    }
+  ],
+  "resultado": {
+    "tipo": "fijo",
+    "contenido": "Gracias por registrarte. Esta es una demostración: no se creó ninguna reserva ni se enviará confirmación.",
+    "cta": {
+      "texto": "Volver a la biblioteca",
+      "accion": "volver_biblioteca"
+    }
+  }
+}
