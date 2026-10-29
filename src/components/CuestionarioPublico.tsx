@@ -30,6 +30,8 @@ export default function CuestionarioPublico({
   const [resultadoFinal, setResultadoFinal] = useState<{
     calculo: Extract<ResultadoCalculado, { estado: "ok" }>;
     respuestas: RespuestasCuestionario;
+    contenidoPersonalizado: string | null;
+    errorPersonalizacion: string | null;
   } | null>(null);
   useEffect(() => {
     let cancelado = false;
@@ -153,9 +155,9 @@ export default function CuestionarioPublico({
     return (
       <PantallaResultado
         calculo={resultadoFinal.calculo}
-        contenidoPersonalizado={null}
+        contenidoPersonalizado={resultadoFinal.contenidoPersonalizado}
         cuestionario={cuestionario}
-        errorPersonalizacion={null}
+        errorPersonalizacion={resultadoFinal.errorPersonalizacion}
         respuestas={resultadoFinal.respuestas}
       />
     );
@@ -167,9 +169,17 @@ export default function CuestionarioPublico({
       <RenderizadorCuestionario
         cuestionario={cuestionario}
         unaPreguntaPorVista
-        personalizarResultados={false}
+        personalizarResultados={
+          cuestionario.personalizar_resultado_con_ia === true
+        }
         requiereConsentimiento
-        onEnvio={async (lead, calculo, respuestas) => {
+        onEnvio={async (
+          lead,
+          calculo,
+          respuestas,
+          contenidoPersonalizado,
+          errorPersonalizacion,
+        ) => {
           if (calculo.estado !== "ok" || enviando) {
             setError("No se pudo calcular el resultado del cuestionario.");
             return;
@@ -177,7 +187,12 @@ export default function CuestionarioPublico({
           setError("");
           setEnviando(true);
           const submissionId = crypto.randomUUID();
-          setResultadoFinal({ calculo, respuestas });
+          setResultadoFinal({
+            calculo,
+            respuestas,
+            contenidoPersonalizado,
+            errorPersonalizacion,
+          });
           setEnvioCompletado(true);
           try {
             const resultadoGuardado = calculo.tipo === "segmentado"

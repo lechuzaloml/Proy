@@ -263,6 +263,15 @@ function esCuestionario(
     errores.push('cuestionario.posicion_contacto debe ser "inicio" o "final".');
     valido = false;
   }
+  if (
+    tienePropiedad(value, "personalizar_resultado_con_ia") &&
+    typeof value.personalizar_resultado_con_ia !== "boolean"
+  ) {
+    errores.push(
+      "cuestionario.personalizar_resultado_con_ia debe ser booleano cuando existe.",
+    );
+    valido = false;
+  }
 
   const estilosVisuales = [
     "finanzas",

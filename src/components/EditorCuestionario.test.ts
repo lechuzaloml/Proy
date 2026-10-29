@@ -58,16 +58,16 @@ function crearCuestionarioFlujo({
       tipo: "fijo",
       contenido: "Resultado del diagnóstico",
     },
-    ...(bienvenidaHabilitada
-      ? {
-          bienvenida: {
-            habilitada: true,
+    bienvenida: {
+      habilitada: bienvenidaHabilitada,
+      ...(bienvenidaHabilitada
+        ? {
             titulo: "Diagnóstico inicial de crecimiento",
             descripcion: "Antes de empezar, te haremos unas preguntas.",
             textoBoton: "Iniciar diagnóstico",
-          },
-        }
-      : {}),
+          }
+        : {}),
+    },
   };
 }
 
@@ -97,6 +97,16 @@ describe("acciones del editor de copias", () => {
     expect(markup).toContain("Resultados por segmento");
   });
 
+  it("muestra el control para añadir preguntas después de toda la lista", () => {
+    const markup = renderEditor(true);
+    const ultimaPregunta = validacion.data.preguntas.at(-1);
+
+    expect(ultimaPregunta).toBeDefined();
+    expect(markup.indexOf('aria-label="Añadir pregunta"')).toBeGreaterThan(
+      markup.indexOf(ultimaPregunta!.texto),
+    );
+  });
+
   it("muestra solo el resultado fijo cuando scoring está desactivado", () => {
     const cuestionario = cambiarModoScoring(validacion.data, false);
     const markup = renderEditor(true, cuestionario);
@@ -105,6 +115,33 @@ describe("acciones del editor de copias", () => {
     expect(markup).toContain("sin calcular puntuaciones ni clasificaciones");
     expect(markup).not.toContain("Reglas de puntuación");
     expect(markup).not.toContain("Puntos de la opción");
+  });
+
+  it("permite activar Gemini y oculta los textos de resultados por segmento", () => {
+    const cuestionario = {
+      ...validacion.data,
+      personalizar_resultado_con_ia: true,
+    };
+    const markup = renderEditor(true, cuestionario);
+
+    expect(markup).toContain("Usar Gemini para personalizar los resultados");
+    expect(markup).toContain("Los textos base se conservan");
+    expect(markup).not.toContain("Contenido del resultado");
+    expect(markup).toContain(validacion.data.resultado.tipo === "por_segmento"
+      ? `<legend>${validacion.data.resultado.resultados[0]?.segmento}</legend>`
+      : "");
+  });
+
+  it("permite activar Gemini y oculta el texto del resultado fijo", () => {
+    const cuestionario = {
+      ...cambiarModoScoring(validacion.data, false),
+      personalizar_resultado_con_ia: true,
+    };
+    const markup = renderEditor(true, cuestionario);
+
+    expect(markup).toContain("Usar Gemini para personalizar el resultado");
+    expect(markup).toContain("El texto base se conserva");
+    expect(markup).not.toContain("Contenido del resultado");
   });
 
   it("ofrece solo las opciones de contacto que admite el modelo", () => {
@@ -175,6 +212,26 @@ describe("acciones del editor de copias", () => {
 
     expect(markup).toContain("Antes de empezar");
     expect(markup).toContain("Iniciar diagnóstico");
+    expect(markup).not.toContain("Completa tus datos para continuar con el cuestionario.");
+  });
+
+  it("muestra la bienvenida predeterminada si está activa aunque no se haya editado ni agregado imagen", () => {
+    const cuestionario = crearCuestionarioFlujo({
+      posicionContacto: "inicio",
+      bienvenidaHabilitada: true,
+    });
+    cuestionario.bienvenida = undefined;
+    const markup = renderToStaticMarkup(
+      createElement(RenderizadorCuestionario, {
+        cuestionario,
+        onEnvio: vi.fn(),
+      }),
+    );
+
+    expect(markup).toContain("Antes de empezar");
+    expect(markup).toContain("Diagnóstico inicial de crecimiento");
+    expect(markup).toContain("Iniciar diagnóstico");
+    expect(markup).not.toContain("questionnaire-welcome-image");
     expect(markup).not.toContain("Completa tus datos para continuar con el cuestionario.");
   });
 

@@ -1319,6 +1319,10 @@ export default function App() {
           });
         }}
         onEstadoChange={actualizarEstadoCuestionario}
+        personalizarResultados={
+          resultadoValidacion.data.personalizar_resultado_con_ia ??
+          seleccion.id === "diagnostico-inicial"
+        }
         requiereConsentimiento={
           seleccion.id === "diagnostico-inicial" ||
           seleccion.id.startsWith("personalizado-")

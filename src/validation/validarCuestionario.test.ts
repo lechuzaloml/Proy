@@ -145,6 +145,20 @@ describe("validarCuestionario", () => {
     erroresDe(data, 'posicion_contacto debe ser "inicio" o "final"');
   });
 
+  it("acepta la opción de personalización con IA como booleano", () => {
+    const data = clonarCuestionario();
+    data.personalizar_resultado_con_ia = true;
+
+    expect(validarCuestionario(data).valido).toBe(true);
+  });
+
+  it("rechaza la opción de personalización con IA si no es booleana", () => {
+    const data = clonarCuestionario();
+    data.personalizar_resultado_con_ia = "sí";
+
+    erroresDe(data, "personalizar_resultado_con_ia debe ser booleano");
+  });
+
   it("rechaza reglas_scoring vacío con un mensaje específico", () => {
     const data = clonarCuestionario();
     data.reglas_scoring = [];

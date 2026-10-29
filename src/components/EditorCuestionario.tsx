@@ -654,33 +654,33 @@ export default function EditorCuestionario({
             )}
           </article>
         ))}
-      </section>
 
-      <section aria-label="Añadir pregunta" className="custom-editor-add">
-        <label>
-          Tipo de pregunta
-          <select
-            onChange={(evento) =>
-              setTipoPregunta(evento.target.value as TipoPregunta | "si_no")
-            }
-            value={tipoPregunta}
+        <section aria-label="Añadir pregunta" className="custom-editor-add">
+          <label>
+            Tipo de pregunta
+            <select
+              onChange={(evento) =>
+                setTipoPregunta(evento.target.value as TipoPregunta | "si_no")
+              }
+              value={tipoPregunta}
+            >
+              {TIPOS_PREGUNTA.map(({ tipo, nombre: nombreTipo }) => (
+                <option key={tipo} value={tipo}>{nombreTipo}</option>
+              ))}
+            </select>
+          </label>
+          <button
+            className="secondary-button"
+            onClick={() => setCuestionario((actual) =>
+              tipoPregunta === "si_no"
+                ? agregarPreguntaSiNo(actual, `pregunta-${crypto.randomUUID()}`)
+                : agregarPregunta(actual, tipoPregunta, `pregunta-${crypto.randomUUID()}`),
+            )}
+            type="button"
           >
-            {TIPOS_PREGUNTA.map(({ tipo, nombre: nombreTipo }) => (
-              <option key={tipo} value={tipo}>{nombreTipo}</option>
-            ))}
-          </select>
-        </label>
-        <button
-          className="secondary-button"
-          onClick={() => setCuestionario((actual) =>
-            tipoPregunta === "si_no"
-              ? agregarPreguntaSiNo(actual, `pregunta-${crypto.randomUUID()}`)
-              : agregarPregunta(actual, tipoPregunta, `pregunta-${crypto.randomUUID()}`),
-          )}
-          type="button"
-        >
-          Añadir pregunta
-        </button>
+            Añadir pregunta
+          </button>
+        </section>
       </section>
 
       {cuestionario.usa_scoring ? (
@@ -756,24 +756,48 @@ export default function EditorCuestionario({
               <div>
                 <p className="eyebrow">Personalización</p>
                 <h2 id="editor-segments-heading">Resultados por segmento</h2>
-                <p>Redacta el contenido que recibirá cada segmento.</p>
+                <p>
+                  {cuestionario.personalizar_resultado_con_ia
+                    ? "Gemini adaptará el resultado base de cada segmento a las respuestas."
+                    : "Redacta el contenido que recibirá cada segmento."}
+                </p>
               </div>
             </header>
+            <label className="custom-editor-toggle">
+              <input
+                checked={cuestionario.personalizar_resultado_con_ia ?? false}
+                className="custom-editor-checkbox"
+                onChange={(evento) => setCuestionario((actual) => ({
+                  ...actual,
+                  personalizar_resultado_con_ia: evento.target.checked,
+                }))}
+                type="checkbox"
+              />
+              Usar Gemini para personalizar los resultados
+            </label>
+            {cuestionario.personalizar_resultado_con_ia && (
+              <p>
+                Los textos base se conservan para que Gemini los use y se
+                mostrarán si la IA no está disponible.
+              </p>
+            )}
             {cuestionario.resultado.resultados.map((resultado, indice) => (
               <fieldset className="custom-editor-question" key={`${resultado.segmento}-${indice}`}>
                 <legend>{resultado.segmento}</legend>
-                <label>
-                  Contenido del resultado
-                  <textarea
-                    maxLength={5000}
-                    onChange={(evento) => setCuestionario((actual) => actual.usa_scoring
-                      ? actualizarResultadoSegmentado(actual, indice, {
-                        contenido: evento.target.value,
-                      })
-                      : actual)}
-                    value={resultado.contenido}
-                  />
-                </label>
+                {!cuestionario.personalizar_resultado_con_ia && (
+                  <label>
+                    Contenido del resultado
+                    <textarea
+                      maxLength={5000}
+                      onChange={(evento) => setCuestionario((actual) => actual.usa_scoring
+                        ? actualizarResultadoSegmentado(actual, indice, {
+                          contenido: evento.target.value,
+                        })
+                        : actual)}
+                      value={resultado.contenido}
+                    />
+                  </label>
+                )}
                 {resultado.cta && (
                   <>
                     <label>
@@ -813,19 +837,42 @@ export default function EditorCuestionario({
             <div>
               <p className="eyebrow">Cierre</p>
               <h2 id="editor-fixed-result-heading">Resultado fijo</h2>
-              <p>Configura el contenido que se mostrará al terminar.</p>
+              <p>
+                {cuestionario.personalizar_resultado_con_ia
+                  ? "Gemini adaptará el resultado base a las respuestas."
+                  : "Configura el contenido que se mostrará al terminar."}
+              </p>
             </div>
           </header>
-          <label>
-            Contenido del resultado
-            <textarea
-              maxLength={5000}
-              onChange={(evento) => setCuestionario((actual) => actual.usa_scoring
-                ? actual
-                : actualizarResultadoFijo(actual, { contenido: evento.target.value }))}
-              value={cuestionario.resultado.contenido}
+          <label className="custom-editor-toggle">
+            <input
+              checked={cuestionario.personalizar_resultado_con_ia ?? false}
+              className="custom-editor-checkbox"
+              onChange={(evento) => setCuestionario((actual) => ({
+                ...actual,
+                personalizar_resultado_con_ia: evento.target.checked,
+              }))}
+              type="checkbox"
             />
+            Usar Gemini para personalizar el resultado
           </label>
+          {cuestionario.personalizar_resultado_con_ia ? (
+            <p>
+              El texto base se conserva para que Gemini lo use y se mostrará si
+              la IA no está disponible.
+            </p>
+          ) : (
+            <label>
+              Contenido del resultado
+              <textarea
+                maxLength={5000}
+                onChange={(evento) => setCuestionario((actual) => actual.usa_scoring
+                  ? actual
+                  : actualizarResultadoFijo(actual, { contenido: evento.target.value }))}
+                value={cuestionario.resultado.contenido}
+              />
+            </label>
+          )}
           {cuestionario.resultado.cta && (
             <>
               <label>

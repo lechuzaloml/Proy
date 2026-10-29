@@ -92,6 +92,7 @@ interface CuestionarioBase {
   cliente: string;
   estado: string;
   posicion_contacto: "inicio" | "final";
+  personalizar_resultado_con_ia?: boolean;
   secciones?: Seccion[];
   preguntas: Pregunta[];
   estilo_visual?: EstiloVisualCuestionario;

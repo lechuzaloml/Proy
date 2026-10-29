@@ -7,6 +7,7 @@ export function crearCuestionarioDesdeCero(): Cuestionario {
     cliente: "Mi cuestionario",
     estado: "borrador",
     posicion_contacto: "inicio",
+    personalizar_resultado_con_ia: false,
     preguntas: [],
     usa_scoring: false,
     bienvenida: {

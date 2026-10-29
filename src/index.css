@@ -6456,16 +6456,13 @@ html {
 }
 
 .custom-editor-preview {
-  position: relative;
-  top: auto;
+  position: sticky;
+  top: 1.25rem;
   display: grid;
   gap: 1rem;
   width: 100%;
-  max-width: 560px;
+  max-width: 620px;
   min-width: 0;
-  height: auto;
-  max-height: none;
-  justify-self: stretch;
   margin-inline: auto;
   padding: 1.2rem;
   border: 1px solid var(--border-subtle);
@@ -6474,7 +6471,6 @@ html {
     radial-gradient(ellipse at 100% 0%, rgb(226 85 79 / 7%), transparent 42%),
     #F1F1F1;
   box-shadow: var(--shadow-card);
-  overflow: visible;
 }
 
 .custom-editor-preview-header {
@@ -6519,7 +6515,7 @@ html {
   display: grid;
   gap: 0.8rem;
   width: 100%;
-  max-width: 520px;
+  max-width: 560px;
   min-width: 0;
   margin-inline: auto;
   padding: 1rem;
@@ -6527,7 +6523,6 @@ html {
   border-radius: 12px;
   background: #FFFFFF;
   box-shadow: 0 8px 22px rgb(51 51 51 / 6%);
-  overflow: visible;
 }
 
 .editor-preview-brand {

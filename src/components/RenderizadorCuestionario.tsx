@@ -55,7 +55,7 @@ export default function RenderizadorCuestionario({
   unaPreguntaPorVista = false,
   requiereConsentimiento = false,
   presentacion,
-  personalizarResultados = true,
+  personalizarResultados = false,
 }: RenderizadorCuestionarioProps) {
   const [respuestas, setRespuestas] = useState<RespuestasCuestionario>(
     () => estadoInicial?.respuestas ?? {},
@@ -72,7 +72,7 @@ export default function RenderizadorCuestionario({
   const [mostrarBienvenida, setMostrarBienvenida] = useState(
     () =>
       estadoInicial?.mostrarBienvenida ??
-      Boolean(cuestionario.bienvenida?.habilitada),
+      Boolean(cuestionario.bienvenida?.habilitada ?? true),
   );
   const [mostrarPreguntas, setMostrarPreguntas] = useState(() => {
     if (estadoInicial?.mostrarPreguntas !== undefined) {
@@ -312,6 +312,7 @@ export default function RenderizadorCuestionario({
     presentacion && "escala" in presentacion ? presentacion.escala : undefined;
   const abiertaPresentacion =
     presentacion && "abierta" in presentacion ? presentacion.abierta : undefined;
+  const bienvenida = cuestionario.bienvenida ?? {};
 
   function renderPregunta({ pregunta, indice }: EntradaPregunta) {
     const idPregunta = `pregunta-${indice}`;
@@ -589,7 +590,6 @@ export default function RenderizadorCuestionario({
   }
 
   const secciones = cuestionario.secciones ?? [];
-  const bienvenida = cuestionario.bienvenida;
 
   return (
     <main
@@ -607,7 +607,7 @@ export default function RenderizadorCuestionario({
         <p className="eyebrow">Cuestionario</p>
         <h1>{cuestionario.cliente}</h1>
       </header>
-      {bienvenida?.habilitada && mostrarBienvenida && !mostrarPreguntas && !datosContacto && (
+      {(bienvenida.habilitada ?? true) && mostrarBienvenida && !mostrarPreguntas && !datosContacto && (
         <section className="questionnaire-welcome" aria-live="polite">
           <div className="questionnaire-welcome-card">
             {bienvenida.imagen && (
