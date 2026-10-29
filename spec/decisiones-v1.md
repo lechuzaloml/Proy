@@ -46,3 +46,7 @@ sin modificar sus diez reglas.
      ejecutándose en el cliente.
 15. **Perfil en cuestionarios públicos:** en cuestionarios públicos se muestra
      el perfil por sección, no el puntaje total ni el segmento.
+16. **Autoevaluación previa de registro a evento:** en la página de registro a
+    evento (autoevaluación previa, sin consecuencias para quien responde) se
+    muestra el porcentaje global; la Decisión 5 sigue aplicando al diagnóstico
+    inicial y a los cuestionarios públicos de las empresas.

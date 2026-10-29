@@ -23,26 +23,212 @@ interface PaginaRegistroEventoProps {
 }
 
 const preguntasSeguimiento = paginaRegistroEvento.cuestionarioPostReserva.preguntas;
+type OpcionRespuesta = string | { texto: string; puntos?: number };
 
-function PantallaConfirmacionPendiente({ respuestas }: { respuestas: Record<number, string> }) {
+function obtenerPuntajeActual(respuestas: Record<number, OpcionRespuesta>) {
+  const confrontaOpcion = (pregunta: { opciones: OpcionRespuesta[] }, respuesta: OpcionRespuesta) =>
+    pregunta.opciones.find((opcion) => {
+      if (typeof opcion === "string") {
+        return typeof respuesta === "string" ? opcion === respuesta : false;
+      }
+      if (typeof respuesta === "string") {
+        return opcion.texto === respuesta;
+      }
+      return opcion.texto === respuesta.texto;
+    });
+
+  const tienePuntaje = preguntasSeguimiento.some((pregunta) =>
+    pregunta.opciones.some((opcion) => typeof opcion !== "string" && typeof opcion.puntos === "number"),
+  );
+
+  if (!tienePuntaje) {
+    return { tienePuntaje: false, porcentaje: null, contestadas: Object.keys(respuestas).length };
+  }
+
+  let puntosObtenidos = 0;
+  let puntosMaximos = 0;
+
+  preguntasSeguimiento.forEach((pregunta, indice) => {
+    const respuesta = respuestas[indice];
+    const opcionSeleccionada = respuesta ? confrontaOpcion(pregunta, respuesta) : undefined;
+
+    if (typeof opcionSeleccionada === "string") {
+      return;
+    }
+
+    if (!opcionSeleccionada || typeof opcionSeleccionada.puntos !== "number") {
+      return;
+    }
+
+    puntosObtenidos += opcionSeleccionada.puntos;
+    const maximoPregunta = pregunta.opciones.reduce((max, opcion) => {
+      if (typeof opcion === "string") {
+        return max;
+      }
+      if (typeof opcion.puntos !== "number") {
+        return max;
+      }
+      return Math.max(max, opcion.puntos);
+    }, 0);
+    puntosMaximos += maximoPregunta;
+  });
+
+  if (puntosMaximos <= 0) {
+    return { tienePuntaje: false, porcentaje: null, contestadas: Object.keys(respuestas).length };
+  }
+
+  return {
+    tienePuntaje: true,
+    porcentaje: Math.round((puntosObtenidos / puntosMaximos) * 100),
+    contestadas: Object.keys(respuestas).length,
+  };
+}
+
+function PantallaConfirmacionPendiente({
+  nombre,
+  horario,
+  respuestas,
+  onRepetir,
+}: {
+  nombre: string;
+  horario: string;
+  respuestas: Record<number, OpcionRespuesta>;
+  onRepetir: () => void;
+}) {
+  const nombrePila = nombre.trim() || "Listo";
+  const resultado = obtenerPuntajeActual(respuestas);
+  const porcentaje = resultado.porcentaje ?? 0;
+  const ayuda = paginaRegistroEvento.confirmacion;
+  const [ringValue, setRingValue] = useState(0);
+  const [fotoFallida, setFotoFallida] = useState(false);
+  const circumference = 2 * Math.PI * 46;
+
+  useEffect(() => {
+    if (!resultado.tienePuntaje) {
+      setRingValue(0);
+      return;
+    }
+
+    const reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    if (reduceMotion) {
+      setRingValue(porcentaje);
+      return;
+    }
+
+    const frame = window.requestAnimationFrame(() => setRingValue(porcentaje));
+    return () => window.cancelAnimationFrame(frame);
+  }, [porcentaje, resultado.tienePuntaje]);
+
+  const ringOffset = circumference - (ringValue / 100) * circumference;
+
   return (
-    <section className="registro-evento__survey registro-evento__survey--complete">
-      <div className="registro-evento__survey-card">
-        <span className="registro-evento__learn-label">Siguiente paso</span>
-        <h2>Se ha completado la reserva y el cuestionario.</h2>
-        <p>
-          Las cinco respuestas quedan preparadas para la siguiente pantalla de confirmación.
-        </p>
-        <div className="registro-evento__survey-summary" aria-live="polite">
-          {Object.entries(respuestas).map(([indice, respuesta]) => (
-            <div key={indice} className="registro-evento__survey-summary-item">
-              <strong>{Number(indice) + 1}.</strong>
-              <span>{respuesta}</span>
+    <main className="registro-evento">
+      <section className="registro-evento__confirmacion">
+        <div className="registro-evento__confirmacion-band">
+          <div className="registro-evento__confirmacion-card">
+            <div className="registro-evento__confirmacion-foto-wrap">
+              {fotoFallida ? (
+                <div className="registro-evento__confirmacion-foto-fallback" aria-label="Avatar del anfitrión" role="img">
+                  <svg viewBox="0 0 120 120" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+                    <circle cx="60" cy="60" r="60" fill="#D7E5FF" />
+                    <circle cx="60" cy="46" r="22" fill="#7BA7FF" />
+                    <path d="M28 94c9-15 22-22 32-22s23 7 32 22" fill="#7BA7FF" />
+                  </svg>
+                </div>
+              ) : (
+                <img
+                  alt={paginaRegistroEvento.anfitrion.alt}
+                  className="registro-evento__confirmacion-foto"
+                  onError={() => setFotoFallida(true)}
+                  src={paginaRegistroEvento.anfitrion.foto}
+                />
+              )}
             </div>
-          ))}
+
+            <div className="registro-evento__confirmacion-copy">
+              <div className="registro-evento__confirmacion-check" aria-hidden="true">
+                <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                  <path d="M6.5 12.5 10 16l8-9" fill="none" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" />
+                </svg>
+              </div>
+
+              <h2>
+                {nombrePila}, tu lugar está <span>{ayuda.confirmado}</span>
+              </h2>
+
+              <div className="registro-evento__confirmacion-deco" aria-hidden="true">
+                <svg viewBox="0 0 168 14" xmlns="http://www.w3.org/2000/svg">
+                  <path d="M2 10c18-10 31 7 52-1 11-4 25-11 41-3 15 7 11 18 29 4 14-11 13 10 36-4 11-7 20-8 30 8" fill="none" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.2" />
+                </svg>
+              </div>
+
+              <p className="registro-evento__confirmacion-fecha">{paginaRegistroEvento.fecha}</p>
+              <p className="registro-evento__confirmacion-horario">{horario}</p>
+              <p className="registro-evento__confirmacion-texto">{ayuda.texto}</p>
+
+              <button
+                className="registro-evento__button registro-evento__button--confirmacion"
+                onClick={() => {
+                  const bloque = document.getElementById("registro-evento-resultado");
+                  bloque?.scrollIntoView({ behavior: "smooth", block: "start" });
+                }}
+                type="button"
+              >
+                {ayuda.boton}
+              </button>
+            </div>
+          </div>
         </div>
-      </div>
-    </section>
+
+        <section className="registro-evento__resultado" id="registro-evento-resultado">
+          <div className="registro-evento__resultado-grid">
+            <div className="registro-evento__resultado-card registro-evento__resultado-card--ring">
+              {resultado.tienePuntaje ? (
+                <>
+                  <div className="registro-evento__progress-ring" aria-label={`Porcentaje de resultado: ${porcentaje}%`}>
+                    <svg className="registro-evento__progress-svg" viewBox="0 0 120 120" xmlns="http://www.w3.org/2000/svg">
+                      <circle className="registro-evento__progress-bg" cx="60" cy="60" r="46" />
+                      <circle
+                        className="registro-evento__progress-value"
+                        cx="60"
+                        cy="60"
+                        r="46"
+                        style={{ strokeDasharray: circumference, strokeDashoffset: ringOffset }}
+                      />
+                    </svg>
+                    <div className="registro-evento__progress-center">
+                      <strong>{porcentaje}%</strong>
+                    </div>
+                  </div>
+                  <p className="registro-evento__resultado-legend">{ayuda.resultado.leyenda}</p>
+                </>
+              ) : (
+                <div className="registro-evento__resultado-plain">
+                  <div className="registro-evento__resultado-stat">
+                    <strong>{resultado.contestadas}</strong>
+                  </div>
+                  <p>{ayuda.resultado.sinPuntaje}</p>
+                </div>
+              )}
+            </div>
+
+            <div className="registro-evento__resultado-copy">
+              <h3>
+                {ayuda.resultado.tituloInicio}
+                <span>{ayuda.resultado.tituloFinal}</span>
+              </h3>
+              <p>{ayuda.resultado.descripcion}</p>
+
+              <div className="registro-evento__resultado-actions">
+                <button className="registro-evento__button" onClick={onRepetir} type="button">
+                  {ayuda.resultado.repetir}
+                </button>
+              </div>
+            </div>
+          </div>
+        </section>
+      </section>
+    </main>
   );
 }
 
@@ -72,7 +258,8 @@ export default function PaginaRegistroEvento({
     envioRealizado ? "cuestionario" : "formulario",
   );
   const [indicePregunta, setIndicePregunta] = useState(0);
-  const [respuestasCuestionario, setRespuestasCuestionario] = useState<Record<number, string>>({});
+  const [respuestasCuestionario, setRespuestasCuestionario] = useState<Record<number, OpcionRespuesta>>({});
+  const [registroForm, setRegistroForm] = useState({ nombre: "Listo", horario: "" });
   const nombreRef = useRef<HTMLInputElement | null>(null);
 
   useEffect(() => {
@@ -147,10 +334,12 @@ export default function PaginaRegistroEvento({
 
     const calculo = calcularResultado(cuestionario, respuestas);
 
+    const nombreCompleto = `${nombre} ${apellido}`.trim();
+
     onEnviar(
       {
         cuestionarioId: cuestionario.id,
-        nombre: `${nombre} ${apellido}`,
+        nombre: nombreCompleto,
         correo,
         telefono: `${lada}${telefonoSoloDigitos}`,
         respuestas: { horario },
@@ -160,6 +349,10 @@ export default function PaginaRegistroEvento({
       null,
       null,
     );
+    setRegistroForm({
+      nombre: nombre || "Listo",
+      horario,
+    });
     setError("");
     setIndicePregunta(0);
     setRespuestasCuestionario({});
@@ -217,7 +410,7 @@ export default function PaginaRegistroEvento({
                     }}
                     type="button"
                   >
-                    {opcion}
+                    {typeof opcion === "string" ? opcion : opcion.texto}
                   </button>
                 );
               })}
@@ -257,9 +450,16 @@ export default function PaginaRegistroEvento({
 
   if (faseCuestionario === "completado") {
     return (
-      <main className="registro-evento">
-        <PantallaConfirmacionPendiente respuestas={respuestasCuestionario} />
-      </main>
+      <PantallaConfirmacionPendiente
+        horario={registroForm.horario || paginaRegistroEvento.horarioOpciones[0]}
+        nombre={registroForm.nombre}
+        onRepetir={() => {
+          setRespuestasCuestionario({});
+          setIndicePregunta(0);
+          setFaseCuestionario("cuestionario");
+        }}
+        respuestas={respuestasCuestionario}
+      />
     );
   }
 
