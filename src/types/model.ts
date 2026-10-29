@@ -76,6 +76,15 @@ export interface ResultadoPorSegmento {
   }[];
 }
 
+export interface BienvenidaCuestionario {
+  habilitada?: boolean;
+  titulo?: string;
+  descripcion?: string;
+  imagen?: string;
+  tiempoEstimado?: string;
+  textoBoton?: string;
+}
+
 export type Resultado = ResultadoFijo | ResultadoPorSegmento;
 
 interface CuestionarioBase {
@@ -88,6 +97,7 @@ interface CuestionarioBase {
   estilo_visual?: EstiloVisualCuestionario;
   landingTitulo?: string;
   landingDescripcion?: string;
+  bienvenida?: BienvenidaCuestionario;
 }
 
 export type Cuestionario = CuestionarioBase &

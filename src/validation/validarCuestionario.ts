@@ -294,6 +294,39 @@ function esCuestionario(
     });
   }
 
+  if (tienePropiedad(value, "bienvenida")) {
+    if (!esRegistro(value.bienvenida)) {
+      errores.push("cuestionario.bienvenida debe ser un objeto cuando existe.");
+      valido = false;
+    } else {
+      const bienvenida = value.bienvenida;
+      if (tienePropiedad(bienvenida, "habilitada") && typeof bienvenida.habilitada !== "boolean") {
+        errores.push("cuestionario.bienvenida.habilitada debe ser booleano cuando existe.");
+        valido = false;
+      }
+      if (tienePropiedad(bienvenida, "titulo") && !esTexto(bienvenida.titulo)) {
+        errores.push("cuestionario.bienvenida.titulo debe ser un texto no vacío cuando existe.");
+        valido = false;
+      }
+      if (tienePropiedad(bienvenida, "descripcion") && !esTexto(bienvenida.descripcion)) {
+        errores.push("cuestionario.bienvenida.descripcion debe ser un texto no vacío cuando existe.");
+        valido = false;
+      }
+      if (tienePropiedad(bienvenida, "imagen") && typeof bienvenida.imagen !== "string") {
+        errores.push("cuestionario.bienvenida.imagen debe ser un texto cuando existe.");
+        valido = false;
+      }
+      if (tienePropiedad(bienvenida, "tiempoEstimado") && typeof bienvenida.tiempoEstimado !== "string") {
+        errores.push("cuestionario.bienvenida.tiempoEstimado debe ser un texto cuando existe.");
+        valido = false;
+      }
+      if (tienePropiedad(bienvenida, "textoBoton") && !esTexto(bienvenida.textoBoton)) {
+        errores.push("cuestionario.bienvenida.textoBoton debe ser un texto no vacío cuando existe.");
+        valido = false;
+      }
+    }
+  }
+
   if (!Array.isArray(value.preguntas)) {
     errores.push("cuestionario.preguntas debe ser un array.");
     valido = false;

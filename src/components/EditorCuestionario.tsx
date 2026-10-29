@@ -339,6 +339,131 @@ export default function EditorCuestionario({
             </div>
           </section>
 
+          <section
+            aria-labelledby="editor-welcome-heading"
+            className="custom-editor-welcome-settings"
+          >
+            <header className="custom-editor-section-heading">
+              <span aria-hidden="true" className="editor-section-number">02</span>
+              <div>
+                <p className="eyebrow">Antes de empezar</p>
+                <h2 id="editor-welcome-heading">Pantalla de bienvenida</h2>
+                <p>Configura una introducción breve para presentar el diagnóstico antes de las preguntas.</p>
+              </div>
+            </header>
+            <label className="custom-editor-toggle">
+              <input
+                checked={Boolean(cuestionario.bienvenida?.habilitada ?? true)}
+                className="custom-editor-checkbox"
+                onChange={(evento) => setCuestionario((actual) => ({
+                  ...actual,
+                  bienvenida: {
+                    habilitada: evento.target.checked,
+                    titulo: actual.bienvenida?.titulo ?? "Diagnóstico inicial de crecimiento",
+                    descripcion: actual.bienvenida?.descripcion ?? "Antes de empezar, te haremos unas preguntas para entender mejor tu situación actual.",
+                    imagen: actual.bienvenida?.imagen ?? "",
+                    tiempoEstimado: actual.bienvenida?.tiempoEstimado ?? "3-5 minutos",
+                    textoBoton: actual.bienvenida?.textoBoton ?? "Iniciar diagnóstico",
+                  },
+                }))}
+                type="checkbox"
+              />
+              Mostrar pantalla de bienvenida
+            </label>
+            {Boolean(cuestionario.bienvenida?.habilitada ?? true) && (
+              <div className="custom-editor-welcome-body">
+                <label>
+                  Título de bienvenida
+                  <input
+                    onChange={(evento) => setCuestionario((actual) => ({
+                      ...actual,
+                      bienvenida: {
+                        habilitada: actual.bienvenida?.habilitada ?? true,
+                        titulo: evento.target.value,
+                        descripcion: actual.bienvenida?.descripcion ?? "",
+                        imagen: actual.bienvenida?.imagen ?? "",
+                        tiempoEstimado: actual.bienvenida?.tiempoEstimado ?? "",
+                        textoBoton: actual.bienvenida?.textoBoton ?? "Iniciar diagnóstico",
+                      },
+                    }))}
+                    value={cuestionario.bienvenida?.titulo ?? "Diagnóstico inicial de crecimiento"}
+                  />
+                </label>
+                <label>
+                  Descripción
+                  <textarea
+                    onChange={(evento) => setCuestionario((actual) => ({
+                      ...actual,
+                      bienvenida: {
+                        habilitada: actual.bienvenida?.habilitada ?? true,
+                        titulo: actual.bienvenida?.titulo ?? "Diagnóstico inicial de crecimiento",
+                        descripcion: evento.target.value,
+                        imagen: actual.bienvenida?.imagen ?? "",
+                        tiempoEstimado: actual.bienvenida?.tiempoEstimado ?? "",
+                        textoBoton: actual.bienvenida?.textoBoton ?? "Iniciar diagnóstico",
+                      },
+                    }))}
+                    value={cuestionario.bienvenida?.descripcion ?? "Antes de empezar, te haremos unas preguntas para entender mejor tu situación actual."}
+                  />
+                </label>
+                <label>
+                  Imagen opcional (URL)
+                  <input
+                    onChange={(evento) => setCuestionario((actual) => ({
+                      ...actual,
+                      bienvenida: {
+                        habilitada: actual.bienvenida?.habilitada ?? true,
+                        titulo: actual.bienvenida?.titulo ?? "Diagnóstico inicial de crecimiento",
+                        descripcion: actual.bienvenida?.descripcion ?? "",
+                        imagen: evento.target.value,
+                        tiempoEstimado: actual.bienvenida?.tiempoEstimado ?? "",
+                        textoBoton: actual.bienvenida?.textoBoton ?? "Iniciar diagnóstico",
+                      },
+                    }))}
+                    value={cuestionario.bienvenida?.imagen ?? ""}
+                  />
+                </label>
+                <div className="custom-editor-welcome-row">
+                  <label>
+                    Tiempo estimado
+                    <input
+                      onChange={(evento) => setCuestionario((actual) => ({
+                        ...actual,
+                        bienvenida: {
+                          habilitada: actual.bienvenida?.habilitada ?? true,
+                          titulo: actual.bienvenida?.titulo ?? "Diagnóstico inicial de crecimiento",
+                          descripcion: actual.bienvenida?.descripcion ?? "",
+                          imagen: actual.bienvenida?.imagen ?? "",
+                          tiempoEstimado: evento.target.value,
+                          textoBoton: actual.bienvenida?.textoBoton ?? "Iniciar diagnóstico",
+                        },
+                      }))}
+                      placeholder="3-5 minutos"
+                      value={cuestionario.bienvenida?.tiempoEstimado ?? ""}
+                    />
+                  </label>
+                  <label>
+                    Texto del botón
+                    <input
+                      onChange={(evento) => setCuestionario((actual) => ({
+                        ...actual,
+                        bienvenida: {
+                          habilitada: actual.bienvenida?.habilitada ?? true,
+                          titulo: actual.bienvenida?.titulo ?? "Diagnóstico inicial de crecimiento",
+                          descripcion: actual.bienvenida?.descripcion ?? "",
+                          imagen: actual.bienvenida?.imagen ?? "",
+                          tiempoEstimado: actual.bienvenida?.tiempoEstimado ?? "",
+                          textoBoton: evento.target.value,
+                        },
+                      }))}
+                      value={cuestionario.bienvenida?.textoBoton ?? "Iniciar diagnóstico"}
+                    />
+                  </label>
+                </div>
+              </div>
+            )}
+          </section>
+
       <section
         aria-labelledby="editor-questions-heading"
         className="custom-editor-questions"

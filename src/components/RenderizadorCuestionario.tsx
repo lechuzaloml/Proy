@@ -19,6 +19,7 @@ export interface EstadoFlujoCuestionario {
   consentimientoAceptado: boolean;
   indicePreguntaActual: number;
   mostrarPreguntas: boolean;
+  mostrarBienvenida?: boolean;
 }
 
 interface RenderizadorCuestionarioProps {
@@ -68,11 +69,20 @@ export default function RenderizadorCuestionario({
   const [indicePreguntaActual, setIndicePreguntaActual] = useState(
     () => estadoInicial?.indicePreguntaActual ?? 0,
   );
-  const [mostrarPreguntas, setMostrarPreguntas] = useState(
+  const [mostrarBienvenida, setMostrarBienvenida] = useState(
     () =>
-      estadoInicial?.mostrarPreguntas ??
-      cuestionario.posicion_contacto !== "inicio",
+      estadoInicial?.mostrarBienvenida ??
+      Boolean(cuestionario.bienvenida?.habilitada),
   );
+  const [mostrarPreguntas, setMostrarPreguntas] = useState(() => {
+    if (estadoInicial?.mostrarPreguntas !== undefined) {
+      return estadoInicial.mostrarPreguntas;
+    }
+    if (mostrarBienvenida) {
+      return false;
+    }
+    return cuestionario.posicion_contacto !== "inicio";
+  });
   const [generandoResultado, setGenerandoResultado] = useState(false);
   const estiloVisual = cuestionario.estilo_visual;
 
@@ -87,6 +97,7 @@ export default function RenderizadorCuestionario({
         consentimientoAceptado,
         indicePreguntaActual,
         mostrarPreguntas,
+        mostrarBienvenida,
         ...siguiente,
       },
       modoHistorial,
@@ -251,16 +262,41 @@ export default function RenderizadorCuestionario({
     setDatosContacto(datos);
     if (cuestionario.posicion_contacto === "inicio") {
       setMostrarPreguntas(true);
+      setMostrarBienvenida(false);
       publicarEstado(
         {
           datosContacto: datos,
           mostrarPreguntas: true,
+          mostrarBienvenida: false,
         },
         "avanzar",
       );
       return;
     }
     finalizar(datos);
+  }
+
+  function iniciarDiagnostico() {
+    setMostrarBienvenida(false);
+    if (cuestionario.posicion_contacto === "inicio") {
+      setMostrarPreguntas(false);
+      publicarEstado(
+        {
+          mostrarBienvenida: false,
+          mostrarPreguntas: false,
+        },
+        "avanzar",
+      );
+      return;
+    }
+    setMostrarPreguntas(true);
+    publicarEstado(
+      {
+        mostrarBienvenida: false,
+        mostrarPreguntas: true,
+      },
+      "avanzar",
+    );
   }
 
   const entradas = cuestionario.preguntas.map((pregunta, indice) => ({
@@ -553,6 +589,7 @@ export default function RenderizadorCuestionario({
   }
 
   const secciones = cuestionario.secciones ?? [];
+  const bienvenida = cuestionario.bienvenida;
 
   return (
     <main
@@ -570,7 +607,37 @@ export default function RenderizadorCuestionario({
         <p className="eyebrow">Cuestionario</p>
         <h1>{cuestionario.cliente}</h1>
       </header>
-      {!mostrarPreguntas && (
+      {bienvenida?.habilitada && mostrarBienvenida && !mostrarPreguntas && !datosContacto && (
+        <section className="questionnaire-welcome" aria-live="polite">
+          <div className="questionnaire-welcome-card">
+            {bienvenida.imagen && (
+              <img
+                alt={bienvenida.titulo ?? "Bienvenida"}
+                className="questionnaire-welcome-image"
+                src={bienvenida.imagen}
+              />
+            )}
+            <div className="questionnaire-welcome-copy">
+              <p className="eyebrow">Antes de empezar</p>
+              <h2>{bienvenida.titulo || "Diagnóstico inicial de crecimiento"}</h2>
+              <p>{bienvenida.descripcion || "Te haremos unas preguntas para entender mejor tu situación actual."}</p>
+              {bienvenida.tiempoEstimado && (
+                <div className="questionnaire-welcome-meta">
+                  <span>{bienvenida.tiempoEstimado}</span>
+                </div>
+              )}
+              <button
+                className="submit-button"
+                onClick={iniciarDiagnostico}
+                type="button"
+              >
+                {bienvenida.textoBoton || "Iniciar diagnóstico"}
+              </button>
+            </div>
+          </div>
+        </section>
+      )}
+      {!mostrarPreguntas && !mostrarBienvenida && (
         <div className="contact-form-view">
           <FormularioContacto
             datosIniciales={datosContacto ?? undefined}

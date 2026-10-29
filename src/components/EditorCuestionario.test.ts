@@ -3,8 +3,10 @@ import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it, vi } from "vitest";
 import casoNuevo from "../../spec/Ejemplos/caso-nuevo.json";
 import EditorCuestionario from "./EditorCuestionario";
+import RenderizadorCuestionario from "./RenderizadorCuestionario";
 import { validarCuestionario } from "../validation/validarCuestionario";
 import { cambiarModoScoring } from "../templates/editarCuestionario";
+import type { Cuestionario } from "../types/model";
 
 const validacion = validarCuestionario(casoNuevo);
 if (!validacion.valido) {
@@ -25,6 +27,48 @@ function renderEditor(
     onDescartar: vi.fn(),
     onEliminar: vi.fn(),
   }));
+}
+
+function crearCuestionarioFlujo({
+  posicionContacto,
+  bienvenidaHabilitada,
+}: {
+  posicionContacto: "inicio" | "final";
+  bienvenidaHabilitada: boolean;
+}): Cuestionario {
+  return {
+    id: "flujo-prueba",
+    cliente: "Clear-IA",
+    estado: "publicado",
+    posicion_contacto: posicionContacto,
+    preguntas: [
+      {
+        id: "pregunta-1",
+        texto: "¿Cuál es tu prioridad principal?",
+        tipo: "opcion_multiple",
+        opciones: [
+          { texto: "Ventas" },
+          { texto: "Marketing" },
+        ],
+        participa_scoring: false,
+      },
+    ],
+    usa_scoring: false,
+    resultado: {
+      tipo: "fijo",
+      contenido: "Resultado del diagnóstico",
+    },
+    ...(bienvenidaHabilitada
+      ? {
+          bienvenida: {
+            habilitada: true,
+            titulo: "Diagnóstico inicial de crecimiento",
+            descripcion: "Antes de empezar, te haremos unas preguntas.",
+            textoBoton: "Iniciar diagnóstico",
+          },
+        }
+      : {}),
+  };
 }
 
 describe("acciones del editor de copias", () => {
@@ -98,5 +142,71 @@ describe("acciones del editor de copias", () => {
 
     expect(indicePregunta).toBeGreaterThan(-1);
     expect(indiceContacto).toBeGreaterThan(indicePregunta);
+  });
+
+  it("muestra la bienvenida antes del cuestionario cuando los datos personales están al inicio", () => {
+    const cuestionario = crearCuestionarioFlujo({
+      posicionContacto: "inicio",
+      bienvenidaHabilitada: true,
+    });
+    const markup = renderToStaticMarkup(
+      createElement(RenderizadorCuestionario, {
+        cuestionario,
+        onEnvio: vi.fn(),
+      }),
+    );
+
+    expect(markup).toContain("Antes de empezar");
+    expect(markup).toContain("Iniciar diagnóstico");
+    expect(markup).not.toContain("Datos de contacto");
+  });
+
+  it("muestra la bienvenida antes del cuestionario aunque los datos personales sean finales", () => {
+    const cuestionario = crearCuestionarioFlujo({
+      posicionContacto: "final",
+      bienvenidaHabilitada: true,
+    });
+    const markup = renderToStaticMarkup(
+      createElement(RenderizadorCuestionario, {
+        cuestionario,
+        onEnvio: vi.fn(),
+      }),
+    );
+
+    expect(markup).toContain("Antes de empezar");
+    expect(markup).toContain("Iniciar diagnóstico");
+    expect(markup).not.toContain("Completa tus datos para continuar con el cuestionario.");
+  });
+
+  it("mantiene el flujo directo cuando la bienvenida está desactivada y los datos personales están al inicio", () => {
+    const cuestionario = crearCuestionarioFlujo({
+      posicionContacto: "inicio",
+      bienvenidaHabilitada: false,
+    });
+    const markup = renderToStaticMarkup(
+      createElement(RenderizadorCuestionario, {
+        cuestionario,
+        onEnvio: vi.fn(),
+      }),
+    );
+
+    expect(markup).not.toContain("Antes de empezar");
+    expect(markup).toContain("Datos de contacto");
+  });
+
+  it("mantiene el cuestionario directo cuando la bienvenida está desactivada y los datos personales están al final", () => {
+    const cuestionario = crearCuestionarioFlujo({
+      posicionContacto: "final",
+      bienvenidaHabilitada: false,
+    });
+    const markup = renderToStaticMarkup(
+      createElement(RenderizadorCuestionario, {
+        cuestionario,
+        onEnvio: vi.fn(),
+      }),
+    );
+
+    expect(markup).not.toContain("Antes de empezar");
+    expect(markup).toContain("¿Cuál es tu prioridad principal?");
   });
 });

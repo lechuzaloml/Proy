@@ -9,6 +9,12 @@ export function crearCuestionarioDesdeCero(): Cuestionario {
     posicion_contacto: "inicio",
     preguntas: [],
     usa_scoring: false,
+    bienvenida: {
+      habilitada: true,
+      titulo: "Diagnóstico inicial de crecimiento",
+      descripcion: "Antes de empezar, te haremos unas preguntas para entender mejor tu situación actual y darte unas recomendaciones útiles.",
+      textoBoton: "Iniciar diagnóstico",
+    },
     resultado: {
       tipo: "fijo",
       contenido: "Gracias por completar el cuestionario.",
