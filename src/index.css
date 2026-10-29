@@ -6839,8 +6839,9 @@ html {
 }
 
 .privacy-consent > label {
+  display: grid;
   grid-template-columns: 1.2rem minmax(0, 1fr);
-  align-items: start;
+  align-items: center;
   gap: 0.7rem;
   color: #333333;
   font-size: 0.82rem;
@@ -6848,7 +6849,7 @@ html {
 }
 
 .privacy-consent input[type="checkbox"] {
-  margin: 0.1rem 0 0;
+  margin: 0;
 }
 
 .contact-form > .demo-notice {
