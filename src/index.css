@@ -5563,6 +5563,10 @@ button {
   letter-spacing: -0.035em;
 }
 
+.admin-header h1 + p {
+  color: #FFFFFF;
+}
+
 .admin-filters {
   grid-template-columns: repeat(4, minmax(0, 1fr));
   padding: clamp(1rem, 2vw, 1.5rem);
