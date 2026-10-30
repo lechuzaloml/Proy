@@ -60,6 +60,21 @@ describe("puedeCrearCopiasPlantilla", () => {
     )).toBe(true);
   });
 
+  it("permite al propietario de una empresa crear copias sin permiso explícito", () => {
+    expect(puedeCrearCopiasPlantilla(
+      { correo: "owner@example.test", correoVerificado: true },
+      false,
+      "demo-a",
+      [{
+        empresaId: "demo-a",
+        correo: "owner@example.test",
+        estado: "activo",
+        rol: "propietario",
+        permisos: {},
+      }],
+    )).toBe(true);
+  });
+
   it("deniega al administrador de otra empresa si no tiene membresía en demo-a", () => {
     expect(puedeCrearCopiasPlantilla(
       { correo: "admin@example.test", correoVerificado: true },

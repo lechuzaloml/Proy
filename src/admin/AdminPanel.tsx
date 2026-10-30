@@ -42,6 +42,11 @@ import {
 } from "./funcionesLeads";
 import ConsolaPlataforma from "./ConsolaPlataforma";
 import GestorMiembros from "./GestorMiembros";
+import {
+  esAdministradorEmpresa,
+  normalizarRolMiembro,
+  type RolMiembroEmpresa,
+} from "./rolesMiembros";
 
 type EstadoAcceso = "cargando" | "sin-sesion" | "revisando" | "denegado" | "listo";
 type EstadoLead =
@@ -52,7 +57,7 @@ type EstadoLead =
   | "descartado";
 
 interface PermisosMiembro {
-  rol: string;
+  rol: RolMiembroEmpresa;
   verLeads: boolean;
   gestionarLeads: boolean;
   editarCuestionarios: boolean;
@@ -92,8 +97,8 @@ function leerPermisos(datos: DocumentData): PermisosMiembro {
     typeof datos.permisos === "object" && datos.permisos !== null
       ? datos.permisos as Record<string, unknown>
       : {};
-  const rol = typeof datos.rol === "string" ? datos.rol : "";
-  const esAdmin = rol === "admin";
+  const rol = normalizarRolMiembro(datos.rol);
+  const esAdmin = esAdministradorEmpresa(rol);
   return {
     rol,
     verLeads: esAdmin || permisos.verLeads === true,
@@ -421,10 +426,10 @@ export default function AdminPanel() {
     esPlataforma || empresaActiva?.permisos.gestionarLeads,
   );
   const puedeEliminar = Boolean(
-    esPlataforma || empresaActiva?.permisos.rol === "admin",
+    esPlataforma || esAdministradorEmpresa(empresaActiva?.permisos.rol),
   );
   const puedeGestionarMiembros = Boolean(
-    esPlataforma || empresaActiva?.permisos.rol === "admin",
+    esPlataforma || esAdministradorEmpresa(empresaActiva?.permisos.rol),
   );
 
   useEffect(() => {
@@ -916,6 +921,9 @@ export default function AdminPanel() {
         <GestorMiembros
           empresaId={empresaIdActiva}
           empresaNombre={empresaActiva.nombre}
+          rolActual={empresaActiva.permisos.rol}
+          correoActual={usuario.email ?? undefined}
+          plataforma={esPlataforma}
         />
       )}
     </main>

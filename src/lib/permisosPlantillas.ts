@@ -1,3 +1,5 @@
+import { esAdministradorEmpresa } from "../admin/rolesMiembros";
+
 export interface UsuarioPlantillas {
   correo: string | null;
   correoVerificado: boolean;
@@ -36,6 +38,7 @@ export function puedeCrearCopiasPlantilla(
     return membresia.empresaId === empresaId &&
       membresia.correo === correo &&
       membresia.estado === "activo" &&
-      (membresia.rol === "admin" || permisos.editarCuestionarios === true);
+      (esAdministradorEmpresa(membresia.rol) ||
+        permisos.editarCuestionarios === true);
   });
 }

@@ -177,7 +177,7 @@ export default function ConsolaPlataforma({
         correoNormalizado,
       ), {
         correo: correoNormalizado,
-        rol: "admin",
+        rol: "propietario",
         permisos: {
           verLeads: true,
           gestionarLeads: true,

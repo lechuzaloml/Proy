@@ -10,6 +10,13 @@ import {
 } from "firebase/firestore";
 import { db } from "../lib/firebase";
 import { normalizarCorreoEmpresa } from "./validacionesEmpresa";
+import {
+  normalizarRolMiembro,
+  puedeBorrarMiembro,
+  puedeEditarMiembro,
+  rolesAsignablesPor,
+  type RolMiembroEmpresa,
+} from "./rolesMiembros";
 
 const PERMISOS = [
   ["verLeads", "Ver leads"],
@@ -19,7 +26,7 @@ const PERMISOS = [
 
 interface MiembroEmpresa {
   correo: string;
-  rol: "admin" | "usuario";
+  rol: RolMiembroEmpresa;
   estado: "activo" | "inactivo";
   permisos: Record<(typeof PERMISOS)[number][0], boolean>;
   creadoEn?: unknown;
@@ -32,7 +39,7 @@ function parsearMiembro(data: DocumentData): MiembroEmpresa {
       : {};
   return {
     correo: typeof data.correo === "string" ? data.correo : "",
-    rol: data.rol === "admin" ? "admin" : "usuario",
+    rol: normalizarRolMiembro(data.rol),
     estado: data.estado === "activo" ? "activo" : "inactivo",
     permisos: {
       verLeads: permisos.verLeads === true,
@@ -52,12 +59,16 @@ const PERMISOS_VACIOS: MiembroEmpresa["permisos"] = {
 interface GestorMiembrosProps {
   empresaId: string;
   empresaNombre: string;
+  rolActual?: RolMiembroEmpresa;
+  correoActual?: string;
   plataforma?: boolean;
 }
 
 export default function GestorMiembros({
   empresaId,
   empresaNombre,
+  rolActual,
+  correoActual,
   plataforma = false,
 }: GestorMiembrosProps) {
   const [miembros, setMiembros] = useState<MiembroEmpresa[]>([]);
@@ -70,6 +81,7 @@ export default function GestorMiembros({
   const [cargando, setCargando] = useState(true);
   const [guardando, setGuardando] = useState(false);
   const [error, setError] = useState("");
+  const rolesAsignables = rolesAsignablesPor(rolActual ?? null, plataforma);
 
   useEffect(() => {
     const database = db;
@@ -119,6 +131,26 @@ export default function GestorMiembros({
       return;
     }
 
+    const miembroActual = miembros.find(
+      (miembro) => miembro.correo === correoNormalizado,
+    );
+    if (!rolesAsignables.includes(rol)) {
+      setError("No puedes asignar ese rol.");
+      return;
+    }
+    if (
+      miembroActual &&
+      !puedeEditarMiembro(
+        rolActual ?? null,
+        miembroActual.rol,
+        miembroActual.correo === correoActual?.trim().toLowerCase(),
+        plataforma,
+      )
+    ) {
+      setError("No puedes editar este miembro.");
+      return;
+    }
+
     setGuardando(true);
     setError("");
     try {
@@ -128,9 +160,6 @@ export default function GestorMiembros({
         empresaId,
         "miembros",
         correoNormalizado,
-      );
-      const miembroActual = miembros.find(
-        (miembro) => miembro.correo === correoNormalizado,
       );
       await setDoc(miembroRef, {
         correo: correoNormalizado,
@@ -171,7 +200,22 @@ export default function GestorMiembros({
 
   async function bajaMiembro(correoMiembro: string) {
     const database = db;
-    if (!database) {
+    const miembro = miembros.find(
+      (candidato) => candidato.correo === correoMiembro,
+    );
+    if (
+      !database ||
+      !miembro ||
+      !puedeBorrarMiembro(
+        rolActual ?? null,
+        miembro.rol,
+        miembro.correo === correoActual?.trim().toLowerCase(),
+        plataforma,
+      )
+    ) {
+      if (database && miembro) {
+        setError("No puedes dar de baja a este miembro.");
+      }
       return;
     }
     setError("");
@@ -220,8 +264,15 @@ export default function GestorMiembros({
             onChange={(evento) => setRol(evento.target.value as MiembroEmpresa["rol"])}
             value={rol}
           >
-            <option value="usuario">Usuario</option>
-            <option value="admin">Administrador</option>
+            {rolesAsignables.map((rolDisponible) => (
+              <option key={rolDisponible} value={rolDisponible}>
+                {rolDisponible === "propietario"
+                  ? "Propietario"
+                  : rolDisponible === "admin"
+                    ? "Administrador"
+                    : "Usuario"}
+              </option>
+            ))}
           </select>
         </label>
         <label>
@@ -297,29 +348,46 @@ export default function GestorMiembros({
                     .join(", ") || "Sin permisos explícitos"}
                 </small>
               </div>
-              <button
-                className="secondary-button"
-                onClick={() => {
-                  setCorreo(miembro.correo);
-                  setCorreoEdicion(miembro.correo);
-                  setRol(miembro.rol);
-                  setEstado(miembro.estado);
-                  setPermisos({ ...miembro.permisos });
-                }}
-                type="button"
-              >
-                Editar
-              </button>
-              <button
-                className="admin-danger-button"
-                onClick={() => {
-                  if (window.confirm(`¿Dar de baja a ${miembro.correo}?`)) {
-                    void bajaMiembro(miembro.correo);
-                  }
-                }}
-              >
-                Dar de baja
-              </button>
+              {puedeEditarMiembro(
+                rolActual ?? null,
+                miembro.rol,
+                miembro.correo === correoActual?.trim().toLowerCase(),
+                plataforma,
+              ) && puedeBorrarMiembro(
+                rolActual ?? null,
+                miembro.rol,
+                miembro.correo === correoActual?.trim().toLowerCase(),
+                plataforma,
+              ) ? (
+                <>
+                  <button
+                    className="secondary-button"
+                    onClick={() => {
+                      setCorreo(miembro.correo);
+                      setCorreoEdicion(miembro.correo);
+                      setRol(miembro.rol);
+                      setEstado(miembro.estado);
+                      setPermisos({ ...miembro.permisos });
+                    }}
+                    type="button"
+                  >
+                    Editar
+                  </button>
+                  <button
+                    className="admin-danger-button"
+                    onClick={() => {
+                      if (window.confirm(`¿Dar de baja a ${miembro.correo}?`)) {
+                        void bajaMiembro(miembro.correo);
+                      }
+                    }}
+                    type="button"
+                  >
+                    Dar de baja
+                  </button>
+                </>
+              ) : (
+                <span className="admin-note">{miembro.rol}</span>
+              )}
             </li>
           ))}
         </ul>

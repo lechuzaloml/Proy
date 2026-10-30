@@ -33,7 +33,14 @@ const PERSONALIZED_QUESTIONNAIRE_ID = "personalizado-emulator-copy";
 const COMPANY_CLEARIA = "clearia";
 const COMPANY_B = "demo-b";
 const COMPANY_DEMO_A = "demo-a";
+const COMPANY_MEMBER_ROLES = "demo-member-roles";
 const DEMO_A_MEMBER_EMAIL = "demo-a-only@example.invalid";
+const OWNER_EMAIL = "owner@example.invalid";
+const OTHER_OWNER_EMAIL = "other-owner@example.invalid";
+const ADMIN_EMAIL = "company-admin@example.invalid";
+const OTHER_ADMIN_EMAIL = "other-admin@example.invalid";
+const USER_EMAIL = "company-user@example.invalid";
+const OTHER_USER_EMAIL = "other-user@example.invalid";
 
 let environment: RulesTestEnvironment;
 type TestFirestore = ReturnType<RulesTestContext["firestore"]>;
@@ -188,6 +195,39 @@ async function seedFixtures(): Promise<void> {
         `empresas/demo-public/cuestionarios/${DRAFT_QUESTIONNAIRE_ID}/versiones/v1`,
       ), { estado: "borrador", numero: 1 }),
     ]);
+  });
+}
+
+function documentoMiembro(correo: string, rol: string) {
+  return {
+    correo,
+    rol,
+    estado: "activo",
+    permisos: {},
+  };
+}
+
+async function prepararMiembrosDePrueba(): Promise<void> {
+  await environment.withSecurityRulesDisabled(async (context) => {
+    const database = context.firestore();
+    await setDoc(doc(database, `empresas/${COMPANY_MEMBER_ROLES}`), {
+      nombre: "Empresa sintética para roles",
+      estado: "activa",
+      planId: "test",
+    });
+    await Promise.all([
+      [OWNER_EMAIL, "propietario"],
+      [OTHER_OWNER_EMAIL, "propietario"],
+      [ADMIN_EMAIL, "admin"],
+      [OTHER_ADMIN_EMAIL, "admin"],
+      [USER_EMAIL, "usuario"],
+      [OTHER_USER_EMAIL, "usuario"],
+    ].map(([correo, rol]) =>
+      setDoc(
+        doc(database, `empresas/${COMPANY_MEMBER_ROLES}/miembros/${correo}`),
+        documentoMiembro(correo, rol),
+      )
+    ));
   });
 }
 
@@ -947,5 +987,157 @@ describe("reglas locales de Firestore", () => {
     expect((await getDoc(referencia)).data()?.nombre).toBe(
       "Copia de plataforma actualizada",
     );
+  });
+
+  it("un admin no puede editar ni borrar a un propietario ni a otro admin", async () => {
+    await prepararMiembrosDePrueba();
+    const database = contextoMiembro(ADMIN_EMAIL).firestore();
+    const propietario = doc(
+      database,
+      `empresas/${COMPANY_MEMBER_ROLES}/miembros/${OWNER_EMAIL}`,
+    );
+    const otroAdmin = doc(
+      database,
+      `empresas/${COMPANY_MEMBER_ROLES}/miembros/${OTHER_ADMIN_EMAIL}`,
+    );
+
+    await assertPermissionDenied(updateDoc(propietario, {
+      estado: "inactivo",
+    }));
+    await assertPermissionDenied(deleteDoc(propietario));
+    await assertPermissionDenied(updateDoc(otroAdmin, {
+      estado: "inactivo",
+    }));
+    await assertPermissionDenied(deleteDoc(otroAdmin));
+  });
+
+  it("un admin sí gestiona usuarios, pero no puede crear un propietario", async () => {
+    await prepararMiembrosDePrueba();
+    const database = contextoMiembro(ADMIN_EMAIL).firestore();
+    const usuario = doc(
+      database,
+      `empresas/${COMPANY_MEMBER_ROLES}/miembros/${USER_EMAIL}`,
+    );
+
+    await assertSucceeds(updateDoc(usuario, { estado: "inactivo" }));
+    await assertSucceeds(deleteDoc(usuario));
+    await assertSucceeds(setDoc(
+      doc(
+        database,
+        `empresas/${COMPANY_MEMBER_ROLES}/miembros/new-user@example.invalid`,
+      ),
+      documentoMiembro("new-user@example.invalid", "usuario"),
+    ));
+    await assertPermissionDenied(setDoc(
+      doc(
+        database,
+        `empresas/${COMPANY_MEMBER_ROLES}/miembros/new-owner@example.invalid`,
+      ),
+      documentoMiembro("new-owner@example.invalid", "propietario"),
+    ));
+  });
+
+  it("el propietario gestiona admins y usuarios, pero no a otro propietario ni a sí mismo", async () => {
+    await prepararMiembrosDePrueba();
+    const database = contextoMiembro(OWNER_EMAIL).firestore();
+    const admin = doc(
+      database,
+      `empresas/${COMPANY_MEMBER_ROLES}/miembros/${ADMIN_EMAIL}`,
+    );
+    const otroAdmin = doc(
+      database,
+      `empresas/${COMPANY_MEMBER_ROLES}/miembros/${OTHER_ADMIN_EMAIL}`,
+    );
+    const otroUsuario = doc(
+      database,
+      `empresas/${COMPANY_MEMBER_ROLES}/miembros/${OTHER_USER_EMAIL}`,
+    );
+    const otroPropietario = doc(
+      database,
+      `empresas/${COMPANY_MEMBER_ROLES}/miembros/${OTHER_OWNER_EMAIL}`,
+    );
+    const propietario = doc(
+      database,
+      `empresas/${COMPANY_MEMBER_ROLES}/miembros/${OWNER_EMAIL}`,
+    );
+
+    await assertSucceeds(updateDoc(admin, { estado: "inactivo" }));
+    await assertSucceeds(deleteDoc(otroAdmin));
+    await assertSucceeds(updateDoc(otroUsuario, { estado: "inactivo" }));
+    await assertSucceeds(deleteDoc(otroUsuario));
+    await assertSucceeds(setDoc(
+      doc(
+        database,
+        `empresas/${COMPANY_MEMBER_ROLES}/miembros/new-admin@example.invalid`,
+      ),
+      documentoMiembro("new-admin@example.invalid", "admin"),
+    ));
+    await assertSucceeds(setDoc(
+      doc(
+        database,
+        `empresas/${COMPANY_MEMBER_ROLES}/miembros/new-user@example.invalid`,
+      ),
+      documentoMiembro("new-user@example.invalid", "usuario"),
+    ));
+    await assertPermissionDenied(updateDoc(otroPropietario, {
+      estado: "inactivo",
+    }));
+    await assertPermissionDenied(deleteDoc(otroPropietario));
+    await assertPermissionDenied(updateDoc(propietario, { rol: "admin" }));
+    await assertPermissionDenied(deleteDoc(propietario));
+    await assertPermissionDenied(setDoc(
+      doc(
+        database,
+        `empresas/${COMPANY_MEMBER_ROLES}/miembros/new-owner@example.invalid`,
+      ),
+      documentoMiembro("new-owner@example.invalid", "propietario"),
+    ));
+  });
+
+  it("un usuario sin rol de administrador no puede crear, editar ni borrar miembros", async () => {
+    await prepararMiembrosDePrueba();
+    const database = contextoMiembro(USER_EMAIL).firestore();
+
+    await assertPermissionDenied(setDoc(
+      doc(
+        database,
+        `empresas/${COMPANY_MEMBER_ROLES}/miembros/new-user@example.invalid`,
+      ),
+      documentoMiembro("new-user@example.invalid", "usuario"),
+    ));
+    await assertPermissionDenied(updateDoc(
+      doc(
+        database,
+        `empresas/${COMPANY_MEMBER_ROLES}/miembros/${OTHER_USER_EMAIL}`,
+      ),
+      { estado: "inactivo" },
+    ));
+    await assertPermissionDenied(deleteDoc(doc(
+      database,
+      `empresas/${COMPANY_MEMBER_ROLES}/miembros/${OTHER_USER_EMAIL}`,
+    )));
+  });
+
+  it("plataforma puede crear, cambiar y quitar propietarios", async () => {
+    await prepararMiembrosDePrueba();
+    const database = contextoMiembro(PLATFORM_ADMIN_EMAIL).firestore();
+    const propietario = doc(
+      database,
+      `empresas/${COMPANY_MEMBER_ROLES}/miembros/${OWNER_EMAIL}`,
+    );
+    const otroPropietario = doc(
+      database,
+      `empresas/${COMPANY_MEMBER_ROLES}/miembros/${OTHER_OWNER_EMAIL}`,
+    );
+
+    await assertSucceeds(setDoc(
+      doc(
+        database,
+        `empresas/${COMPANY_MEMBER_ROLES}/miembros/platform-owner@example.invalid`,
+      ),
+      documentoMiembro("platform-owner@example.invalid", "propietario"),
+    ));
+    await assertSucceeds(updateDoc(propietario, { rol: "usuario" }));
+    await assertSucceeds(deleteDoc(otroPropietario));
   });
 });

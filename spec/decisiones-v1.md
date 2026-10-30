@@ -50,3 +50,6 @@ sin modificar sus diez reglas.
     evento (autoevaluación previa, sin consecuencias para quien responde) se
     muestra el porcentaje global; la Decisión 5 sigue aplicando al diagnóstico
     inicial y a los cuestionarios públicos de las empresas.
+17. Cada empresa tiene un propietario protegido: solo el administrador de
+    plataforma puede crearlo, cambiarlo o quitarlo. Los admins de la empresa
+    solo gestionan usuarios.

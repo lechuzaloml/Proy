@@ -16,11 +16,24 @@ service cloud.firestore {
     }
     function esMiembro(emp) {
       return conSesion()
+        && empresaActiva(emp)
         && exists(/databases/$(database)/documents/empresas/$(emp)/miembros/$(correo()))
         && miembro(emp).data.estado == 'activo';
+    }& miembro(emp).data.estado == 'activo';
+    }
+    function esPropietario(emp) {
+      return esMiembro(emp) && miembro(emp).data.rol == 'propietario';
     }
     function esAdminEmpresa(emp) {
-      return esMiembro(emp) && miembro(emp).data.rol == 'admin';
+      return esMiembro(emp) && miembro(emp).data.rol in ['admin','propietario'];
+    }
+    function datosMiembroValidos(id) {
+      return nuevo().keys().hasOnly(['correo','rol','permisos','estado','creadoEn'])
+        && id == id.lower()
+        && nuevo().correo == id
+        && nuevo().rol in ['propietario','admin','usuario']
+        && nuevo().estado in ['activo','inactivo']
+        && nuevo().permisos is map;
     }
     function tienePermiso(emp, permiso) {
       return esAdminEmpresa(emp)
@@ -135,14 +148,20 @@ service cloud.firestore {
       match /miembros/{id} {
         allow get: if conSesion() && correo() == id;
         allow list: if esAdminEmpresa(emp) || esPlataforma();
-        allow delete: if esAdminEmpresa(emp) || esPlataforma();
-        allow create, update: if (esAdminEmpresa(emp) || esPlataforma())
-          && nuevo().keys().hasOnly(['correo','rol','permisos','estado','creadoEn'])
-          && id == id.lower()
-          && nuevo().correo == id
-          && nuevo().rol in ['admin','usuario']
-          && nuevo().estado in ['activo','inactivo']
-          && nuevo().permisos is map;
+
+        allow create: if datosMiembroValidos(id)
+          && (esPlataforma()
+              || (esPropietario(emp) && nuevo().rol in ['admin','usuario'])
+              || (esAdminEmpresa(emp) && nuevo().rol == 'usuario'));
+
+        allow update: if datosMiembroValidos(id)
+          && (esPlataforma()
+              || (esPropietario(emp) && resource.data.rol in ['admin','usuario'] && nuevo().rol in ['admin','usuario'])
+              || (esAdminEmpresa(emp) && resource.data.rol == 'usuario' && nuevo().rol == 'usuario'));
+
+        allow delete: if esPlataforma()
+          || (esPropietario(emp) && resource.data.rol in ['admin','usuario'])
+          || (esAdminEmpresa(emp) && resource.data.rol == 'usuario');
       }
 
       match /cuestionarios/{cid} {
