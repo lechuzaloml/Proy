@@ -12,6 +12,7 @@ import {
 import { personalizarResultado } from "../logic/personalizarResultado";
 import type { RespuestaParaPersonalizacion } from "../logic/personalizarResultado";
 import type { Presentacion } from "../config/presentacionTemplates";
+import PantallaPreviaCuestionario from "./PantallaPreviaCuestionario";
 
 export interface EstadoFlujoCuestionario {
   respuestas: RespuestasCuestionario;
@@ -590,6 +591,63 @@ export default function RenderizadorCuestionario({
   }
 
   const secciones = cuestionario.secciones ?? [];
+  const mostrarPrevia =
+    Boolean(presentacion) &&
+    (bienvenida.habilitada ?? true) &&
+    mostrarBienvenida &&
+    !mostrarPreguntas &&
+    !datosContacto;
+  const panelPregunta = entradaActual ? (
+    <section
+      className="question-section question-step-panel"
+      key={presentacion ? indicePreguntaActual : 0}
+    >
+      {(!presentacion || !unaPreguntaPorVista) &&
+        entradaActual.pregunta.seccion && <h2>{entradaActual.pregunta.seccion}</h2>}
+      <div className="question-list">{renderPregunta(entradaActual)}</div>
+    </section>
+  ) : null;
+  const navegacionPregunta = entradaActual ? (
+    <nav aria-label="Navegación de preguntas" className="question-step-navigation">
+      <button
+        className="secondary-button"
+        onClick={() => cambiarPregunta(indicePreguntaActual - 1)}
+        disabled={generandoResultado || indicePreguntaActual === 0}
+        type="button"
+      >
+        Anterior
+      </button>
+      {indicePreguntaActual < entradas.length - 1 ? (
+        <button
+          className="submit-button"
+          disabled={
+            generandoResultado ||
+            !preguntaRespondida(indicePreguntaActual)
+          }
+          onClick={() => cambiarPregunta(indicePreguntaActual + 1)}
+          type="button"
+        >
+          Siguiente
+        </button>
+      ) : (
+        <button
+          className="submit-button"
+          disabled={
+            generandoResultado ||
+            !preguntaRespondida(indicePreguntaActual)
+          }
+          onClick={enviarRespuestas}
+          type="button"
+        >
+          {generandoResultado
+            ? "Generando resultado…"
+            : cuestionario.posicion_contacto === "final"
+              ? "Continuar"
+              : "Ver resultado"}
+        </button>
+      )}
+    </nav>
+  ) : null;
 
   return (
     <main
@@ -603,11 +661,31 @@ export default function RenderizadorCuestionario({
           Preparando tu resultado personalizado…
         </p>
       )}
-      <header className="questionnaire-header">
-        <p className="eyebrow">Cuestionario</p>
-        <h1>{cuestionario.cliente}</h1>
-      </header>
-      {(bienvenida.habilitada ?? true) && mostrarBienvenida && !mostrarPreguntas && !datosContacto && (
+      {!mostrarPrevia && (
+        <header className="questionnaire-header">
+          <p className="eyebrow">Cuestionario</p>
+          <h1>{cuestionario.cliente}</h1>
+        </header>
+      )}
+      {mostrarPrevia && (
+        <PantallaPreviaCuestionario
+          cuestionario={cuestionario}
+          descripcion={
+            bienvenida.descripcion ||
+            cuestionario.landingDescripcion ||
+            "Te haremos unas preguntas para entender mejor tu situación actual."
+          }
+          onComenzar={iniciarDiagnostico}
+          requiereConsentimiento={requiereConsentimiento}
+          textoBoton={bienvenida.textoBoton || "Comenzar cuestionario"}
+          titulo={
+            bienvenida.titulo ||
+            cuestionario.landingTitulo ||
+            cuestionario.cliente
+          }
+        />
+      )}
+      {!presentacion && (bienvenida.habilitada ?? true) && mostrarBienvenida && !mostrarPreguntas && !datosContacto && (
         <section className="questionnaire-welcome" aria-live="polite">
           <div className="questionnaire-welcome-card">
             {bienvenida.imagen && (
@@ -653,70 +731,61 @@ export default function RenderizadorCuestionario({
       {mostrarPreguntas && (
         <>
           {unaPreguntaPorVista && entradaActual ? (
-            <>
-              <progress
-                aria-label="Progreso del cuestionario"
-                className="question-progress-bar"
-                max={entradas.length}
-                value={indicePreguntaActual + 1}
-              />
-              <p aria-live="polite" className="question-progress">
-                Pregunta {indicePreguntaActual + 1} de {entradas.length}
-              </p>
-              <section
-                className="question-section question-step-panel"
-                key={presentacion ? indicePreguntaActual : 0}
-              >
-                {(!presentacion || !unaPreguntaPorVista) &&
-                  entradaActual.pregunta.seccion && (
-                    <h2>{entradaActual.pregunta.seccion}</h2>
+            presentacion ? (
+              <div className="question-step-layout">
+                <aside
+                  aria-label="Progreso del cuestionario"
+                  className="question-progress-sidebar"
+                >
+                  <p aria-live="polite" className="question-progress">
+                    Pregunta {indicePreguntaActual + 1} de {entradas.length}
+                  </p>
+                  <progress
+                    aria-label="Progreso del cuestionario"
+                    className="question-progress-bar"
+                    max={entradas.length}
+                    value={indicePreguntaActual + 1}
+                  />
+                  {secciones.length > 0 && (
+                    <ol className="question-progress-sections">
+                      {secciones.map((seccion) => {
+                        const actual =
+                          entradaActual.pregunta.seccion === seccion;
+                        return (
+                          <li
+                            aria-current={actual ? "step" : undefined}
+                            className={
+                              actual ? "question-progress-section-current" : ""
+                            }
+                            key={seccion}
+                          >
+                            {seccion}
+                          </li>
+                        );
+                      })}
+                    </ol>
                   )}
-                <div className="question-list">
-                  {renderPregunta(entradaActual)}
+                </aside>
+                <div className="question-content-card">
+                  {panelPregunta}
+                  {navegacionPregunta}
                 </div>
-              </section>
-              <div className="question-step-navigation">
-                {indicePreguntaActual > 0 && (
-                  <button
-                    className="secondary-button"
-                    onClick={() => cambiarPregunta(indicePreguntaActual - 1)}
-                    disabled={generandoResultado}
-                    type="button"
-                  >
-                    Anterior
-                  </button>
-                )}
-                {indicePreguntaActual < entradas.length - 1 ? (
-                  <button
-                    className="submit-button"
-                    disabled={
-                      generandoResultado ||
-                      !preguntaRespondida(indicePreguntaActual)
-                    }
-                    onClick={() => cambiarPregunta(indicePreguntaActual + 1)}
-                    type="button"
-                  >
-                    Siguiente
-                  </button>
-                ) : (
-                  <button
-                    className="submit-button"
-                    disabled={
-                      generandoResultado ||
-                      !preguntaRespondida(indicePreguntaActual)
-                    }
-                    onClick={enviarRespuestas}
-                    type="button"
-                  >
-                    {generandoResultado
-                      ? "Generando resultado…"
-                      : cuestionario.posicion_contacto === "final"
-                      ? "Continuar"
-                      : "Ver resultado"}
-                  </button>
-                )}
               </div>
-            </>
+            ) : (
+              <>
+                <progress
+                  aria-label="Progreso del cuestionario"
+                  className="question-progress-bar"
+                  max={entradas.length}
+                  value={indicePreguntaActual + 1}
+                />
+                <p aria-live="polite" className="question-progress">
+                  Pregunta {indicePreguntaActual + 1} de {entradas.length}
+                </p>
+                {panelPregunta}
+                {navegacionPregunta}
+              </>
+            )
           ) : secciones.length === 0 ? (
             <div className="question-list">{entradas.map(renderPregunta)}</div>
           ) : (

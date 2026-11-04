@@ -9,6 +9,7 @@ import {
   type RespuestasCuestionario,
   type ResultadoCalculado,
 } from "../logic/calcularResultado";
+import { obtenerPresentacionTemplate } from "../config/presentacionTemplates";
 import type { Cuestionario } from "../types/model";
 import { validarCuestionario } from "../validation/validarCuestionario";
 
@@ -169,6 +170,7 @@ export default function CuestionarioPublico({
       <RenderizadorCuestionario
         cuestionario={cuestionario}
         unaPreguntaPorVista
+        presentacion={obtenerPresentacionTemplate(cuestionario.id)}
         personalizarResultados={
           cuestionario.personalizar_resultado_con_ia === true
         }

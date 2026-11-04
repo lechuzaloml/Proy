@@ -1567,6 +1567,7 @@ textarea {
 .impact-prospect-grid {
   display: grid;
   width: fit-content;
+  margin-inline: auto;
   max-width: 100%;
   grid-template-columns: repeat(10, 12px);
   gap: 7px;
@@ -6033,6 +6034,93 @@ button {
   }
 }
 
+.admin-page.admin-login {
+  display: grid;
+  width: 100%;
+  min-height: 100svh;
+  place-items: center;
+  margin: 0;
+  padding: 1rem;
+  background: var(--color-white);
+  text-align: center;
+}
+
+.admin-login-card {
+  display: flex;
+  width: min(100%, 500px);
+  flex-direction: column;
+  align-items: stretch;
+  justify-content: center;
+  gap: 1rem;
+  padding: clamp(1.5rem, 6vw, 3rem);
+  border: 1px solid var(--color-divider);
+  border-radius: 12px;
+  background: var(--color-white);
+  box-shadow: 0 12px 32px rgb(17 17 17 / 7%);
+  text-align: center;
+}
+
+.admin-page.admin-login .admin-login-card {
+  min-width: 0;
+}
+
+.admin-login-mark {
+  display: grid;
+  width: 4rem;
+  height: 4rem;
+  align-self: center;
+  place-items: center;
+  border: 1px solid var(--color-divider);
+  border-radius: 12px;
+  background: var(--color-light-gray);
+  color: var(--color-dark-gray);
+}
+
+.admin-login-mark svg {
+  width: 2rem;
+  height: 2rem;
+}
+
+.admin-page.admin-login .admin-login-eyebrow {
+  margin: 0;
+  color: var(--color-coral);
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.admin-page.admin-login h1 {
+  color: var(--color-graphite);
+  font-size: clamp(1.5rem, 5vw, 1.9rem);
+  letter-spacing: -0.035em;
+  line-height: 1.2;
+}
+
+.admin-page.admin-login .admin-login-description {
+  max-width: 34ch;
+  align-self: center;
+  color: var(--color-dark-gray);
+  font-size: 0.95rem;
+  line-height: 1.6;
+}
+
+.admin-page.admin-login .submit-button {
+  min-height: 48px;
+  border-radius: 8px;
+}
+
+.admin-page.admin-login .submit-button:focus-visible {
+  outline: 3px solid var(--color-coral);
+  outline-offset: 3px;
+}
+
+.admin-page.admin-login .admin-login-note {
+  color: var(--color-gray);
+  font-size: 0.8rem;
+  line-height: 1.5;
+}
+
 @media (prefers-reduced-motion: reduce) {
   html {
     scroll-behavior: auto;
@@ -9197,11 +9285,11 @@ body.registro-evento-page {
 }
 
 .admin-page.admin-login {
-  width: min(calc(100% - 2rem), 580px);
-  min-height: min(80vh, 760px);
-  align-content: center;
-  margin-inline: auto;
-  padding-block: 2rem;
+  width: 100%;
+  max-width: none;
+  min-height: 100svh;
+  margin: 0;
+  padding: 1rem;
 }
 
 .contact-form {
@@ -9982,5 +10070,426 @@ button[aria-busy="true"] {
   .landing-next-step-button:not(:disabled):active,
   .template-landing-button:not(:disabled):active {
     transform: none;
+  }
+}
+
+.questionnaire-intro {
+  display: grid;
+  width: min(calc(100% - 2rem), 960px);
+  min-height: calc(100svh - 6rem);
+  grid-template-columns: minmax(0, 1.08fr) minmax(16rem, 0.92fr);
+  align-content: center;
+  align-items: center;
+  gap: clamp(2rem, 5vw, 4rem);
+  margin: 0 auto;
+  padding: clamp(1.5rem, 4vw, 3rem);
+  border: 1px solid var(--color-divider);
+  border-radius: 12px;
+  background: var(--color-white);
+  color: var(--color-dark-gray);
+}
+
+.questionnaire-intro-copy,
+.questionnaire-intro-steps {
+  min-width: 0;
+}
+
+.questionnaire-intro-eyebrow {
+  width: fit-content;
+  margin: 0 0 1rem;
+  padding-left: 0.75rem;
+  border-left: 3px solid var(--color-coral);
+  color: var(--color-dark-gray);
+  font-size: 0.9rem;
+  font-weight: 700;
+}
+
+.questionnaire-intro h1 {
+  margin: 0;
+  color: var(--color-graphite);
+  font-size: clamp(2rem, 3.5vw, 3rem);
+  line-height: 1.12;
+  overflow-wrap: anywhere;
+}
+
+.questionnaire-intro-description {
+  margin: 1rem 0 0;
+  color: var(--color-dark-gray);
+  font-size: 1rem;
+  line-height: 1.6;
+}
+
+.questionnaire-intro-facts {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  margin: 1.25rem 0;
+}
+
+.questionnaire-intro-facts span {
+  display: inline-flex;
+  min-height: 44px;
+  align-items: center;
+  padding: 0.6rem 0.9rem;
+  border: 1px solid var(--color-divider);
+  border-radius: 8px;
+  background: var(--color-light-gray);
+  color: var(--color-dark-gray);
+  font-size: 0.9rem;
+  font-weight: 650;
+}
+
+.questionnaire-intro-button {
+  display: block;
+  min-width: min(100%, 16rem);
+  min-height: 48px;
+  margin-top: 0.5rem;
+  padding: 0.75rem 1.25rem;
+  border: 1px solid var(--color-graphite);
+  border-radius: 8px;
+  background: var(--color-graphite);
+  color: var(--color-white);
+  font: inherit;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.questionnaire-intro-button:hover {
+  background: var(--color-dark-gray);
+}
+
+.questionnaire-intro-button:focus-visible,
+.questionnaire-intro a:focus-visible,
+.questionnaire-intro summary:focus-visible {
+  outline: 3px solid var(--color-coral);
+  outline-offset: 3px;
+}
+
+.questionnaire-intro-notice {
+  margin: 0.75rem 0 0;
+  color: var(--color-dark-gray);
+  font-size: 0.875rem;
+  line-height: 1.5;
+}
+
+.questionnaire-intro a {
+  color: var(--color-dark-gray);
+  font-weight: 700;
+  text-underline-offset: 0.18em;
+}
+
+.questionnaire-intro details {
+  margin-top: 0.5rem;
+  color: var(--color-dark-gray);
+  font-size: 0.875rem;
+  line-height: 1.55;
+}
+
+.questionnaire-intro summary {
+  min-height: 44px;
+  padding-block: 0.65rem;
+  cursor: pointer;
+}
+
+.questionnaire-intro details p {
+  margin: 0 0 0.5rem;
+}
+
+.questionnaire-intro-steps h2 {
+  margin: 0 0 1.25rem;
+  color: var(--color-graphite);
+  font-size: 1.25rem;
+}
+
+.questionnaire-intro-steps ol {
+  display: grid;
+  gap: 1rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.questionnaire-intro-steps li {
+  display: grid;
+  min-height: 44px;
+  grid-template-columns: 2rem minmax(0, 1fr);
+  align-items: center;
+  gap: 0.85rem;
+  color: var(--color-dark-gray);
+  font-weight: 650;
+}
+
+.questionnaire-intro-steps li > span:first-child {
+  display: grid;
+  width: 2rem;
+  min-height: 2rem;
+  place-items: center;
+  border: 1px solid var(--color-divider);
+  border-radius: 8px;
+  color: var(--color-dark-gray);
+  font-size: 0.875rem;
+  font-weight: 700;
+}
+
+.questionnaire[data-presentation] {
+  width: min(calc(100% - 2rem), 1160px);
+  margin: 1.5rem auto;
+  color: var(--color-dark-gray);
+}
+
+.questionnaire[data-presentation] .questionnaire-header {
+  border: 1px solid var(--color-divider);
+  border-radius: 8px;
+  background: var(--color-white);
+}
+
+.questionnaire[data-presentation] .question-step-layout {
+  display: grid;
+  grid-template-columns: 240px minmax(0, 1fr);
+  align-items: start;
+  gap: clamp(1.5rem, 4vw, 2.5rem);
+}
+
+.questionnaire[data-presentation] .question-progress-sidebar {
+  min-width: 0;
+}
+
+.questionnaire[data-presentation] .question-progress {
+  margin: 0 0 0.75rem;
+  color: var(--color-dark-gray);
+  font-size: 0.9rem;
+  font-weight: 700;
+}
+
+.questionnaire[data-presentation] .question-progress-bar {
+  display: block;
+  width: 100%;
+  height: 0.75rem;
+  margin: 0;
+  border: 1px solid var(--color-divider);
+  border-radius: 8px;
+  background: var(--color-light-gray);
+}
+
+.questionnaire[data-presentation] .question-progress-bar::-webkit-progress-bar {
+  border-radius: 8px;
+  background: var(--color-light-gray);
+}
+
+.questionnaire[data-presentation] .question-progress-bar::-webkit-progress-value,
+.questionnaire[data-presentation] .question-progress-bar::-moz-progress-bar {
+  border-radius: 8px;
+  background: var(--color-coral);
+}
+
+.questionnaire[data-presentation] .question-progress-sections {
+  display: grid;
+  gap: 0.5rem;
+  margin: 1.5rem 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.questionnaire[data-presentation] .question-progress-sections li {
+  min-height: 44px;
+  padding: 0.65rem 0.75rem;
+  border-left: 3px solid transparent;
+  border-radius: 4px;
+  color: var(--color-dark-gray);
+  font-size: 0.9rem;
+  line-height: 1.4;
+  overflow-wrap: anywhere;
+}
+
+.questionnaire[data-presentation]
+  .question-progress-sections
+  .question-progress-section-current {
+  border-left-color: var(--color-coral);
+  background: var(--color-light-gray);
+  font-weight: 700;
+}
+
+.questionnaire[data-presentation] .question-content-card {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  padding: clamp(1.25rem, 3vw, 2rem);
+  border: 1px solid var(--color-divider);
+  border-radius: 12px;
+  background: var(--color-white);
+}
+
+.questionnaire[data-presentation] .question-step-panel {
+  flex: 1 1 auto;
+  min-width: 0;
+  margin: 0;
+  animation: none;
+}
+
+.questionnaire[data-presentation] .question-content-card .question-list {
+  gap: 0.75rem;
+  margin: 0;
+}
+
+.questionnaire[data-presentation] .question-content-card .question-card {
+  margin: 0;
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: var(--color-white);
+  box-shadow: none;
+  color: var(--color-dark-gray);
+}
+
+.questionnaire[data-presentation] .question-card-section {
+  margin: 0 0 0.85rem;
+  padding: 0.3rem 0.6rem;
+  border-left: 3px solid var(--color-coral);
+  border-radius: 4px;
+  background: var(--color-light-gray);
+  color: var(--color-dark-gray);
+  font-size: 0.8rem;
+}
+
+.questionnaire[data-presentation] .question-card h3 {
+  margin: 0 0 1.5rem;
+  color: var(--color-graphite);
+  font-size: clamp(1.5rem, 3vw, 2rem);
+  line-height: 1.35;
+  overflow-wrap: anywhere;
+}
+
+.questionnaire[data-presentation] .question-content-card .option-list,
+.questionnaire[data-presentation] .question-content-card .scale-choices {
+  gap: 0.75rem;
+}
+
+.questionnaire[data-presentation] .question-content-card .option {
+  min-height: 44px;
+  padding: 0.85rem 1rem;
+  border-radius: 8px;
+  transition: none;
+}
+
+.questionnaire[data-presentation]
+  .scale-choices-circulos
+  .scale-choice
+  span {
+  border-radius: 8px;
+}
+
+.questionnaire[data-presentation] .question-content-card .question-step-navigation {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  margin-top: auto;
+  padding-top: 2rem;
+}
+
+.questionnaire[data-presentation] .question-step-navigation button {
+  min-width: 0;
+  min-height: 48px;
+  flex: 1 1 0;
+  border-radius: 8px;
+}
+
+.questionnaire[data-presentation] .question-step-navigation .submit-button {
+  max-width: 14rem;
+}
+
+.questionnaire[data-presentation] .question-step-navigation .secondary-button {
+  max-width: 14rem;
+}
+
+.questionnaire[data-presentation] .question-step-navigation button:focus-visible {
+  outline: 3px solid var(--color-coral);
+  outline-offset: 3px;
+}
+
+.questionnaire[data-presentation] .question-step-navigation button:disabled {
+  cursor: not-allowed;
+}
+
+.recommendation-page > .impact-embedded {
+  width: min(100%, 1080px);
+  grid-column: 1 / -1;
+  justify-self: center;
+}
+
+@media (min-width: 1024px) {
+  .questionnaire[data-presentation] .question-content-card {
+    min-height: 360px;
+  }
+}
+
+@media (max-width: 1023px) {
+  .questionnaire-intro {
+    min-height: calc(100svh - 6rem);
+    grid-template-columns: minmax(0, 1fr);
+    gap: 2rem;
+  }
+
+  .questionnaire[data-presentation] .question-step-layout {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .questionnaire[data-presentation] .question-content-card {
+    width: 100%;
+  }
+}
+
+@media (max-width: 600px) {
+  .flow-navigation {
+    width: min(calc(100% - 1rem), 960px);
+    flex-wrap: wrap;
+    align-items: center;
+  }
+
+  .flow-navigation > span {
+    min-width: 0;
+    flex: 1 1 100%;
+    margin-left: 0;
+    overflow-wrap: anywhere;
+    white-space: normal;
+  }
+
+  .questionnaire-intro {
+    width: min(calc(100% - 1rem), 960px);
+    min-height: calc(100svh - 5rem);
+    gap: 1.5rem;
+    margin-block: 0.5rem;
+    padding: 1.25rem;
+  }
+
+  .questionnaire-intro h1 {
+    font-size: clamp(1.8rem, 8vw, 2.5rem);
+  }
+
+  .questionnaire-intro-button {
+    width: 100%;
+  }
+
+  .questionnaire-intro-facts span {
+    flex: 1 1 auto;
+  }
+
+  .questionnaire[data-presentation] {
+    width: calc(100% - 1rem);
+    margin-block: 1rem;
+  }
+
+  .questionnaire[data-presentation] .questionnaire-header {
+    margin-bottom: 1rem;
+    padding: 1rem;
+  }
+
+  .questionnaire[data-presentation] .question-content-card {
+    padding: 1.25rem;
+  }
+
+  .questionnaire[data-presentation] .question-step-navigation {
+    gap: 0.5rem;
+    padding-top: 1.5rem;
   }
 }

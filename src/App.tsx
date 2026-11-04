@@ -1043,14 +1043,19 @@ export default function App() {
           templateId={seleccion.id}
           template={templateIntroduccion.metadata}
           cuestionario={resultadoValidacion.data}
-          presentacion={obtenerPresentacionTemplate(
-            resultadoValidacion.data.id,
-          )}
           onComenzar={() =>
             navegar({
               ...estadoAppRef.current,
               origenIntroduccionTemplate: null,
-              estadoCuestionario: null,
+              estadoCuestionario: {
+                respuestas: {},
+                datosContacto: null,
+                consentimientoAceptado: false,
+                indicePreguntaActual: 0,
+                mostrarPreguntas:
+                  resultadoValidacion.data.posicion_contacto !== "inicio",
+                mostrarBienvenida: false,
+              },
               envio: null,
             })
           }

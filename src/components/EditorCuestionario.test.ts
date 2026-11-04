@@ -6,6 +6,7 @@ import EditorCuestionario from "./EditorCuestionario";
 import RenderizadorCuestionario from "./RenderizadorCuestionario";
 import { validarCuestionario } from "../validation/validarCuestionario";
 import { cambiarModoScoring } from "../templates/editarCuestionario";
+import { porDefecto } from "../config/presentacionTemplates";
 import type { Cuestionario } from "../types/model";
 
 const validacion = validarCuestionario(casoNuevo);
@@ -233,6 +234,31 @@ describe("acciones del editor de copias", () => {
     expect(markup).toContain("Iniciar diagnóstico");
     expect(markup).not.toContain("questionnaire-welcome-image");
     expect(markup).not.toContain("Completa tus datos para continuar con el cuestionario.");
+  });
+
+  it("muestra una sola previa de template y enlaza el aviso cuando se guardan datos", () => {
+    const cuestionario = crearCuestionarioFlujo({
+      posicionContacto: "final",
+      bienvenidaHabilitada: true,
+    });
+    const markup = renderToStaticMarkup(
+      createElement(RenderizadorCuestionario, {
+        cuestionario,
+        onEnvio: vi.fn(),
+        presentacion: porDefecto,
+        requiereConsentimiento: true,
+        unaPreguntaPorVista: true,
+      }),
+    );
+
+    expect(markup.match(/<h1/g)).toHaveLength(1);
+    expect(markup).toContain("Qué vas a hacer");
+    expect(markup).toContain(">Las preguntas</span>");
+    expect(markup).toContain(">Confirmación</span>");
+    expect(markup).toContain('href="#questionnaire-intro-privacy"');
+    expect(markup).toContain("Leer aviso de privacidad");
+    expect(markup).not.toContain("Demostración: no se guardan datos.");
+    expect(markup).not.toContain('class="questionnaire-header"');
   });
 
   it("mantiene el flujo directo cuando la bienvenida está desactivada y los datos personales están al inicio", () => {

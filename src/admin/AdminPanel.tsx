@@ -637,13 +637,44 @@ export default function AdminPanel() {
 
   if (!usuario) {
     return (
-      <main className="admin-page admin-login">
-        <h1>Administración de Clear-IA</h1>
-        <p>Inicia sesión con tu cuenta de Google para continuar.</p>
-        {error && <p className="admin-error" role="alert">{error}</p>}
-        <button className="submit-button" onClick={() => void iniciarSesion()}>
-          Iniciar sesión con Google
-        </button>
+      <main aria-labelledby="admin-login-title" className="admin-page admin-login">
+        <section className="admin-login-card">
+          <div aria-hidden="true" className="admin-login-mark">
+            <svg fill="none" viewBox="0 0 32 32" xmlns="http://www.w3.org/2000/svg">
+              <path
+                d="M16 3.5 26 7v8.1c0 6.4-4.1 11-10 13.4-5.9-2.4-10-7-10-13.4V7l10-3.5Z"
+                stroke="currentColor"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth="1.8"
+              />
+              <path
+                d="m11.5 15.8 3 3 6-6.2"
+                stroke="currentColor"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth="1.8"
+              />
+            </svg>
+          </div>
+          <p className="admin-login-eyebrow">Acceso seguro</p>
+          <h1 id="admin-login-title">Administración de Clear-IA</h1>
+          <p className="admin-login-description">
+            Inicia sesión con tu cuenta de Google autorizada para administrar
+            empresas y cuestionarios.
+          </p>
+          {error && <p className="admin-error" role="alert">{error}</p>}
+          <button
+            className="submit-button"
+            onClick={() => void iniciarSesion()}
+            type="button"
+          >
+            Iniciar sesión con Google
+          </button>
+          <p className="admin-login-note">
+            El acceso está limitado a cuentas autorizadas.
+          </p>
+        </section>
       </main>
     );
   }
