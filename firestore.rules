@@ -19,7 +19,6 @@ service cloud.firestore {
         && empresaActiva(emp)
         && exists(/databases/$(database)/documents/empresas/$(emp)/miembros/$(correo()))
         && miembro(emp).data.estado == 'activo';
-    }& miembro(emp).data.estado == 'activo';
     }
     function esPropietario(emp) {
       return esMiembro(emp) && miembro(emp).data.rol == 'propietario';
