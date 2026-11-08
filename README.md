@@ -1,6 +1,6 @@
 
-<<<<<<< HEAD
-=======
+HEAD
+
 Aplicación React + TypeScript para cuestionarios, resultados calculados y
 personalización opcional de la redacción con Google Gemini.
 
@@ -48,4 +48,4 @@ build` como comando de compilación y `dist` como directorio de salida. Agrega
 vayas a usar (Production, Preview o Development); no la agregues con prefijo
 `VITE_`. La función `api/personalizar.ts` expone el endpoint que usa la
 aplicación y lee esta variable en el servidor.
->>>>>>> 3796ef5 (Ya estan las graficas al final y estilo unico)
+

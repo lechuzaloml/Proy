@@ -2130,6 +2130,93 @@ textarea {
   text-align: center;
 }
 
+.suscripcion-page {
+  width: min(100% - 2rem, 760px);
+  min-height: 100vh;
+  margin: 0 auto;
+  padding: 2rem 0 4rem;
+}
+
+.suscripcion-card {
+  display: grid;
+  gap: 1rem;
+  margin: clamp(2rem, 8vh, 5rem) auto 0;
+  padding: clamp(1.25rem, 5vw, 2.5rem);
+  border: 1px solid var(--color-divider);
+  border-top: 5px solid var(--color-coral);
+  background: var(--color-white);
+}
+
+.suscripcion-card h1 {
+  margin: 0;
+  color: var(--color-dark-gray);
+  font-size: clamp(2rem, 5vw, 3rem);
+  line-height: 1.1;
+}
+
+.suscripcion-mode {
+  width: fit-content;
+  margin: 0;
+  padding: 0.55rem 0.75rem;
+  border: 1px solid var(--color-coral);
+  border-radius: 6px;
+  color: var(--color-dark-gray);
+  font-size: 0.88rem;
+  font-weight: 700;
+}
+
+.suscripcion-resumen {
+  margin: 0;
+  color: var(--color-dark-gray);
+  font-size: 1.2rem;
+  font-weight: 700;
+}
+
+.suscripcion-form {
+  display: grid;
+  gap: 1rem;
+  margin-top: 0.5rem;
+}
+
+.suscripcion-form label {
+  display: grid;
+  gap: 0.4rem;
+  color: var(--color-dark-gray);
+  font-weight: 650;
+}
+
+.suscripcion-form input {
+  width: 100%;
+  min-width: 0;
+  padding: 0.7rem;
+  border: 1px solid var(--color-divider);
+  border-radius: 8px;
+  background: var(--color-white);
+  color: var(--color-dark-gray);
+}
+
+.suscripcion-preview {
+  margin: 0;
+  overflow-wrap: anywhere;
+  color: var(--color-dark-gray);
+  font-size: 0.9rem;
+}
+
+.suscripcion-google {
+  justify-self: start;
+}
+
+.suscripcion-cuenta p,
+.suscripcion-card > p {
+  line-height: 1.55;
+}
+
+.suscripcion-cancelada {
+  padding: 0.75rem;
+  border-left: 4px solid var(--color-coral);
+  background: var(--color-light-gray);
+}
+
 .sr-only {
   position: absolute;
   width: 1px;
@@ -3810,6 +3897,47 @@ textarea:focus-visible {
 .admin-company-status {
   color: var(--color-white);
   font-size: 0.9rem;
+}
+
+.admin-subscription-banner,
+.admin-suspension-notice {
+  position: sticky;
+  top: 0.5rem;
+  z-index: 10;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  margin: 0 0 1rem;
+  padding: 1rem;
+  border: 1px solid var(--color-divider);
+  border-radius: 10px;
+  background: var(--color-white);
+  box-shadow: 0 6px 24px rgb(0 0 0 / 8%);
+}
+
+.admin-subscription-banner > div > p,
+.admin-suspension-notice p {
+  margin: 0.35rem 0 0;
+}
+
+.admin-subscription-mode {
+  font-weight: 750;
+}
+
+.admin-subscription-banner-warning,
+.admin-suspension-notice {
+  border-color: var(--color-coral);
+  background: #fff3f1;
+}
+
+.admin-subscription-warning {
+  color: #8d241f;
+  font-weight: 750;
+}
+
+.admin-suspension-notice {
+  display: block;
 }
 
 .admin-company-select {

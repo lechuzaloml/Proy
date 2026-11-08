@@ -20,7 +20,7 @@ import {
 } from "./validacionesEmpresa";
 
 const PLANES = ["interno", "inicial", "pro", "avanzado"] as const;
-type PlanEmpresa = (typeof PLANES)[number];
+type PlanEmpresa = (typeof PLANES)[number] | "prueba";
 type EstadoEmpresa = "activa" | "suspendida";
 
 interface Empresa {
@@ -42,7 +42,11 @@ function empresaDesdeDocumento(
   return {
     id,
     nombre: typeof data.nombre === "string" ? data.nombre : "",
-    planId: PLANES.includes(data.planId) ? data.planId : "interno",
+    planId: data.planId === "prueba"
+      ? "prueba"
+      : PLANES.includes(data.planId)
+      ? data.planId
+      : "interno",
     estado: data.estado === "suspendida" ? "suspendida" : "activa",
     marca: {
       colorPrimario: typeof marcaData.colorPrimario === "string"
@@ -373,9 +377,13 @@ export default function ConsolaPlataforma({
               <label>
                 Plan
                 <select
+                  disabled={empresaSeleccionada.planId === "prueba"}
                   onChange={(evento) => setPlanEditado(evento.target.value as PlanEmpresa)}
                   value={planEditado}
                 >
+                  {empresaSeleccionada.planId === "prueba" && (
+                    <option value="prueba">prueba (administrado por Stripe)</option>
+                  )}
                   {PLANES.map((plan) => <option key={plan} value={plan}>{plan}</option>)}
                 </select>
               </label>

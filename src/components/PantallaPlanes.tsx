@@ -1,4 +1,3 @@
-import { useState } from "react";
 import type { PlanRecomendado } from "../config/recomendaciones";
 
 interface PantallaPlanesProps {
@@ -10,8 +9,6 @@ export default function PantallaPlanes({
   planes,
   planRecomendadoNombre,
 }: PantallaPlanesProps) {
-  const [planSeleccionado, setPlanSeleccionado] = useState<string | null>(null);
-
   return (
     <main className="plans-page">
       <header className="landing-brand">
@@ -48,8 +45,6 @@ export default function PantallaPlanes({
       <section aria-label="Planes disponibles" className="available-plans">
         {planes.map((plan) => {
           const esRecomendado = plan.nombre === planRecomendadoNombre;
-          const textoBoton = `Elegir ${plan.nombre}`;
-
           return (
             <article
               className={`recommendation-plan available-plan${esRecomendado ? " available-plan-recommended" : ""}`}
@@ -93,33 +88,12 @@ export default function PantallaPlanes({
                 ))}
               </ul>
 
-              {plan.enlacePago ? (
-                <a
-                  className="submit-button plan-submit"
-                  href={plan.enlacePago}
-                  rel="noopener noreferrer"
-                  target="_blank"
-                >
-                  {textoBoton}
-                </a>
-              ) : (
-                <button
-                  className="submit-button plan-submit"
-                  onClick={() => setPlanSeleccionado(plan.nombre)}
-                  type="button"
-                >
-                  {textoBoton}
-                </button>
-              )}
-              {planSeleccionado === plan.nombre && !plan.enlacePago && (
-                <p
-                  aria-live="polite"
-                  className="plan-payment-notice"
-                  role="status"
-                >
-                  El pago se habilitará próximamente.
-                </p>
-              )}
+              <a
+                className="submit-button plan-submit"
+                href="/suscripcion"
+              >
+                Probar gratis 7 días
+              </a>
             </article>
           );
         })}

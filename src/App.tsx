@@ -21,6 +21,7 @@ import RenderizadorCuestionario from "./components/RenderizadorCuestionario";
 import PantallaResultado from "./components/PantallaResultado";
 import PantallaRecomendacion from "./components/PantallaRecomendacion";
 import PantallaPlanes from "./components/PantallaPlanes";
+import PantallaSuscripcion from "./components/PantallaSuscripcion";
 import PantallaInicioTemplate from "./components/PantallaInicioTemplate";
 import PaginaRegistroEvento from "./components/PaginaRegistroEvento";
 import EditorCuestionario from "./components/EditorCuestionario";
@@ -371,6 +372,10 @@ export default function App() {
         cuestionarioId={enlacePublicoValido ? cuestionarioPublicoId : ""}
       />
     );
+  }
+
+  if (rutaActual === "/suscripcion") {
+    return <PantallaSuscripcion />;
   }
 
   if (rutaActual === "/admin" || rutaActual.startsWith("/admin/")) {

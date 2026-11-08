@@ -73,6 +73,7 @@ interface EmpresaAccesible {
   estado: string;
   planId: string;
   permisos: PermisosMiembro;
+  miembroEmpresa: boolean;
 }
 
 interface Seguimiento {
@@ -81,6 +82,11 @@ interface Seguimiento {
   notas: string;
   creadoPor: string;
   creadoEn: unknown;
+}
+
+interface SuscripcionPanel {
+  estado: string;
+  pruebaHasta: unknown;
 }
 
 const ESTADOS: EstadoLead[] = [
@@ -231,6 +237,43 @@ function texto(valor: unknown): string {
   return typeof valor === "string" ? valor : "";
 }
 
+function diasRestantes(pruebaHasta: unknown): number | null {
+  let fecha: Date | null = null;
+  if (pruebaHasta instanceof Date) {
+    fecha = pruebaHasta;
+  } else if (typeof pruebaHasta === "string") {
+    const milisegundos = Date.parse(pruebaHasta);
+    fecha = Number.isFinite(milisegundos) ? new Date(milisegundos) : null;
+  } else if (
+    typeof pruebaHasta === "object" &&
+    pruebaHasta !== null &&
+    "toDate" in pruebaHasta &&
+    typeof pruebaHasta.toDate === "function"
+  ) {
+    const resultado = pruebaHasta.toDate();
+    fecha = resultado instanceof Date ? resultado : null;
+  }
+  if (!fecha || !Number.isFinite(fecha.getTime())) {
+    return null;
+  }
+  return Math.max(0, Math.ceil((fecha.getTime() - Date.now()) / 86_400_000));
+}
+
+function estadoSuscripcionLegible(estado: string | undefined): string {
+  switch (estado) {
+    case "prueba":
+      return "En prueba";
+    case "activa":
+      return "Activa";
+    case "pago_pendiente":
+      return "Pago pendiente";
+    case "cancelada":
+      return "Cancelada";
+    default:
+      return "Sin suscripción";
+  }
+}
+
 export default function AdminPanel() {
   const filtersReveal = useScrollReveal<HTMLElement>();
   const tableReveal = useScrollReveal<HTMLDivElement>();
@@ -241,6 +284,10 @@ export default function AdminPanel() {
   const [empresaIdActiva, setEmpresaIdActiva] = useState("");
   const [esPlataforma, setEsPlataforma] = useState(false);
   const [error, setError] = useState("");
+  const [suscripcion, setSuscripcion] = useState<SuscripcionPanel | null>(null);
+  const [cargandoSuscripcion, setCargandoSuscripcion] = useState(false);
+  const [errorSuscripcion, setErrorSuscripcion] = useState("");
+  const [abriendoPortal, setAbriendoPortal] = useState(false);
   const [leads, setLeads] = useState<LeadAdmin[]>([]);
   const [leadSeleccionado, setLeadSeleccionado] = useState<LeadAdmin | null>(null);
   const [cargandoLeads, setCargandoLeads] = useState(false);
@@ -257,6 +304,11 @@ export default function AdminPanel() {
     window.location.pathname.replace(/\/+$/, "") === "/admin/plataforma";
   const empresaActiva =
     empresas.find(({ id }) => id === empresaIdActiva) ?? null;
+  const puedeAdministrarSuscripcion = Boolean(
+    empresaActiva &&
+      (!esPlataforma || empresaActiva.miembroEmpresa) &&
+      esAdministradorEmpresa(empresaActiva.permisos.rol),
+  );
 
   useEffect(() => {
     if (!auth) {
@@ -337,6 +389,7 @@ export default function AdminPanel() {
                 ? datosEmpresa.planId
                 : "interno",
               permisos: leerPermisos(membresia.data()),
+              miembroEmpresa: Boolean(membresia.exists()),
             } satisfies EmpresaAccesible;
           }),
         );
@@ -370,6 +423,7 @@ export default function AdminPanel() {
                 gestionarLeads: true,
                 editarCuestionarios: true,
               },
+              miembroEmpresa: existente !== undefined,
             };
           });
         }
@@ -416,6 +470,124 @@ export default function AdminPanel() {
       window.localStorage.setItem(CLAVE_EMPRESA_ACTIVA, empresaIdActiva);
     }
   }, [empresaIdActiva]);
+
+  useEffect(() => {
+    const database = db;
+    if (
+      !usuario ||
+      !database ||
+      !empresaActiva ||
+      !puedeAdministrarSuscripcion
+    ) {
+      setSuscripcion(null);
+      setCargandoSuscripcion(false);
+      setErrorSuscripcion("");
+      return;
+    }
+
+    let cancelado = false;
+    setCargandoSuscripcion(true);
+    setErrorSuscripcion("");
+
+    async function cargarSuscripcion(): Promise<void> {
+      try {
+        if (!database) {
+          throw new Error("Firebase no está configurado.");
+        }
+        let datos: SuscripcionPanel | null = null;
+        try {
+          const snapshot = await getDoc(doc(
+            database,
+            "empresas",
+            empresaIdActiva,
+            "suscripcion",
+            "actual",
+          ));
+          if (snapshot.exists()) {
+            const documento = snapshot.data();
+            datos = {
+              estado: typeof documento.estado === "string"
+                ? documento.estado
+                : "desconocido",
+              pruebaHasta: documento.pruebaHasta,
+            };
+          }
+        } catch (errorLectura: unknown) {
+          const codigo = typeof errorLectura === "object" &&
+              errorLectura !== null &&
+              "code" in errorLectura
+            ? errorLectura.code
+            : "";
+          if (codigo !== "permission-denied") {
+            throw errorLectura;
+          }
+
+          if (!usuario) {
+            throw new Error("Inicia sesión para consultar la suscripción.");
+          }
+          const token = await usuario.getIdToken();
+          const respuesta = await fetch("/api/suscripcion/estado", {
+            method: "POST",
+            headers: {
+              Authorization: `Bearer ${token}`,
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({ slug: empresaIdActiva }),
+          });
+          const resultado: unknown = await respuesta.json();
+          if (!respuesta.ok) {
+            throw new Error(
+              typeof resultado === "object" &&
+                  resultado !== null &&
+                  "error" in resultado &&
+                  typeof resultado.error === "string"
+                ? resultado.error
+                : "No se pudo consultar la suscripción.",
+            );
+          }
+          const contenedor = typeof resultado === "object" &&
+              resultado !== null &&
+              "suscripcion" in resultado
+            ? resultado.suscripcion
+            : null;
+          if (typeof contenedor === "object" && contenedor !== null) {
+            const datosRespuesta = contenedor as Record<string, unknown>;
+            datos = {
+              estado: typeof datosRespuesta.estado === "string"
+                ? datosRespuesta.estado
+                : "desconocido",
+              pruebaHasta: datosRespuesta.pruebaHasta,
+            };
+          }
+        }
+        if (!cancelado) {
+          setSuscripcion(datos);
+        }
+      } catch (errorLectura: unknown) {
+        if (!cancelado) {
+          setErrorSuscripcion(
+            errorLectura instanceof Error
+              ? errorLectura.message
+              : "No se pudo consultar la suscripción.",
+          );
+        }
+      } finally {
+        if (!cancelado) {
+          setCargandoSuscripcion(false);
+        }
+      }
+    }
+
+    void cargarSuscripcion();
+    return () => {
+      cancelado = true;
+    };
+  }, [
+    empresaActiva,
+    empresaIdActiva,
+    puedeAdministrarSuscripcion,
+    usuario,
+  ]);
 
   const puedeVerLeads = Boolean(
     esPlataforma ||
@@ -592,6 +764,54 @@ export default function AdminPanel() {
           ? signOutError.message
           : "No se pudo cerrar sesión.",
       );
+    }
+  }
+
+  async function abrirPortalSuscripcion(): Promise<void> {
+    if (!usuario || !empresaIdActiva) {
+      return;
+    }
+    setAbriendoPortal(true);
+    setErrorSuscripcion("");
+    try {
+      const token = await usuario.getIdToken();
+      const respuesta = await fetch("/api/suscripcion/portal", {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ slug: empresaIdActiva }),
+      });
+      const resultado: unknown = await respuesta.json();
+      if (!respuesta.ok) {
+        throw new Error(
+          typeof resultado === "object" &&
+              resultado !== null &&
+              "error" in resultado &&
+              typeof resultado.error === "string"
+            ? resultado.error
+            : "No se pudo abrir el portal de suscripción.",
+        );
+      }
+      const url = typeof resultado === "object" &&
+          resultado !== null &&
+          "url" in resultado &&
+          typeof resultado.url === "string"
+        ? resultado.url
+        : "";
+      if (!url) {
+        throw new Error("El servidor no devolvió la dirección del portal.");
+      }
+      window.location.assign(url);
+    } catch (errorPortal: unknown) {
+      setErrorSuscripcion(
+        errorPortal instanceof Error
+          ? errorPortal.message
+          : "No se pudo abrir el portal de suscripción.",
+      );
+    } finally {
+      setAbriendoPortal(false);
     }
   }
 
@@ -810,6 +1030,56 @@ export default function AdminPanel() {
           </button>
         </div>
       </header>
+
+      {empresaActiva.estado === "suspendida" && (
+        <aside
+          aria-live="polite"
+          className="admin-suspension-notice"
+          role="alert"
+        >
+          <strong>Empresa suspendida</strong>
+          <p>Los datos de tu empresa se conservan. Puedes administrar la suscripción desde esta pantalla.</p>
+        </aside>
+      )}
+
+      {puedeAdministrarSuscripcion && (
+        <section
+          aria-label="Estado de la suscripción"
+          className={`admin-subscription-banner${suscripcion?.estado === "pago_pendiente" ? " admin-subscription-banner-warning" : ""}`}
+        >
+          <div>
+            <p className="admin-subscription-mode">Modo de prueba</p>
+            {suscripcion?.estado === "prueba" && (
+              <p>
+                Prueba gratuita: te quedan{" "}
+                {diasRestantes(suscripcion.pruebaHasta) ?? "—"} días
+              </p>
+            )}
+            {suscripcion?.estado === "pago_pendiente" && (
+              <p className="admin-subscription-warning">
+                Hay un pago pendiente. Actualiza el método de pago en el portal.
+              </p>
+            )}
+            <p>
+              Estado de la suscripción:{" "}
+              {cargandoSuscripcion
+                ? "Consultando..."
+                : estadoSuscripcionLegible(suscripcion?.estado)}
+            </p>
+            {errorSuscripcion && (
+              <p className="admin-error" role="alert">{errorSuscripcion}</p>
+            )}
+          </div>
+          <button
+            className="secondary-button"
+            disabled={abriendoPortal || !suscripcion}
+            onClick={() => void abrirPortalSuscripcion()}
+            type="button"
+          >
+            {abriendoPortal ? "Abriendo portal..." : "Administrar suscripción"}
+          </button>
+        </section>
+      )}
 
       {error && <p className="admin-error" role="alert">{error}</p>}
 

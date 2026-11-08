@@ -144,6 +144,11 @@ service cloud.firestore {
       allow get: if true;
       allow list, write: if esPlataforma();
 
+      match /suscripcion/{doc} {
+        allow read: if esAdminEmpresa(emp) || esPlataforma();
+        allow write: if false;
+      }
+
       match /miembros/{id} {
         allow get: if conSesion() && correo() == id;
         allow list: if esAdminEmpresa(emp) || esPlataforma();
