@@ -4,9 +4,12 @@ import type {
   Transaction,
 } from "firebase-admin/firestore";
 import type Stripe from "stripe";
-import { DIAS_PRUEBA, PRECIO, PRECIO_PROVISIONAL } from "../../src/config/suscripcion.js";
-import type { RespuestaApi, SolicitudApi } from "./contratos.js";
-import type { DependenciasSuscripcion } from "./runtime.js";
+import { DIAS_PRUEBA, PRECIO, PRECIO_PROVISIONAL } from "../../src/config/suscripcion.ts";
+import type { RespuestaApi, SolicitudApi } from "./contratos.ts";
+import {
+  registrarError,
+  type DependenciasSuscripcion,
+} from "./runtime.ts";
 
 const SLUG_RESERVADOS = new Set([
   "admin",
@@ -149,10 +152,6 @@ function validarMetodoPost(
   return false;
 }
 
-function mensajeErrorSeguro(error: unknown): string {
-  return error instanceof Error ? error.name : "Error desconocido";
-}
-
 export function crearHandlerIniciar(dependencias: DependenciasSuscripcion) {
   return async (
     solicitud: SolicitudApi,
@@ -228,7 +227,7 @@ export function crearHandlerIniciar(dependencias: DependenciasSuscripcion) {
       }
       respuesta.status(200).json({ url: session.url });
     } catch (error: unknown) {
-      console.error("No se pudo iniciar Checkout.", mensajeErrorSeguro(error));
+      registrarError("suscripcion.iniciar.checkout", error);
       enviarError(respuesta, 502, "No se pudo iniciar el pago de prueba.");
     }
   };
@@ -286,7 +285,7 @@ export function crearHandlerPortal(dependencias: DependenciasSuscripcion) {
       });
       respuesta.status(200).json({ url: portal.url });
     } catch (error: unknown) {
-      console.error("No se pudo crear el portal de suscripción.", mensajeErrorSeguro(error));
+      registrarError("suscripcion.portal.checkout", error);
       enviarError(respuesta, 502, "No se pudo abrir el portal de suscripción.");
     }
   };
@@ -358,7 +357,7 @@ export function crearHandlerEstado(dependencias: DependenciasSuscripcion) {
         },
       });
     } catch (error: unknown) {
-      console.error("No se pudo consultar la suscripción.", mensajeErrorSeguro(error));
+      registrarError("suscripcion.estado.firestore", error);
       enviarError(respuesta, 500, "No se pudo consultar la suscripción.");
     }
   };
@@ -570,7 +569,7 @@ export function crearHandlerWebhook(dependencias: DependenciasSuscripcion) {
         dependencias.webhookSecret,
       );
     } catch (error: unknown) {
-      console.error("No se pudo verificar la firma del webhook.", mensajeErrorSeguro(error));
+      registrarError("stripe.webhook.signature", error);
       enviarError(respuesta, 400, "La firma del webhook no es válida.");
       return;
     }
@@ -623,7 +622,7 @@ export function crearHandlerWebhook(dependencias: DependenciasSuscripcion) {
         });
         if (resultado === "conflicto") {
           console.error(
-            "Checkout completado para una empresa o correo ya registrado; se cancelará la suscripción duplicada.",
+            "[stripe.webhook.checkout] Conflicto de empresa o prueba; se cancelará la suscripción duplicada.",
           );
           await dependencias.stripe.subscriptions.cancel(subscriptionId);
         }
@@ -671,7 +670,7 @@ export function crearHandlerWebhook(dependencias: DependenciasSuscripcion) {
       }
       respuesta.status(200).json({ recibido: true });
     } catch (error: unknown) {
-      console.error("No se pudo procesar el evento de Stripe.", mensajeErrorSeguro(error));
+      registrarError("stripe.webhook.event", error);
       enviarError(respuesta, 500, "No se pudo procesar el evento de Stripe.");
     }
   };

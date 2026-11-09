@@ -1,6 +1,6 @@
 import { Readable } from "node:stream";
 import { describe, expect, it, vi } from "vitest";
-import type { RespuestaApi, SolicitudApi } from "./contratos.js";
+import type { RespuestaApi, SolicitudApi } from "./contratos.ts";
 import {
   crearHandlerEstado,
   crearHandlerIniciar,
@@ -9,9 +9,9 @@ import {
   decidirCheckout,
   estadoSegunEvento,
   validarSlug,
-} from "./handlers.js";
-import type { DependenciasSuscripcion } from "./runtime.js";
-import { conDependencias } from "./runtime.js";
+} from "./handlers.ts";
+import type { DependenciasSuscripcion } from "./runtime.ts";
+import { conDependencias } from "./runtime.ts";
 
 class FirestoreSimulado {
   documentos = new Map<string, Record<string, unknown>>();
@@ -434,6 +434,8 @@ describe("endpoints de suscripción con Stripe y Firebase simulados", () => {
     const respuesta = new RespuestaSimulada();
     try {
       await conDependencias(
+        "suscripcion.iniciar",
+        [],
         respuesta,
         ejecutar,
       );
@@ -447,5 +449,53 @@ describe("endpoints de suscripción con Stripe y Firebase simulados", () => {
 
     expect(respuesta.codigo).toBe(503);
     expect(ejecutar).not.toHaveBeenCalled();
+  });
+
+  it("nombra la variable faltante y devuelve JSON sin registrar valores", async () => {
+    const nombres = [
+      "STRIPE_SECRET_KEY",
+      "STRIPE_PRICE_ID",
+      "STRIPE_WEBHOOK_SECRET",
+      "FIREBASE_SERVICE_ACCOUNT_JSON",
+      "APP_URL",
+    ] as const;
+    const valoresPrevios = new Map(
+      nombres.map((nombre) => [nombre, process.env[nombre]]),
+    );
+    const clave = "sk_test_no_debe_aparecer";
+    process.env.STRIPE_SECRET_KEY = clave;
+    delete process.env.FIREBASE_SERVICE_ACCOUNT_JSON;
+    delete process.env.APP_URL;
+    delete process.env.STRIPE_PRICE_ID;
+    delete process.env.STRIPE_WEBHOOK_SECRET;
+    const log = vi.spyOn(console, "error").mockImplementation(() => undefined);
+    const respuesta = new RespuestaSimulada();
+    try {
+      await conDependencias(
+        "suscripcion.iniciar",
+        ["STRIPE_PRICE_ID"],
+        respuesta,
+        vi.fn(),
+      );
+      expect(log).toHaveBeenCalledWith(
+        "[suscripcion.iniciar] Falta configurar FIREBASE_SERVICE_ACCOUNT_JSON.",
+      );
+      expect(JSON.stringify(log.mock.calls)).not.toContain(clave);
+    } finally {
+      log.mockRestore();
+      for (const nombre of nombres) {
+        const valor = valoresPrevios.get(nombre);
+        if (valor === undefined) {
+          delete process.env[nombre];
+        } else {
+          process.env[nombre] = valor;
+        }
+      }
+    }
+
+    expect(respuesta.codigo).toBe(503);
+    expect(respuesta.body).toEqual({
+      error: "Falta configurar FIREBASE_SERVICE_ACCOUNT_JSON.",
+    });
   });
 });
