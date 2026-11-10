@@ -225,11 +225,13 @@ service cloud.firestore {
             (nuevo().estado == 'publicado'
               && puedePublicar(emp)
               && empresaActiva(emp)
+              && nuevo().diff(resource.data).affectedKeys().hasOnly(['estado','versionActualId','actualizadoEn'])
               && texto(nuevo().versionActualId, 1, 60)
               && existsAfter(/databases/$(database)/documents/empresas/$(emp)/cuestionarios/$(cid)/versiones/$(nuevo().versionActualId)))
             ||
             (resource.data.estado == 'publicado' && nuevo().estado == 'borrador'
-              && puedePublicar(emp))
+              && puedePublicar(emp)
+              && nuevo().diff(resource.data).affectedKeys().hasOnly(['estado','actualizadoEn']))
           );
 
         allow delete: if esPlataforma()
