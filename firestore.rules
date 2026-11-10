@@ -5,63 +5,91 @@ service cloud.firestore {
     function conSesion() {
       return request.auth != null && request.auth.token.email_verified == true;
     }
+
     function correo() {
       return request.auth.token.email.lower();
     }
+
     function esPlataforma() {
       return conSesion() && exists(/databases/$(database)/documents/plataformaAdmins/$(correo()));
     }
+
     function miembro(emp) {
       return get(/databases/$(database)/documents/empresas/$(emp)/miembros/$(correo()));
     }
+
     function esMiembro(emp) {
       return conSesion()
         && empresaActiva(emp)
         && exists(/databases/$(database)/documents/empresas/$(emp)/miembros/$(correo()))
         && miembro(emp).data.estado == 'activo';
     }
+
     function esPropietario(emp) {
       return esMiembro(emp) && miembro(emp).data.rol == 'propietario';
     }
+
     function esAdminEmpresa(emp) {
       return esMiembro(emp) && miembro(emp).data.rol in ['admin','propietario'];
     }
+
     function datosMiembroValidos(id) {
       return nuevo().keys().hasOnly(['correo','rol','permisos','estado','creadoEn'])
         && id == id.lower()
         && nuevo().correo == id
         && nuevo().rol in ['propietario','admin','usuario']
         && nuevo().estado in ['activo','inactivo']
-        && nuevo().permisos is map;
+        && nuevo().permisos is map
+        && nuevo().permisos.keys().hasOnly(['verLeads','gestionarLeads','editarCuestionarios','publicarCuestionarios'])
+        && nuevo().permisos.get('verLeads', false) is bool
+        && nuevo().permisos.get('gestionarLeads', false) is bool
+        && nuevo().permisos.get('editarCuestionarios', false) is bool
+        && nuevo().permisos.get('publicarCuestionarios', false) is bool;
     }
+
     function tienePermiso(emp, permiso) {
       return esAdminEmpresa(emp)
         || (esMiembro(emp) && miembro(emp).data.permisos.get(permiso, false) == true);
     }
+
     function puedeVerLeads(emp) {
       return esPlataforma() || tienePermiso(emp, 'verLeads') || tienePermiso(emp, 'gestionarLeads');
     }
+
     function puedeGestionarLeads(emp) {
       return esPlataforma() || tienePermiso(emp, 'gestionarLeads');
     }
+
     function puedeEditarCuestionarios(emp) {
       return esPlataforma() || tienePermiso(emp, 'editarCuestionarios');
     }
+
+    function puedePublicar(emp) {
+      return esPlataforma() || tienePermiso(emp, 'publicarCuestionarios');
+    }
+
+    function esAutorDelBorrador() {
+      return resource.data.get('creadoPor', '').lower() == correo();
+    }
+
     function empresaActiva(emp) {
       return exists(/databases/$(database)/documents/empresas/$(emp))
         && get(/databases/$(database)/documents/empresas/$(emp)).data.estado == 'activa';
     }
+
     function cuestionarioPublicado(emp, cid) {
       return empresaActiva(emp)
         && exists(/databases/$(database)/documents/empresas/$(emp)/cuestionarios/$(cid))
         && get(/databases/$(database)/documents/empresas/$(emp)/cuestionarios/$(cid)).data.estado == 'publicado';
     }
+
     function puedeLeerVersionPublicada(emp, cid, vid) {
       return empresaActiva(emp)
         && exists(/databases/$(database)/documents/empresas/$(emp)/cuestionarios/$(cid))
         && get(/databases/$(database)/documents/empresas/$(emp)/cuestionarios/$(cid)).data.estado == 'publicado'
         && get(/databases/$(database)/documents/empresas/$(emp)/cuestionarios/$(cid)).data.versionActualId == vid;
     }
+
     function copiaAutorizada(emp, cid) {
       return empresaActiva(emp)
         && puedeEditarCuestionarios(emp)
@@ -71,6 +99,7 @@ service cloud.firestore {
         && get(/databases/$(database)/documents/empresas/$(emp)/cuestionarios/$(cid)).data.id == cid
         && get(/databases/$(database)/documents/empresas/$(emp)/cuestionarios/$(cid)).data.configuracion.id == cid;
     }
+
     function ctaValida(cta) {
       return cta is map
         && cta.keys().hasAll(['texto','accion'])
@@ -78,6 +107,7 @@ service cloud.firestore {
         && texto(cta.texto, 1, 300)
         && texto(cta.accion, 1, 500);
     }
+
     function resultadoCopiaValido(resultado, segmentado) {
       return resultado is map
         && (
@@ -102,10 +132,12 @@ service cloud.firestore {
             && (!('cta' in resultado.resultados[0]) || ctaValida(resultado.resultados[0].cta)))
         );
     }
+
     function envioCopiaValido(emp, did) {
       let diagnostico = getAfter(/databases/$(database)/documents/empresas/$(emp)/diagnosticos/$(did)).data;
       let lead = getAfter(/databases/$(database)/documents/empresas/$(emp)/leads/$(did)).data;
       let cuestionario = get(/databases/$(database)/documents/empresas/$(emp)/cuestionarios/$(diagnostico.cuestionarioId)).data;
+
       return copiaAutorizada(emp, diagnostico.cuestionarioId)
         && diagnostico.leadId == did
         && !('versionId' in diagnostico)
@@ -125,12 +157,15 @@ service cloud.firestore {
         && existsAfter(/databases/$(database)/documents/empresas/$(emp)/leads/$(did))
         && lead.origen == 'copia-clear-ia';
     }
+
     function versionActual(emp, cid) {
       return get(/databases/$(database)/documents/empresas/$(emp)/cuestionarios/$(cid)).data.versionActualId;
     }
+
     function texto(v, minimo, maximo) {
       return v is string && v.size() >= minimo && v.size() <= maximo;
     }
+
     function nuevo() {
       return request.resource.data;
     }
@@ -169,26 +204,46 @@ service cloud.firestore {
       }
 
       match /cuestionarios/{cid} {
-        allow get: if (resource.data.estado == 'publicado' && empresaActiva(emp)) || puedeEditarCuestionarios(emp);
+        allow get: if (resource.data.estado == 'publicado' && empresaActiva(emp))
+          || puedeEditarCuestionarios(emp);
+
         allow list: if puedeEditarCuestionarios(emp);
+
         allow create: if puedeEditarCuestionarios(emp)
           && nuevo().keys().hasOnly(['id','nombre','estado','configuracion','creadoPor','creadoEn','actualizadoEn'])
-          && nuevo().estado == 'borrador';
-        allow update: if puedeEditarCuestionarios(emp)
-          && nuevo().diff(resource.data).affectedKeys()
+          && nuevo().estado == 'borrador'
+          && nuevo().creadoPor.lower() == correo();
+
+        allow update: if nuevo().diff(resource.data).affectedKeys()
             .hasOnly(['nombre','estado','configuracion','versionActualId','actualizadoEn'])
           && nuevo().estado in ['borrador','publicado']
-          && (nuevo().estado == 'borrador'
-              || (empresaActiva(emp)
-                  && texto(nuevo().versionActualId, 1, 60)
-                  && existsAfter(/databases/$(database)/documents/empresas/$(emp)/cuestionarios/$(cid)/versiones/$(nuevo().versionActualId))));
-        allow delete: if puedeEditarCuestionarios(emp);
+          && (
+            (resource.data.estado == 'borrador' && nuevo().estado == 'borrador'
+              && puedeEditarCuestionarios(emp)
+              && (esAdminEmpresa(emp) || esPlataforma() || esAutorDelBorrador()))
+            ||
+            (nuevo().estado == 'publicado'
+              && puedePublicar(emp)
+              && empresaActiva(emp)
+              && texto(nuevo().versionActualId, 1, 60)
+              && existsAfter(/databases/$(database)/documents/empresas/$(emp)/cuestionarios/$(cid)/versiones/$(nuevo().versionActualId)))
+            ||
+            (resource.data.estado == 'publicado' && nuevo().estado == 'borrador'
+              && puedePublicar(emp))
+          );
+
+        allow delete: if esPlataforma()
+          || (resource.data.estado == 'borrador'
+              && puedeEditarCuestionarios(emp)
+              && (esAdminEmpresa(emp) || esAutorDelBorrador()));
 
         match /versiones/{vid} {
           allow get: if puedeLeerVersionPublicada(emp, cid, vid)
             || puedeEditarCuestionarios(emp);
+
           allow list: if puedeEditarCuestionarios(emp);
-          allow create: if puedeEditarCuestionarios(emp)
+
+          allow create: if puedePublicar(emp)
             && empresaActiva(emp)
             && nuevo().keys().hasAll(['numero','configuracion','publicadaEn','creadoPor'])
             && nuevo().keys().hasOnly(['numero','configuracion','publicadaEn','creadoPor'])
@@ -196,7 +251,9 @@ service cloud.firestore {
             && nuevo().configuracion is map
             && nuevo().publicadaEn == request.time
             && texto(nuevo().creadoPor, 3, 200);
-          allow update, delete: if false;
+
+          allow update: if false;
+          allow delete: if esPlataforma();
         }
       }
 
@@ -241,6 +298,7 @@ service cloud.firestore {
 
         match /seguimientos/{sid} {
           allow read: if puedeVerLeads(emp);
+
           allow create: if puedeGestionarLeads(emp)
             && nuevo().keys().hasAll(['tipo','notas','creadoPor','creadoEn'])
             && nuevo().keys().hasOnly(['tipo','notas','resultado','proximaAccionEn','creadoPor','creadoEn'])
@@ -250,6 +308,7 @@ service cloud.firestore {
             && nuevo().creadoEn == request.time
             && (!('resultado' in nuevo()) || texto(nuevo().resultado, 1, 500))
             && (!('proximaAccionEn' in nuevo()) || nuevo().proximaAccionEn is timestamp);
+
           allow update: if false;
           allow delete: if esAdminEmpresa(emp) || esPlataforma();
         }

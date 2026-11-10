@@ -427,6 +427,216 @@ describe("endpoints de suscripción con Stripe y Firebase simulados", () => {
     expect(JSON.stringify(estadoRespuesta.body)).not.toContain("sub_private");
   });
 
+  it("rechaza sin sesión iniciar, portal y consulta de estado sin llamar a Stripe", async () => {
+    const { dependencias } = crearDependencias();
+    const stripe = dependencias.stripe as unknown as {
+      checkout: { sessions: { create: ReturnType<typeof vi.fn> } };
+      billingPortal: { sessions: { create: ReturnType<typeof vi.fn> } };
+    };
+    for (const ejecutar of [
+      crearHandlerIniciar(dependencias),
+      crearHandlerPortal(dependencias),
+      crearHandlerEstado(dependencias),
+    ]) {
+      const respuesta = new RespuestaSimulada();
+      await ejecutar(
+        solicitud(
+          { slug: "empresa-a", nombre: "Empresa A" },
+          { authorization: undefined },
+        ),
+        respuesta,
+      );
+      expect(respuesta.codigo).toBe(401);
+    }
+    expect(stripe.checkout.sessions.create).not.toHaveBeenCalled();
+    expect(stripe.billingPortal.sessions.create).not.toHaveBeenCalled();
+  });
+
+  it("portal y estado rechazan a quien solo pertenece a otra empresa, a usuario y a miembro inactivo", async () => {
+    const { dependencias, firestore } = crearDependencias();
+    const auth = dependencias.auth as unknown as {
+      verifyIdToken: ReturnType<typeof vi.fn>;
+    };
+    const portal = dependencias.stripe as unknown as {
+      billingPortal: { sessions: { create: ReturnType<typeof vi.fn> } };
+    };
+    auth.verifyIdToken.mockResolvedValue({
+      email: "ajeno@example.com",
+      email_verified: true,
+    });
+    firestore.documentos.set("empresas/otra/miembros/ajeno@example.com", {
+      rol: "admin",
+      estado: "activo",
+    });
+
+    for (const handler of [
+      crearHandlerPortal(dependencias),
+      crearHandlerEstado(dependencias),
+    ]) {
+      const respuesta = new RespuestaSimulada();
+      await handler(solicitud({ slug: "empresa-a" }), respuesta);
+      expect(respuesta.codigo).toBe(403);
+    }
+
+    firestore.documentos.set("empresas/empresa-a/miembros/ajeno@example.com", {
+      rol: "usuario",
+      estado: "activo",
+    });
+    let respuesta = new RespuestaSimulada();
+    await crearHandlerPortal(dependencias)(
+      solicitud({ slug: "empresa-a" }),
+      respuesta,
+    );
+    expect(respuesta.codigo).toBe(403);
+    respuesta = new RespuestaSimulada();
+    await crearHandlerEstado(dependencias)(
+      solicitud({ slug: "empresa-a" }),
+      respuesta,
+    );
+    expect(respuesta.codigo).toBe(403);
+
+    firestore.documentos.set("empresas/empresa-a/miembros/ajeno@example.com", {
+      rol: "admin",
+      estado: "inactivo",
+    });
+    respuesta = new RespuestaSimulada();
+    await crearHandlerPortal(dependencias)(
+      solicitud({ slug: "empresa-a" }),
+      respuesta,
+    );
+    expect(respuesta.codigo).toBe(403);
+    expect(portal.billingPortal.sessions.create).not.toHaveBeenCalled();
+  });
+
+  it("un admin activo de la empresa abre su portal y los IDs de Stripe vienen de Firestore", async () => {
+    const { dependencias, firestore } = crearDependencias();
+    (dependencias.auth as unknown as {
+      verifyIdToken: ReturnType<typeof vi.fn>;
+    }).verifyIdToken.mockResolvedValue({
+      email: "admin@example.com",
+      email_verified: true,
+    });
+    firestore.documentos.set("empresas/empresa-a/miembros/admin@example.com", {
+      rol: "admin",
+      estado: "activo",
+    });
+    firestore.documentos.set("empresas/empresa-a/suscripcion/actual", {
+      estado: "activa",
+      stripeCustomerId: "cus_from_firestore",
+      stripeSubscriptionId: "sub_private",
+    });
+    const stripe = dependencias.stripe as unknown as {
+      billingPortal: { sessions: { create: ReturnType<typeof vi.fn> } };
+    };
+    const respuesta = new RespuestaSimulada();
+    await crearHandlerPortal(dependencias)(
+      solicitud({
+        slug: "empresa-a",
+        correo: "victima@example.com",
+        rol: "propietario",
+        stripeCustomerId: "cus_attacker",
+      }),
+      respuesta,
+    );
+    expect(respuesta.codigo).toBe(200);
+    expect(stripe.billingPortal.sessions.create).toHaveBeenCalledWith({
+      customer: "cus_from_firestore",
+      return_url: "https://app.example/admin?empresa=empresa-a",
+    });
+  });
+
+  it("propietario activo puede consultar y recuperar la suscripción aunque su empresa esté suspendida", async () => {
+    const { dependencias, firestore } = crearDependencias();
+    firestore.documentos.set("empresas/empresa-a", {
+      estado: "suspendida",
+      planId: "prueba",
+    });
+    firestore.documentos.set("empresas/empresa-a/miembros/duena@example.com", {
+      rol: "propietario",
+      estado: "activo",
+    });
+    firestore.documentos.set("empresas/empresa-a/suscripcion/actual", {
+      estado: "cancelada",
+      stripeCustomerId: "cus_from_firestore",
+    });
+
+    const estado = new RespuestaSimulada();
+    await crearHandlerEstado(dependencias)(
+      solicitud({ slug: "empresa-a" }),
+      estado,
+    );
+    expect(estado.codigo).toBe(200);
+    expect(estado.body).toEqual({
+      suscripcion: { estado: "cancelada", pruebaHasta: null },
+    });
+
+    const portal = new RespuestaSimulada();
+    await crearHandlerPortal(dependencias)(
+      solicitud({ slug: "empresa-a" }),
+      portal,
+    );
+    expect(portal.codigo).toBe(200);
+    expect((dependencias.stripe as unknown as {
+      billingPortal: { sessions: { create: ReturnType<typeof vi.fn> } };
+    }).billingPortal.sessions.create).toHaveBeenCalledWith({
+      customer: "cus_from_firestore",
+      return_url: "https://app.example/admin?empresa=empresa-a",
+    });
+  });
+
+  it("el inicio ignora correo y plan del cliente y usa la identidad verificada y el precio configurado", async () => {
+    const { dependencias } = crearDependencias();
+    const stripe = dependencias.stripe as unknown as {
+      checkout: { sessions: { create: ReturnType<typeof vi.fn> } };
+    };
+    const respuesta = new RespuestaSimulada();
+    await crearHandlerIniciar(dependencias)(
+      solicitud({
+        slug: "empresa-a",
+        nombre: "Empresa A",
+        correo: "victima@example.com",
+        email: "victima@example.com",
+        planId: "avanzado",
+        priceId: "price_attacker",
+      }),
+      respuesta,
+    );
+
+    expect(respuesta.codigo).toBe(200);
+    expect(stripe.checkout.sessions.create).toHaveBeenCalledWith(
+      expect.objectContaining({
+        line_items: [{ price: "price_test", quantity: 1 }],
+        customer_email: "duena@example.com",
+        metadata: {
+          slug: "empresa-a",
+          nombre: "Empresa A",
+          correo: "duena@example.com",
+        },
+        subscription_data: expect.objectContaining({
+          metadata: {
+            slug: "empresa-a",
+            nombre: "Empresa A",
+            correo: "duena@example.com",
+          },
+        }),
+      }),
+    );
+  });
+
+  it("la ruta firmada de Stripe no acepta un webhook sin firma", async () => {
+    const { dependencias } = crearDependencias();
+    const construirEvento = (dependencias.stripe as unknown as {
+      webhooks: { constructEvent: ReturnType<typeof vi.fn> };
+    }).webhooks.constructEvent;
+    const respuesta = new RespuestaSimulada();
+    await crearHandlerWebhook(dependencias)(
+      solicitud(undefined, { "stripe-signature": undefined }),
+      respuesta,
+    );
+    expect(respuesta.codigo).toBe(400);
+    expect(construirEvento).not.toHaveBeenCalled();
+  });
+
   it("bloquea toda ruta protegida cuando la llave no es de prueba", async () => {
     const claveAnterior = process.env.STRIPE_SECRET_KEY;
     process.env.STRIPE_SECRET_KEY = "sk_live_no-real";
