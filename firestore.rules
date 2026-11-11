@@ -1,3 +1,4 @@
+
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
@@ -184,6 +185,11 @@ service cloud.firestore {
         allow write: if false;
       }
 
+      match /uso/{doc} {
+        allow read: if esMiembro(emp) || esPlataforma();
+        allow write: if false;
+      }
+
       match /miembros/{id} {
         allow get: if conSesion() && correo() == id;
         allow list: if esAdminEmpresa(emp) || esPlataforma();
@@ -214,25 +220,11 @@ service cloud.firestore {
           && nuevo().estado == 'borrador'
           && nuevo().creadoPor.lower() == correo();
 
-        allow update: if nuevo().diff(resource.data).affectedKeys()
-            .hasOnly(['nombre','estado','configuracion','versionActualId','actualizadoEn'])
-          && nuevo().estado in ['borrador','publicado']
-          && (
-            (resource.data.estado == 'borrador' && nuevo().estado == 'borrador'
-              && puedeEditarCuestionarios(emp)
-              && (esAdminEmpresa(emp) || esPlataforma() || esAutorDelBorrador()))
-            ||
-            (nuevo().estado == 'publicado'
-              && puedePublicar(emp)
-              && empresaActiva(emp)
-              && nuevo().diff(resource.data).affectedKeys().hasOnly(['estado','versionActualId','actualizadoEn'])
-              && texto(nuevo().versionActualId, 1, 60)
-              && existsAfter(/databases/$(database)/documents/empresas/$(emp)/cuestionarios/$(cid)/versiones/$(nuevo().versionActualId)))
-            ||
-            (resource.data.estado == 'publicado' && nuevo().estado == 'borrador'
-              && puedePublicar(emp)
-              && nuevo().diff(resource.data).affectedKeys().hasOnly(['estado','actualizadoEn']))
-          );
+        allow update: if resource.data.estado == 'borrador'
+          && nuevo().estado == 'borrador'
+          && nuevo().diff(resource.data).affectedKeys().hasOnly(['nombre','configuracion','actualizadoEn'])
+          && puedeEditarCuestionarios(emp)
+          && (esAdminEmpresa(emp) || esPlataforma() || esAutorDelBorrador());
 
         allow delete: if esPlataforma()
           || (resource.data.estado == 'borrador'
@@ -245,15 +237,7 @@ service cloud.firestore {
 
           allow list: if puedeEditarCuestionarios(emp);
 
-          allow create: if puedePublicar(emp)
-            && empresaActiva(emp)
-            && nuevo().keys().hasAll(['numero','configuracion','publicadaEn','creadoPor'])
-            && nuevo().keys().hasOnly(['numero','configuracion','publicadaEn','creadoPor'])
-            && nuevo().numero is number
-            && nuevo().configuracion is map
-            && nuevo().publicadaEn == request.time
-            && texto(nuevo().creadoPor, 3, 200);
-
+          allow create: if false;
           allow update: if false;
           allow delete: if esPlataforma();
         }

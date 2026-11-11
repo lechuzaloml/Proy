@@ -65,7 +65,7 @@ export default function PantallaRecomendacion({
       </section>
       <CalculadoraImpacto />
       <OfertaAcompanamiento />
-      <OfertaPremium />
+      <OfertaPremium onVerPlanes={onVerPlanes} />
     </main>
   );
 }

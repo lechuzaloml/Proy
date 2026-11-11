@@ -608,6 +608,12 @@ textarea {
   content: "—";
 }
 
+.landing-premium-plans-button {
+  display: block;
+  width: fit-content;
+  margin: 1.5rem auto 0;
+}
+
 .questionnaire-header {
   margin-bottom: 2.5rem;
 }
@@ -10543,6 +10549,41 @@ button[aria-busy="true"] {
   width: min(100%, 1080px);
   grid-column: 1 / -1;
   justify-self: center;
+}
+
+.recommendation-page > .landing-premium {
+  width: min(100%, 960px);
+  grid-column: 1 / -1;
+  justify-self: center;
+}
+
+.landing-premium-grid {
+  width: 100%;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  align-items: stretch;
+}
+
+.landing-premium-item {
+  min-width: 0;
+  height: 100%;
+  overflow-wrap: anywhere;
+}
+
+.landing-premium-grid > .landing-premium-item:first-child {
+  grid-column: auto;
+  background: var(--color-white);
+}
+
+@media (max-width: 760px) {
+  .landing-premium-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 600px) {
+  .landing-premium-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
 }
 
 @media (min-width: 1024px) {

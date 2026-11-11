@@ -25,7 +25,11 @@ const beneficiosProximos = [
   "Personalización de cuestionarios",
 ];
 
-export default function OfertaPremium() {
+interface OfertaPremiumProps {
+  onVerPlanes: () => void;
+}
+
+export default function OfertaPremium({ onVerPlanes }: OfertaPremiumProps) {
   return (
     <section
       aria-labelledby="premium-offer-title"
@@ -64,6 +68,14 @@ export default function OfertaPremium() {
           ))}
         </ul>
       </div>
+
+      <button
+        className="submit-button landing-premium-plans-button"
+        onClick={onVerPlanes}
+        type="button"
+      >
+        Comprar un plan
+      </button>
     </section>
   );
 }
