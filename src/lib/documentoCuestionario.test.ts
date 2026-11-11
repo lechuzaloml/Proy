@@ -54,6 +54,15 @@ describe("documento de cuestionario guardado", () => {
     expect(diagnosticoInicial.preguntas[0].texto).not.toBe("Texto modificado");
   });
 
+  it("normaliza el correo del autor de la copia en minúsculas", () => {
+    const resultado = construirDocumentoCuestionarioGuardado({
+      ...entrada(),
+      creadoPor: " Editor@Example.Invalid ",
+    });
+
+    expect(resultado.data?.creadoPor).toBe("editor@example.invalid");
+  });
+
   it("rechaza IDs no personalizados, nombres vacíos y configuración inválida", () => {
     const base = entrada();
     const erroresId = validarDocumentoCuestionarioGuardado({

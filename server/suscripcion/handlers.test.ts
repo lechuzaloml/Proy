@@ -268,6 +268,10 @@ describe("endpoints de suscripción con Stripe y Firebase simulados", () => {
         correo: "duena@example.com",
         rol: "propietario",
         estado: "activo",
+        permisos: expect.objectContaining({
+          editarCuestionarios: true,
+          publicarCuestionarios: true,
+        }),
       }));
     expect(firestore.documentos.get("empresas/empresa-a/suscripcion/actual"))
       .toEqual(expect.objectContaining({

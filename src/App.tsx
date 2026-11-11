@@ -54,7 +54,14 @@ import { crearCopiaPlantilla } from "./templates/crearCopiaPlantilla";
 import { crearCuestionarioDesdeCero } from "./templates/crearCuestionarioDesdeCero";
 import { auth } from "./lib/firebaseAuth";
 import { db } from "./lib/firebase";
-import { puedeCrearCopiasPlantilla } from "./lib/permisosPlantillas";
+import {
+  puedeBorrarBorrador,
+  puedeEditarBorrador,
+  puedePublicar,
+  type PermisosCuestionarios,
+  type RolCuestionarios,
+} from "./lib/permisosCuestionarios";
+import { esAdministradorEmpresa, normalizarRolMiembro } from "./admin/rolesMiembros";
 import {
   actualizarCuestionarioGuardado,
   crearCuestionarioGuardado,
@@ -102,39 +109,102 @@ const CLAVE_INTENTOS_GUARDADOS = "clearIaDiagnosticosGuardados";
 const ID_TEMPLATE_REGISTRO_EVENTO = "demo-registro-evento-pagina-completa";
 const PanelAdmin = lazy(() => import("./admin/AdminPanel"));
 
-async function puedeEditarCuestionarios(
+interface AccesoCuestionarios {
+  correo: string;
+  rol: RolCuestionarios;
+  permisos: PermisosCuestionarios;
+  puedeEditar: boolean;
+  puedePublicar: boolean;
+  puedeDespublicar: boolean;
+}
+
+function puedeEditarCopia(
+  acceso: AccesoCuestionarios | null,
+  copia: DocumentoCuestionarioGuardado,
+): boolean {
+  return Boolean(
+    acceso &&
+    copia.estado === "borrador" &&
+    puedeEditarBorrador(
+      acceso.rol,
+      acceso.permisos,
+      copia.creadoPor,
+      acceso.correo,
+    ),
+  );
+}
+
+function puedeBorrarCopia(
+  acceso: AccesoCuestionarios | null,
+  copia: DocumentoCuestionarioGuardado,
+): boolean {
+  return Boolean(
+    acceso &&
+    copia.estado === "borrador" &&
+    puedeBorrarBorrador(
+      acceso.rol,
+      acceso.permisos,
+      copia.creadoPor,
+      acceso.correo,
+    ),
+  );
+}
+
+async function obtenerAccesoCuestionarios(
   usuario: User,
   empresaId: string,
-): Promise<boolean> {
+): Promise<AccesoCuestionarios | null> {
   const database = db;
   const correo = usuario.email?.toLowerCase();
   if (!database || !usuario.emailVerified || !correo || !empresaId) {
-    return false;
+    return null;
   }
 
   const plataforma = await getDocFromServer(
     doc(database, "plataformaAdmins", correo),
   );
   if (plataforma.exists()) {
-    return puedeCrearCopiasPlantilla(
-      { correo, correoVerificado: usuario.emailVerified },
-      true,
-      empresaId,
-      [],
-    );
+    const empresa = await getDocFromServer(doc(database, "empresas", empresaId));
+    const empresaActiva = empresa.exists() && empresa.data().estado === "activa";
+    return {
+      correo,
+      rol: "plataforma",
+      permisos: {
+        editarCuestionarios: true,
+        publicarCuestionarios: true,
+      },
+      puedeEditar: true,
+      puedePublicar: empresaActiva,
+      puedeDespublicar: true,
+    };
   }
 
   const membresia = await getDocFromServer(
     doc(database, "empresas", empresaId, "miembros", correo),
   );
-  return puedeCrearCopiasPlantilla(
-    { correo, correoVerificado: usuario.emailVerified },
-    false,
-    empresaId,
-    membresia.exists()
-      ? [{ ...membresia.data(), empresaId }]
-      : [],
-  );
+  if (!membresia.exists() || membresia.data().estado !== "activo") {
+    return null;
+  }
+  const empresa = await getDocFromServer(doc(database, "empresas", empresaId));
+  const empresaActiva = empresa.exists() && empresa.data().estado === "activa";
+  if (!empresaActiva) {
+    return null;
+  }
+  const datos = membresia.data();
+  const rol = normalizarRolMiembro(datos.rol);
+  const permisos =
+    typeof datos.permisos === "object" && datos.permisos !== null
+      ? datos.permisos as PermisosCuestionarios
+      : {};
+  const administrador = esAdministradorEmpresa(rol);
+  return {
+    correo,
+    rol,
+    permisos,
+    puedeEditar: administrador || permisos.editarCuestionarios === true,
+    puedePublicar: puedePublicar(rol, permisos) && empresaActiva,
+    puedeDespublicar: puedePublicar(rol, permisos),
+  };
 }
 
 function intentoMarcadoComoGuardado(id: string): boolean {
@@ -217,7 +287,8 @@ export default function App() {
     obtenerEmpresaActivaInicial,
   );
   const [estadoApp, setEstadoApp] = useState(obtenerEstadoInicial);
-  const [puedeCrearCopias, setPuedeCrearCopias] = useState(false);
+  const [accesoCuestionarios, setAccesoCuestionarios] =
+    useState<AccesoCuestionarios | null>(null);
   const [usuarioSesion, setUsuarioSesion] = useState<User | null>(null);
   const [authListo, setAuthListo] = useState(false);
   const [copiasGuardadas, setCopiasGuardadas] = useState<
@@ -228,6 +299,7 @@ export default function App() {
   const estadoAppRef = useRef(estadoApp);
   const intentosGuardadosRef = useRef(new Set<string>());
   const { seleccion, bienvenidaCompletada, mostrarPlanes, envio } = estadoApp;
+  const puedeCrearCopias = accesoCuestionarios?.puedeEditar === true;
   const calculo = envio?.calculo ?? null;
   const resultadoValidacion = seleccion
     ? validarCuestionario(seleccion.configuracion)
@@ -286,7 +358,7 @@ export default function App() {
     if (!auth || !db) {
       setUsuarioSesion(null);
       setAuthListo(true);
-      setPuedeCrearCopias(false);
+      setAccesoCuestionarios(null);
       return;
     }
 
@@ -298,14 +370,14 @@ export default function App() {
         const revisionActual = ++revision;
         setUsuarioSesion(usuario);
         setAuthListo(true);
-        setPuedeCrearCopias(false);
+        setAccesoCuestionarios(null);
         if (!usuario) {
           return;
         }
-        void puedeEditarCuestionarios(usuario, empresaActivaId)
-          .then((permitido) => {
+        void obtenerAccesoCuestionarios(usuario, empresaActivaId)
+          .then((acceso) => {
             if (!cancelado && revisionActual === revision) {
-              setPuedeCrearCopias(permitido);
+              setAccesoCuestionarios(acceso);
             }
           })
           .catch((error: unknown) => {
@@ -317,7 +389,7 @@ export default function App() {
       (error) => {
         setUsuarioSesion(null);
         setAuthListo(true);
-        setPuedeCrearCopias(false);
+        setAccesoCuestionarios(null);
         console.error("No se pudo verificar la sesión para crear copias.", error);
       },
     );
@@ -464,19 +536,17 @@ export default function App() {
   ) {
     try {
       const usuario = auth?.currentUser;
-      let permitido = false;
+      let acceso: AccesoCuestionarios | null = null;
       try {
-        permitido = Boolean(
-          usuario &&
-          usuario.email &&
-          await puedeEditarCuestionarios(usuario, empresaActivaId),
-        );
+        acceso = usuario
+          ? await obtenerAccesoCuestionarios(usuario, empresaActivaId)
+          : null;
       } catch {
-        setPuedeCrearCopias(false);
+        setAccesoCuestionarios(null);
         throw new Error("No se pudo verificar tu permiso para crear copias.");
       }
-      if (!usuario?.email || !permitido) {
-        setPuedeCrearCopias(false);
+      if (!usuario?.email || !acceso?.puedeEditar) {
+        setAccesoCuestionarios(null);
         throw new Error("No tienes permiso para crear copias en esta empresa.");
       }
 
@@ -501,11 +571,11 @@ export default function App() {
   async function crearCuestionarioEnBlanco() {
     try {
       const usuario = auth?.currentUser;
-      if (
-        !usuario ||
-        !await puedeEditarCuestionarios(usuario, empresaActivaId)
-      ) {
-        setPuedeCrearCopias(false);
+      const acceso = usuario
+        ? await obtenerAccesoCuestionarios(usuario, empresaActivaId)
+        : null;
+      if (!usuario || !acceso?.puedeEditar) {
+        setAccesoCuestionarios(null);
         throw new Error("No tienes permiso para crear cuestionarios en esta empresa.");
       }
       const cuestionario = crearCuestionarioDesdeCero();
@@ -531,13 +601,23 @@ export default function App() {
   async function abrirCopiaGuardada(id: string) {
     try {
       const usuario = auth?.currentUser;
-      if (!usuario || !await puedeEditarCuestionarios(usuario, empresaActivaId)) {
-        setPuedeCrearCopias(false);
+      const acceso = usuario
+        ? await obtenerAccesoCuestionarios(usuario, empresaActivaId)
+        : null;
+      if (!usuario || !acceso?.puedeEditar) {
+        setAccesoCuestionarios(null);
         throw new Error("No tienes permiso para editar copias en esta empresa.");
       }
       const copia = await leerCuestionarioGuardado(empresaActivaId, id);
       if (!copia) {
         throw new Error("La copia guardada ya no existe.");
+      }
+      if (!puedeEditarCopia(acceso, copia)) {
+        throw new Error(
+          copia.estado === "publicado"
+            ? "Despublica primero el cuestionario para editarlo."
+            : "Solo puedes editar tus borradores; solicita a un administrador la edición de los demás.",
+        );
       }
       seleccionarCuestionario(
         copia.id,
@@ -557,22 +637,26 @@ export default function App() {
   }
 
   async function eliminarCopiaPlantilla(id: string) {
+    const usuario = auth?.currentUser;
+    const acceso = usuario
+      ? await obtenerAccesoCuestionarios(usuario, empresaActivaId)
+      : null;
+    if (!usuario || !acceso?.puedeEditar) {
+      setAccesoCuestionarios(null);
+      throw new Error("No tienes permiso para eliminar copias en esta empresa.");
+    }
+    const copia = await leerCuestionarioGuardado(empresaActivaId, id);
+    if (!copia) {
+      throw new Error("La copia guardada ya no existe.");
+    }
+    if (copia.estado === "publicado") {
+      throw new Error("Despublica primero el cuestionario; los publicados no se eliminan.");
+    }
+    if (!puedeBorrarCopia(acceso, copia)) {
+      throw new Error("Solo puedes eliminar tus borradores o los de tu empresa como administrador.");
+    }
     if (!window.confirm("¿Eliminar esta copia guardada? Esta acción no se puede deshacer.")) {
       return;
-    }
-    const usuario = auth?.currentUser;
-    let permitido = false;
-    try {
-      permitido = Boolean(
-        usuario && await puedeEditarCuestionarios(usuario, empresaActivaId),
-      );
-    } catch {
-      setPuedeCrearCopias(false);
-      throw new Error("No se pudo verificar tu permiso para eliminar copias.");
-    }
-    if (!usuario || !permitido) {
-      setPuedeCrearCopias(false);
-      throw new Error("No tienes permiso para eliminar copias en esta empresa.");
     }
     await eliminarCuestionarioGuardado(empresaActivaId, id);
     setCopiasGuardadas((actuales) => actuales.filter((copia) => copia.id !== id));
@@ -614,21 +698,37 @@ export default function App() {
 
     if (!previsualizar) {
       const usuario = auth?.currentUser;
-      let permitido = false;
+      let acceso: AccesoCuestionarios | null = null;
       try {
-        permitido = Boolean(
-          usuario && await puedeEditarCuestionarios(usuario, empresaActivaId),
-        );
+        acceso = usuario
+          ? await obtenerAccesoCuestionarios(usuario, empresaActivaId)
+          : null;
       } catch {
-        setPuedeCrearCopias(false);
+        setAccesoCuestionarios(null);
         throw new Error("No se pudo verificar tu permiso para guardar cambios.");
       }
-      if (!usuario?.email || !permitido) {
-        setPuedeCrearCopias(false);
+      if (!usuario?.email || !acceso?.puedeEditar) {
+        setAccesoCuestionarios(null);
         throw new Error("No tienes permiso para editar copias en esta empresa.");
       }
       const copiaGuardada = actual.copiaGuardada ??
         copiasGuardadas.some((copia) => copia.id === actual.seleccion?.id);
+      if (copiaGuardada) {
+        const copiaExistente = await leerCuestionarioGuardado(
+          empresaActivaId,
+          actual.seleccion.id,
+        );
+        if (!copiaExistente) {
+          throw new Error("La copia guardada ya no existe.");
+        }
+        if (!puedeEditarCopia(acceso, copiaExistente)) {
+          throw new Error(
+            copiaExistente.estado === "publicado"
+              ? "Despublica primero el cuestionario para guardar cambios."
+              : "Solo puedes editar tus borradores o los de tu empresa como administrador.",
+          );
+        }
+      }
       const guardada = copiaGuardada
         ? await actualizarCuestionarioGuardado(
           empresaActivaId,
@@ -669,30 +769,10 @@ export default function App() {
     setEstadoApp(siguiente);
   }
 
-  async function publicarCopiaPlantilla(
-    nombre: string,
-    configuracion: unknown,
+  async function crearVersionYPublicar(
+    copia: DocumentoCuestionarioGuardado,
+    correo: string,
   ): Promise<string> {
-    const seleccionActual = estadoAppRef.current.seleccion;
-    if (!seleccionActual || !seleccionActual.id.startsWith("personalizado-")) {
-      throw new Error("Solo se pueden publicar copias guardadas.");
-    }
-    const usuario = auth?.currentUser;
-    if (
-      !usuario?.email ||
-      !await puedeEditarCuestionarios(usuario, empresaActivaId)
-    ) {
-      setPuedeCrearCopias(false);
-      throw new Error("No tienes permiso para publicar copias en esta empresa.");
-    }
-    await actualizarCopiaPlantilla(nombre, configuracion, false);
-    const copiaGuardada = await leerCuestionarioGuardado(
-      empresaActivaId,
-      seleccionActual.id,
-    );
-    if (!copiaGuardada) {
-      throw new Error("La copia guardada ya no existe.");
-    }
     if (!db) {
       throw new Error("Firebase no está configurado.");
     }
@@ -701,7 +781,7 @@ export default function App() {
       "empresas",
       empresaActivaId,
       "cuestionarios",
-      seleccionActual.id,
+      copia.id,
     );
     const versiones = await getDocsFromServer(
       collection(cuestionarioRef, "versiones"),
@@ -717,9 +797,9 @@ export default function App() {
     const batch = writeBatch(db);
     batch.set(versionRef, {
       numero,
-      configuracion: copiaGuardada.configuracion,
+      configuracion: copia.configuracion,
       publicadaEn: serverTimestamp(),
-      creadoPor: usuario.email.toLowerCase(),
+      creadoPor: correo.toLowerCase(),
     });
     batch.update(cuestionarioRef, {
       estado: "publicado",
@@ -729,7 +809,7 @@ export default function App() {
     await batch.commit();
     const actualizada = await leerCuestionarioGuardado(
       empresaActivaId,
-      seleccionActual.id,
+      copia.id,
     );
     if (actualizada) {
       setCopiasGuardadas((copias) => [
@@ -737,20 +817,94 @@ export default function App() {
         ...copias.filter(({ id }) => id !== actualizada.id),
       ]);
     }
-    return urlCopiaPublicada(
+    return urlCopiaPublicada(empresaActivaId, copia.id);
+  }
+
+  async function publicarCopiaPlantilla(
+    nombre: string,
+    configuracion: unknown,
+  ): Promise<string> {
+    const seleccionActual = estadoAppRef.current.seleccion;
+    if (!seleccionActual || !seleccionActual.id.startsWith("personalizado-")) {
+      throw new Error("Solo se pueden publicar copias guardadas.");
+    }
+    const usuario = auth?.currentUser;
+    const acceso = usuario
+      ? await obtenerAccesoCuestionarios(usuario, empresaActivaId)
+      : null;
+    if (!usuario?.email || !acceso?.puedePublicar || !acceso.puedeEditar) {
+      throw new Error("No tienes permiso para publicar copias en esta empresa.");
+    }
+    let existente = await leerCuestionarioGuardado(
       empresaActivaId,
       seleccionActual.id,
     );
+    if (!existente) {
+      throw new Error("La copia guardada ya no existe.");
+    }
+    if (existente.estado === "publicado") {
+      if (!db) {
+        throw new Error("Firebase no está configurado.");
+      }
+      await updateDoc(
+        doc(db, "empresas", empresaActivaId, "cuestionarios", existente.id),
+        { estado: "borrador", actualizadoEn: serverTimestamp() },
+      );
+      existente = await leerCuestionarioGuardado(empresaActivaId, existente.id);
+      if (!existente) {
+        throw new Error("La copia dejó de existir al despublicarla.");
+      }
+      const despublicada = existente;
+      setCopiasGuardadas((copias) => [
+        despublicada,
+        ...copias.filter(({ id }) => id !== despublicada.id),
+      ]);
+    }
+    if (!puedeEditarCopia(acceso, existente)) {
+      throw new Error("Solo puedes cambiar tus borradores o los de tu empresa como administrador.");
+    }
+    await actualizarCopiaPlantilla(nombre, configuracion, false);
+    const guardada = await leerCuestionarioGuardado(
+      empresaActivaId,
+      seleccionActual.id,
+    );
+    if (!guardada) {
+      throw new Error("La copia guardada ya no existe.");
+    }
+    const url = await crearVersionYPublicar(guardada, usuario.email);
+    regresarBiblioteca();
+    return url;
+  }
+
+  async function publicarCopiaDesdeBiblioteca(id: string): Promise<void> {
+    const usuario = auth?.currentUser;
+    const acceso = usuario
+      ? await obtenerAccesoCuestionarios(usuario, empresaActivaId)
+      : null;
+    if (!usuario?.email || !acceso?.puedePublicar) {
+      throw new Error("No tienes permiso para publicar cuestionarios en esta empresa.");
+    }
+    const copia = await leerCuestionarioGuardado(empresaActivaId, id);
+    if (!copia || copia.estado !== "borrador") {
+      throw new Error("Solo se pueden publicar borradores; despublica primero el cuestionario.");
+    }
+    await crearVersionYPublicar(copia, usuario.email);
   }
 
   async function despublicarCopiaPlantilla(id: string): Promise<void> {
     const usuario = auth?.currentUser;
-    if (!usuario || !await puedeEditarCuestionarios(usuario, empresaActivaId)) {
-      setPuedeCrearCopias(false);
+    const acceso = usuario
+      ? await obtenerAccesoCuestionarios(usuario, empresaActivaId)
+      : null;
+    if (!usuario || !acceso?.puedePublicar) {
       throw new Error("No tienes permiso para despublicar copias en esta empresa.");
     }
     if (!db) {
       throw new Error("Firebase no está configurado.");
+    }
+    const copia = await leerCuestionarioGuardado(empresaActivaId, id);
+    if (!copia || copia.estado !== "publicado") {
+      throw new Error("El cuestionario ya no está publicado.");
     }
     await updateDoc(
       doc(db, "empresas", empresaActivaId, "cuestionarios", id),
@@ -774,6 +928,14 @@ export default function App() {
       origenIntroduccionTemplate: null,
       estadoCuestionario: null,
     });
+  }
+
+  function reportarErrorBiblioteca(accion: string, error: unknown) {
+    setErrorBiblioteca(
+      error instanceof Error
+        ? `No se pudo ${accion}: ${error.message}`
+        : `No se pudo ${accion}.`,
+    );
   }
 
   function abrirDiagnostico() {
@@ -820,26 +982,52 @@ export default function App() {
   }
 
   if (!seleccion) {
+    const puedeVerTodasCopias = accesoCuestionarios?.rol === "admin" ||
+      accesoCuestionarios?.rol === "propietario" ||
+      accesoCuestionarios?.rol === "plataforma" ||
+      accesoCuestionarios?.permisos.publicarCuestionarios === true;
+    const copiasVisibles = puedeVerTodasCopias
+      ? copiasGuardadas
+      : copiasGuardadas.filter((copia) =>
+        puedeEditarCopia(accesoCuestionarios, copia)
+      );
     return (
       <BibliotecaTemplates
         accesoCuenta={
           <AccesoCuenta authListo={authListo} usuario={usuarioSesion} />
         }
         casosReferencia={casosReferencia}
-        copiasGuardadas={copiasGuardadas}
+        copiasGuardadas={copiasVisibles}
         cargandoCopias={cargandoCopias}
         errorBiblioteca={errorBiblioteca}
         onAbrirCopia={abrirCopiaGuardada}
+        puedeEditarCopia={(copia) =>
+          puedeEditarCopia(accesoCuestionarios, copia)
+        }
+        puedeBorrarCopia={(copia) =>
+          puedeBorrarCopia(accesoCuestionarios, copia)
+        }
         onCrearDesdeCero={puedeCrearCopias ? crearCuestionarioEnBlanco : undefined}
-        onEliminarCopia={
-          puedeCrearCopias
-            ? (id) => void eliminarCopiaPlantilla(id).catch((error: unknown) => {
-              setErrorBiblioteca(
-                error instanceof Error
-                  ? `No se pudo eliminar la copia: ${error.message}`
-                  : "No se pudo eliminar la copia.",
-              );
-            })
+        onEliminarCopia={(id) =>
+          void eliminarCopiaPlantilla(id).catch((error: unknown) =>
+            reportarErrorBiblioteca("eliminar la copia", error)
+          )
+        }
+        puedePublicar={accesoCuestionarios?.puedePublicar === true}
+        onPublicarCopia={
+          accesoCuestionarios?.puedePublicar
+            ? (id) =>
+              void publicarCopiaDesdeBiblioteca(id).catch((error: unknown) =>
+                reportarErrorBiblioteca("publicar la copia", error)
+              )
+            : undefined
+        }
+        onDespublicarCopia={
+          accesoCuestionarios?.puedeDespublicar
+            ? (id) =>
+              void despublicarCopiaPlantilla(id).catch((error: unknown) =>
+                reportarErrorBiblioteca("despublicar la copia", error)
+              )
             : undefined
         }
         onCrearCopia={puedeCrearCopias ? seleccionarCopiaPlantilla : undefined}
@@ -919,6 +1107,9 @@ export default function App() {
     seleccion.id.startsWith("personalizado-") &&
     estadoApp.editandoCopia
   ) {
+    const copiaSeleccionada = copiasGuardadas.find(
+      ({ id }) => id === seleccion.id,
+    );
     if (!puedeCrearCopias) {
       return (
         <>
@@ -930,6 +1121,42 @@ export default function App() {
         </>
       );
     }
+    if (
+      estadoApp.copiaGuardada &&
+      copiaSeleccionada?.estado === "publicado"
+    ) {
+      return (
+        <>
+          {navegacion}
+          <main className="validation-errors">
+            <h1>Despublica primero</h1>
+            <p>Un cuestionario publicado no se puede editar ni eliminar.</p>
+            <button
+              className="secondary-button"
+              onClick={regresarBiblioteca}
+              type="button"
+            >
+              Volver a la biblioteca
+            </button>
+          </main>
+        </>
+      );
+    }
+    if (
+      estadoApp.copiaGuardada &&
+      copiaSeleccionada &&
+      !puedeEditarCopia(accesoCuestionarios, copiaSeleccionada)
+    ) {
+      return (
+        <>
+          {navegacion}
+          <main className="validation-errors" role="alert">
+            <h1>Sin permiso para editar este borrador</h1>
+            <p>Solo puedes editar tus borradores. Pide ayuda a un administrador.</p>
+          </main>
+        </>
+      );
+    }
     return (
       <>
         {navegacion}
@@ -937,6 +1164,7 @@ export default function App() {
           id={seleccion.id}
           key={seleccion.id}
           copiaGuardada={estadoApp.copiaGuardada}
+          creadoPor={copiaSeleccionada?.creadoPor}
           desdeCero={seleccion.desdeCero}
           nombre={seleccion.nombre}
           cuestionario={resultadoValidacion.data}
@@ -950,7 +1178,9 @@ export default function App() {
             estadoApp.copiaGuardada ? undefined : descartarCopiaNueva
           }
           onEliminar={
-            estadoApp.copiaGuardada
+            estadoApp.copiaGuardada &&
+              copiaSeleccionada &&
+              puedeBorrarCopia(accesoCuestionarios, copiaSeleccionada)
               ? () => eliminarCopiaPlantilla(seleccion.id)
               : undefined
           }
@@ -965,10 +1195,17 @@ export default function App() {
               ? urlCopiaPublicada(empresaActivaId, seleccion.id)
               : undefined;
           })()}
-          onPublicar={(nombre, configuracion) =>
-            publicarCopiaPlantilla(nombre, configuracion)
+          onPublicar={
+            accesoCuestionarios?.puedePublicar
+              ? (nombre, configuracion) =>
+                publicarCopiaPlantilla(nombre, configuracion)
+              : undefined
           }
-          onDespublicar={() => despublicarCopiaPlantilla(seleccion.id)}
+          onDespublicar={
+            accesoCuestionarios?.puedeDespublicar
+              ? () => despublicarCopiaPlantilla(seleccion.id)
+              : undefined
+          }
         />
       </>
     );
@@ -1264,9 +1501,9 @@ export default function App() {
               !intentoMarcadoComoGuardado(idIntento)
             ) {
               intentosGuardadosRef.current.add(idIntento);
-              void puedeEditarCuestionarios(usuario, empresaActivaId)
-                .then((permitido) => {
-                  if (!permitido) {
+              void obtenerAccesoCuestionarios(usuario, empresaActivaId)
+                .then((acceso) => {
+                  if (!acceso?.puedeEditar) {
                     throw new Error(
                       "No tienes permiso para guardar envíos de copias en esta empresa.",
                     );

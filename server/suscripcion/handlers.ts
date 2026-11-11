@@ -459,6 +459,7 @@ async function registrarCheckout(
         verLeads: true,
         gestionarLeads: true,
         editarCuestionarios: true,
+        publicarCuestionarios: true,
       },
       creadoEn: ahora,
     });

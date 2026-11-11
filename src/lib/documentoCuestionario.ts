@@ -120,6 +120,7 @@ export function construirDocumentoCuestionarioGuardado(
 
   return validarDocumentoCuestionarioGuardado({
     ...entrada,
+    creadoPor: entrada.creadoPor.trim().toLowerCase(),
     estado: "borrador",
     configuracion,
   });

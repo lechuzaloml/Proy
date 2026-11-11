@@ -186,6 +186,7 @@ export default function ConsolaPlataforma({
           verLeads: true,
           gestionarLeads: true,
           editarCuestionarios: true,
+          publicarCuestionarios: true,
         },
         estado: "activo",
         creadoEn: serverTimestamp(),

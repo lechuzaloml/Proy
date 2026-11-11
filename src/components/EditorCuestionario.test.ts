@@ -87,6 +87,28 @@ describe("acciones del editor de copias", () => {
     expect(markup).toContain(">Guardar</button>");
     expect(markup).toContain(">Eliminar</button>");
     expect(markup).not.toContain(">Descartar</button>");
+    expect(markup).toContain("Pide la publicación a un administrador.");
+  });
+
+  it("una copia publicada no ofrece edición ni eliminación y pide despublicarla primero", () => {
+    const markup = renderToStaticMarkup(createElement(EditorCuestionario, {
+      id: "personalizado-publicado",
+      nombre: "Copia publicada",
+      cuestionario: validacion.data,
+      copiaGuardada: true,
+      publicado: true,
+      creadoPor: "owner@example.invalid",
+      onGuardar: vi.fn(),
+      onPrevisualizar: vi.fn(),
+      onEliminar: vi.fn(),
+      onDespublicar: vi.fn(),
+    }));
+
+    expect(markup).toContain("Despublica primero");
+    expect(markup).toContain("Creado por owner@example.invalid");
+    expect(markup).toContain(">Despublicar</button>");
+    expect(markup).not.toContain(">Guardar</button>");
+    expect(markup).not.toContain(">Eliminar</button>");
   });
 
   it("muestra controles para scoring, reglas, segmentos y puntos", () => {

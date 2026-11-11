@@ -61,6 +61,7 @@ interface PermisosMiembro {
   verLeads: boolean;
   gestionarLeads: boolean;
   editarCuestionarios: boolean;
+  publicarCuestionarios: boolean;
 }
 
 interface LeadAdmin extends LeadParaLista {
@@ -110,6 +111,7 @@ function leerPermisos(datos: DocumentData): PermisosMiembro {
     verLeads: esAdmin || permisos.verLeads === true,
     gestionarLeads: esAdmin || permisos.gestionarLeads === true,
     editarCuestionarios: esAdmin || permisos.editarCuestionarios === true,
+    publicarCuestionarios: esAdmin || permisos.publicarCuestionarios === true,
   };
 }
 
@@ -422,6 +424,7 @@ export default function AdminPanel() {
                 verLeads: true,
                 gestionarLeads: true,
                 editarCuestionarios: true,
+                publicarCuestionarios: true,
               },
               miembroEmpresa: existente !== undefined,
             };

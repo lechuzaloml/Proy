@@ -447,7 +447,10 @@ it("permite a un miembro solo de demo-a copiar, publicar y recibir un envío en 
       member,
       `empresas/${COMPANY_DEMO_A}/cuestionarios/${PERSONALIZED_QUESTIONNAIRE_ID}`,
     );
-    await assertSucceeds(setDoc(questionnaireRef, documentoCopia()));
+    await assertSucceeds(setDoc(questionnaireRef, {
+      ...documentoCopia(),
+      creadoPor: DEMO_A_MEMBER_EMAIL,
+    }));
     const versionId = "demo-a-published-v1";
     const publish = writeBatch(member);
     publish.set(doc(
@@ -888,7 +891,11 @@ describe("reglas locales de Firestore", () => {
   });
 
   it("permite publicar y despublicar con lotes atómicos desde el cliente", async () => {
-    await establecerPermisoEdicion(MEMBER_EMAIL, true);
+    await establecerMembresia(MEMBER_EMAIL, "usuario", {
+      verLeads: true,
+      editarCuestionarios: true,
+      publicarCuestionarios: true,
+    });
     const database = contextoMiembro().firestore();
     const cuestionarioRef = doc(
       database,
@@ -1012,7 +1019,10 @@ describe("reglas locales de Firestore", () => {
       `empresas/${COMPANY_CLEARIA}/cuestionarios/${PERSONALIZED_QUESTIONNAIRE_ID}`,
     );
 
-    await assertSucceeds(setDoc(referencia, documentoCopia()));
+    await assertSucceeds(setDoc(referencia, {
+      ...documentoCopia(),
+      creadoPor: PLATFORM_ADMIN_EMAIL,
+    }));
     await assertSucceeds(getDocs(
       collection(database, `empresas/${COMPANY_CLEARIA}/cuestionarios`),
     ));
@@ -1369,16 +1379,12 @@ describe("reglas locales de Firestore", () => {
     ), documentoMiembro("manager-created@example.invalid", "usuario")));
   });
 
-  it("solo editarCuestionarios: crea borradores/versiones, publica y despublica sin acceder a leads", async () => {
+  it("solo editarCuestionarios: crea, edita y borra su borrador, pero no publica ni toca borradores ajenos", async () => {
     await establecerMembresia(EDITOR_EMAIL, "usuario", {
       editarCuestionarios: true,
     });
     const database = contextoMiembro(EDITOR_EMAIL).firestore();
-    await assertSucceeds(updateDoc(doc(
-      database,
-      `empresas/${COMPANY_CLEARIA}/cuestionarios/${PERSONALIZED_QUESTIONNAIRE_ID}`,
-    ), { nombre: "Editada por otro miembro" }));
-    const id = "editor-draft";
+    const id = "editor-owned-draft";
     const referencia = doc(
       database,
       `empresas/${COMPANY_CLEARIA}/cuestionarios/${id}`,
@@ -1392,23 +1398,73 @@ describe("reglas locales de Firestore", () => {
       creadoEn: serverTimestamp(),
       actualizadoEn: serverTimestamp(),
     }));
-    const versionId = "editor-version";
-    const publicar = writeBatch(database);
-    publicar.set(doc(referencia, "versiones", versionId), {
-      numero: 1,
-      configuracion: { cualquierForma: true },
-      publicadaEn: serverTimestamp(),
-      creadoPor: EDITOR_EMAIL,
-    });
-    publicar.update(referencia, {
-      estado: "publicado",
-      versionActualId: versionId,
-      actualizadoEn: serverTimestamp(),
-    });
-    await assertSucceeds(publicar.commit());
     await assertSucceeds(updateDoc(referencia, {
+      nombre: "Borrador actualizado por su autor",
+      actualizadoEn: serverTimestamp(),
+    }));
+    await assertSucceeds(deleteDoc(referencia));
+
+    await environment.withSecurityRulesDisabled(async (context) => {
+      const base = context.firestore();
+      await setDoc(doc(
+        base,
+        `empresas/${COMPANY_CLEARIA}/cuestionarios/${PERSONALIZED_QUESTIONNAIRE_ID}`,
+      ), {
+        ...documentoCopia("Borrador ajeno"),
+        creadoPor: OWNER_EMAIL,
+      });
+      await setDoc(doc(
+        base,
+        `empresas/${COMPANY_CLEARIA}/cuestionarios/editor-published-owner`,
+      ), {
+        ...documentoCopia("Publicado ajeno"),
+        id: "editor-published-owner",
+        estado: "publicado",
+        versionActualId: "owner-v1",
+        creadoPor: OWNER_EMAIL,
+      });
+      await setDoc(doc(
+        base,
+        `empresas/${COMPANY_CLEARIA}/cuestionarios/editor-published-owner/versiones/owner-v1`,
+      ), {
+        numero: 1,
+        configuracion: documentoCopia().configuracion,
+        publicadaEn: new Date(),
+        creadoPor: OWNER_EMAIL,
+      });
+    });
+
+    const borradorAjeno = doc(
+      database,
+      `empresas/${COMPANY_CLEARIA}/cuestionarios/${PERSONALIZED_QUESTIONNAIRE_ID}`,
+    );
+    const publicado = doc(
+      database,
+      `empresas/${COMPANY_CLEARIA}/cuestionarios/editor-published-owner`,
+    );
+    await assertPermissionDenied(updateDoc(borradorAjeno, {
+      nombre: "Edición ajena",
+    }));
+    await assertPermissionDenied(deleteDoc(borradorAjeno));
+    await assertPermissionDenied(deleteDoc(publicado));
+    await assertPermissionDenied(updateDoc(publicado, {
       estado: "borrador",
       actualizadoEn: serverTimestamp(),
+    }));
+    await assertPermissionDenied(updateDoc(publicado, {
+      estado: "publicado",
+      versionActualId: "editor-cannot-republish",
+      actualizadoEn: serverTimestamp(),
+    }));
+    await assertPermissionDenied(setDoc(doc(
+      referencia,
+      "versiones",
+      "editor-cannot-publish",
+    ), {
+      numero: 1,
+      configuracion: {},
+      publicadaEn: serverTimestamp(),
+      creadoPor: EDITOR_EMAIL,
     }));
     await assertFails(getDocs(collection(
       database,
@@ -1416,7 +1472,7 @@ describe("reglas locales de Firestore", () => {
     )));
   });
 
-  it.fails("BRECHA: editor sin permiso administrativo no debería borrar un cuestionario publicado ajeno", async () => {
+  it("usuario con editarCuestionarios no borra cuestionarios publicados ajenos", async () => {
     await establecerMembresia(EDITOR_EMAIL, "usuario", {
       editarCuestionarios: true,
     });
@@ -1442,7 +1498,7 @@ describe("reglas locales de Firestore", () => {
     )));
   });
 
-  it.fails("BRECHA: editor sin permiso administrativo no debería borrar un borrador ajeno", async () => {
+  it("usuario con editarCuestionarios no borra borradores ajenos", async () => {
     await establecerMembresia(EDITOR_EMAIL, "usuario", {
       editarCuestionarios: true,
     });
@@ -1453,7 +1509,7 @@ describe("reglas locales de Firestore", () => {
     )));
   });
 
-  it.fails("BRECHA: editarCuestionarios no debería autorizar la publicación sin un permiso separado", async () => {
+  it("usuario con solo editarCuestionarios no publica sin publicarCuestionarios", async () => {
     await establecerMembresia(EDITOR_EMAIL, "usuario", {
       editarCuestionarios: true,
     });
@@ -1481,6 +1537,318 @@ describe("reglas locales de Firestore", () => {
     await assertPermissionDenied(lote.commit());
   });
 
+  it("usuario con editar y publicar crea versiones y no cambia nombre/configuración al publicar o despublicar", async () => {
+    await establecerMembresia(EDITOR_EMAIL, "usuario", {
+      editarCuestionarios: true,
+      publicarCuestionarios: true,
+    });
+    const database = contextoMiembro(EDITOR_EMAIL).firestore();
+    const cuestionario = doc(
+      database,
+      `empresas/${COMPANY_CLEARIA}/cuestionarios/editor-two-permissions`,
+    );
+    await assertSucceeds(setDoc(cuestionario, {
+      ...documentoCopia("Borrador del editor"),
+      id: "editor-two-permissions",
+      creadoPor: EDITOR_EMAIL,
+    }));
+
+    const versionId = "editor-two-permissions-v1";
+    const publicar = writeBatch(database);
+    publicar.set(doc(cuestionario, "versiones", versionId), {
+      numero: 1,
+      configuracion: documentoCopia().configuracion,
+      publicadaEn: serverTimestamp(),
+      creadoPor: EDITOR_EMAIL,
+    });
+    publicar.update(cuestionario, {
+      estado: "publicado",
+      versionActualId: versionId,
+      actualizadoEn: serverTimestamp(),
+    });
+    await assertSucceeds(publicar.commit());
+
+    const nuevoAlPublicar = writeBatch(database);
+    nuevoAlPublicar.set(doc(cuestionario, "versiones", "bad-publish-version"), {
+      numero: 2,
+      configuracion: {},
+      publicadaEn: serverTimestamp(),
+      creadoPor: EDITOR_EMAIL,
+    });
+    nuevoAlPublicar.update(cuestionario, {
+      estado: "publicado",
+      versionActualId: "bad-publish-version",
+      nombre: "Nombre cambiado durante publicación",
+      configuracion: { alterada: true },
+      actualizadoEn: serverTimestamp(),
+    });
+    await assertFails(nuevoAlPublicar.commit());
+
+    await assertSucceeds(updateDoc(cuestionario, {
+      estado: "borrador",
+      actualizadoEn: serverTimestamp(),
+    }));
+    await assertFails(updateDoc(cuestionario, {
+      estado: "publicado",
+      versionActualId: versionId,
+      nombre: "Nombre cambiado al republicar",
+      actualizadoEn: serverTimestamp(),
+    }));
+    await assertSucceeds(updateDoc(cuestionario, {
+      estado: "publicado",
+      versionActualId: versionId,
+      actualizadoEn: serverTimestamp(),
+    }));
+    await assertFails(updateDoc(cuestionario, {
+      estado: "borrador",
+      configuracion: { alterada: true },
+      actualizadoEn: serverTimestamp(),
+    }));
+
+    await assertFails(deleteDoc(cuestionario));
+    await environment.withSecurityRulesDisabled(async (context) => {
+      await setDoc(doc(
+        context.firestore(),
+        `empresas/${COMPANY_CLEARIA}/cuestionarios/editor-other-draft`,
+      ), {
+        ...documentoCopia("Borrador ajeno"),
+        id: "editor-other-draft",
+        creadoPor: OWNER_EMAIL,
+      });
+    });
+    await assertPermissionDenied(updateDoc(doc(
+      database,
+      `empresas/${COMPANY_CLEARIA}/cuestionarios/editor-other-draft`,
+    ), { nombre: "Edición ajena" }));
+    await assertPermissionDenied(deleteDoc(doc(
+      database,
+      `empresas/${COMPANY_CLEARIA}/cuestionarios/editor-other-draft`,
+    )));
+  });
+
+  it.each([
+    ["admin", ADMIN_EMAIL],
+    ["propietario", OWNER_EMAIL],
+  ] as const)("%s edita y borra borradores ajenos, publica y despublica, pero no borra publicados", async (
+    rol,
+    correo,
+  ) => {
+    await establecerMembresia(correo, rol, {});
+    await environment.withSecurityRulesDisabled(async (context) => {
+      const base = context.firestore();
+      await setDoc(doc(
+        base,
+        `empresas/${COMPANY_CLEARIA}/cuestionarios/admin-owner-draft`,
+      ), {
+        ...documentoCopia("Borrador ajeno"),
+        id: "admin-owner-draft",
+        creadoPor: EDITOR_EMAIL,
+      });
+      await setDoc(doc(
+        base,
+        `empresas/${COMPANY_CLEARIA}/cuestionarios/admin-owner-published`,
+      ), {
+        ...documentoCopia("Publicado"),
+        id: "admin-owner-published",
+        estado: "publicado",
+        versionActualId: "admin-owner-v1",
+        creadoPor: EDITOR_EMAIL,
+      });
+      await setDoc(doc(
+        base,
+        `empresas/${COMPANY_CLEARIA}/cuestionarios/admin-owner-published/versiones/admin-owner-v1`,
+      ), {
+        numero: 1,
+        configuracion: documentoCopia().configuracion,
+        publicadaEn: new Date(),
+        creadoPor: EDITOR_EMAIL,
+      });
+    });
+
+    const database = contextoMiembro(correo).firestore();
+    const borrador = doc(
+      database,
+      `empresas/${COMPANY_CLEARIA}/cuestionarios/admin-owner-draft`,
+    );
+    const publicado = doc(
+      database,
+      `empresas/${COMPANY_CLEARIA}/cuestionarios/admin-owner-published`,
+    );
+    await assertSucceeds(updateDoc(borrador, { nombre: `Editado por ${rol}` }));
+    await assertSucceeds(deleteDoc(borrador));
+    await assertSucceeds(updateDoc(publicado, {
+      estado: "borrador",
+      actualizadoEn: serverTimestamp(),
+    }));
+    const versionId = `${rol}-published-v2`;
+    const republicar = writeBatch(database);
+    republicar.set(doc(publicado, "versiones", versionId), {
+      numero: 2,
+      configuracion: documentoCopia().configuracion,
+      publicadaEn: serverTimestamp(),
+      creadoPor: correo,
+    });
+    republicar.update(publicado, {
+      estado: "publicado",
+      versionActualId: versionId,
+      actualizadoEn: serverTimestamp(),
+    });
+    await assertSucceeds(republicar.commit());
+    await assertPermissionDenied(deleteDoc(publicado));
+  });
+
+  it("administrador de plataforma puede editar, publicar, despublicar y borrar cuestionarios publicados", async () => {
+    const database = contextoMiembro(PLATFORM_ADMIN_EMAIL).firestore();
+    const borrador = doc(
+      database,
+      `empresas/${COMPANY_CLEARIA}/cuestionarios/${PERSONALIZED_QUESTIONNAIRE_ID}`,
+    );
+    await assertSucceeds(updateDoc(borrador, { nombre: "Borrador de plataforma" }));
+    await assertSucceeds(deleteDoc(borrador));
+    const publicado = doc(
+      database,
+      `empresas/${COMPANY_CLEARIA}/cuestionarios/platform-questionnaire`,
+    );
+    await assertSucceeds(setDoc(publicado, {
+      ...documentoCopia("Cuestionario de plataforma"),
+      id: "platform-questionnaire",
+      creadoPor: PLATFORM_ADMIN_EMAIL,
+    }));
+    const versionId = "platform-questionnaire-v1";
+    const publish = writeBatch(database);
+    publish.set(doc(publicado, "versiones", versionId), {
+      numero: 1,
+      configuracion: documentoCopia().configuracion,
+      publicadaEn: serverTimestamp(),
+      creadoPor: PLATFORM_ADMIN_EMAIL,
+    });
+    publish.update(publicado, {
+      estado: "publicado",
+      versionActualId: versionId,
+      actualizadoEn: serverTimestamp(),
+    });
+    await assertSucceeds(publish.commit());
+    await assertSucceeds(updateDoc(publicado, {
+      estado: "borrador",
+      actualizadoEn: serverTimestamp(),
+    }));
+    await assertSucceeds(deleteDoc(publicado));
+  });
+
+  it.each([
+    ["visitante anónimo", "anonymous"],
+    ["miembro de otra empresa", "foreign"],
+    ["miembro inactivo", "inactive"],
+    ["usuario sin permisos", "none"],
+    ["usuario solo verLeads", "viewer"],
+    ["usuario solo gestionarLeads", "manager"],
+  ] as const)("%s no puede crear, editar, borrar, publicar ni despublicar cuestionarios", async (
+    actor,
+    tipo,
+  ) => {
+    const correo = `${tipo}-questionnaire@example.invalid`;
+    if (tipo === "foreign") {
+      await establecerMembresia(correo, "admin", {}, COMPANY_B);
+    } else if (tipo === "inactive") {
+      await establecerMembresia(
+        correo,
+        "usuario",
+        { editarCuestionarios: true, publicarCuestionarios: true },
+        COMPANY_CLEARIA,
+        "inactivo",
+      );
+    } else if (tipo === "viewer") {
+      await establecerMembresia(correo, "usuario", { verLeads: true });
+    } else if (tipo === "manager") {
+      await establecerMembresia(correo, "usuario", { gestionarLeads: true });
+    } else if (tipo === "none") {
+      await establecerMembresia(correo, "usuario", {});
+    }
+    await environment.withSecurityRulesDisabled(async (context) => {
+      const base = context.firestore();
+      await setDoc(doc(
+        base,
+        `empresas/${COMPANY_CLEARIA}/cuestionarios/${PERSONALIZED_QUESTIONNAIRE_ID}`,
+      ), {
+        ...documentoCopia("Borrador ajeno"),
+        creadoPor: OWNER_EMAIL,
+      });
+      await setDoc(doc(
+        base,
+        `empresas/${COMPANY_CLEARIA}/cuestionarios/actor-published`,
+      ), {
+        ...documentoCopia("Publicado"),
+        id: "actor-published",
+        estado: "publicado",
+        versionActualId: "actor-v1",
+        creadoPor: OWNER_EMAIL,
+      });
+    });
+    const database = tipo === "anonymous"
+      ? environment.unauthenticatedContext().firestore()
+      : contextoMiembro(correo).firestore();
+    const borrador = doc(
+      database,
+      `empresas/${COMPANY_CLEARIA}/cuestionarios/${PERSONALIZED_QUESTIONNAIRE_ID}`,
+    );
+    const publicado = doc(
+      database,
+      `empresas/${COMPANY_CLEARIA}/cuestionarios/actor-published`,
+    );
+    const idNuevo = `${tipo}-new-draft`;
+    await assertFails(setDoc(doc(
+      database,
+      `empresas/${COMPANY_CLEARIA}/cuestionarios/${idNuevo}`,
+    ), {
+      ...documentoCopia("Borrador no autorizado"),
+      id: idNuevo,
+      creadoPor: correo,
+    }));
+    await assertFails(updateDoc(borrador, { nombre: `Edición de ${actor}` }));
+    await assertFails(deleteDoc(borrador));
+    await assertFails(updateDoc(publicado, {
+      estado: "borrador",
+      actualizadoEn: serverTimestamp(),
+    }));
+    await assertFails(deleteDoc(publicado));
+    await assertFails(setDoc(doc(publicado, "versiones", `${tipo}-v2`), {
+      numero: 2,
+      configuracion: {},
+      publicadaEn: serverTimestamp(),
+      creadoPor: correo,
+    }));
+  });
+
+  it("empresa suspendida: incluso quien tiene publicarCuestionarios no puede publicar", async () => {
+    await establecerMembresia(EDITOR_EMAIL, "usuario", {
+      editarCuestionarios: true,
+      publicarCuestionarios: true,
+    });
+    await environment.withSecurityRulesDisabled(async (context) => {
+      await updateDoc(doc(context.firestore(), `empresas/${COMPANY_CLEARIA}`), {
+        estado: "suspendida",
+      });
+    });
+    const database = contextoMiembro(EDITOR_EMAIL).firestore();
+    const cuestionario = doc(
+      database,
+      `empresas/${COMPANY_CLEARIA}/cuestionarios/${PERSONALIZED_QUESTIONNAIRE_ID}`,
+    );
+    const publish = writeBatch(database);
+    publish.set(doc(cuestionario, "versiones", "suspended-publish"), {
+      numero: 1,
+      configuracion: {},
+      publicadaEn: serverTimestamp(),
+      creadoPor: EDITOR_EMAIL,
+    });
+    publish.update(cuestionario, {
+      estado: "publicado",
+      versionActualId: "suspended-publish",
+      actualizadoEn: serverTimestamp(),
+    });
+    await assertFails(publish.commit());
+  });
+
   it("admin de empresa: concede permisos a otros, pero no modifica su propio rol", async () => {
     await prepararMiembrosDePrueba();
     const database = contextoMiembro(ADMIN_EMAIL).firestore();
@@ -1501,18 +1869,18 @@ describe("reglas locales de Firestore", () => {
     ), { rol: "propietario" }));
   });
 
-  it("admin de empresa: la regla solo exige que permisos sea mapa, sin validar claves ni valores", async () => {
+  it("admin de empresa: rechaza claves desconocidas y valores no booleanos en permisos", async () => {
     await prepararMiembrosDePrueba();
     const database = contextoMiembro(ADMIN_EMAIL).firestore();
-    await assertSucceeds(updateDoc(doc(
+    const usuario = doc(
       database,
       `empresas/${COMPANY_MEMBER_ROLES}/miembros/${USER_EMAIL}`,
-    ), {
-      permisos: {
-        permisoDesconocido: "habilitado",
-        gestionarLeads: "true",
-        anidado: { valor: 7 },
-      },
+    );
+    await assertFails(updateDoc(usuario, {
+      permisos: { verLeads: false, permisoDesconocido: true },
+    }));
+    await assertFails(updateDoc(usuario, {
+      permisos: { verLeads: false, publicarCuestionarios: "true" },
     }));
   });
 
@@ -1742,6 +2110,8 @@ describe("reglas locales de Firestore", () => {
       id: "platform-suspended-draft",
       nombre: "Borrador de plataforma",
       estado: "borrador",
+      configuracion: { id: "platform-suspended-draft" },
+      creadoPor: PLATFORM_ADMIN_EMAIL,
     }));
     await assertFails(setDoc(doc(
       database,
@@ -1850,7 +2220,11 @@ describe("reglas locales de Firestore", () => {
       borradores.set(doc(
         database,
         `empresas/${COMPANY_MEMBER_ROLES}/cuestionarios/${id}`,
-      ), { id, nombre: id, estado: "borrador" });
+      ), {
+        ...documentoCopia(id),
+        id,
+        creadoPor: OWNER_EMAIL,
+      });
     }
     await assertSucceeds(borradores.commit());
 

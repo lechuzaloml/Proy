@@ -53,3 +53,5 @@ sin modificar sus diez reglas.
 17. Cada empresa tiene un propietario protegido: solo el administrador de
     plataforma puede crearlo, cambiarlo o quitarlo. Los admins de la empresa
     solo gestionan usuarios.
+18. Crear, publicar y borrar cuestionarios son permisos distintos; un publicado
+    no se borra sin despublicar.

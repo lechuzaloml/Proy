@@ -22,7 +22,12 @@ interface BibliotecaTemplatesProps {
   onCrearCopia?: (nombre: string, configuracion: unknown) => void | Promise<void>;
   onCrearDesdeCero?: () => void | Promise<void>;
   onAbrirCopia: (id: string) => void | Promise<void>;
+  puedeEditarCopia: (copia: DocumentoCuestionarioGuardado) => boolean;
+  puedeBorrarCopia: (copia: DocumentoCuestionarioGuardado) => boolean;
   onEliminarCopia?: (id: string) => void | Promise<void>;
+  puedePublicar: boolean;
+  onPublicarCopia?: (id: string) => void | Promise<void>;
+  onDespublicarCopia?: (id: string) => void | Promise<void>;
   onSeleccionar: (
     id: string,
     nombre: string,
@@ -41,7 +46,12 @@ export default function BibliotecaTemplates({
   onCrearCopia,
   onCrearDesdeCero,
   onAbrirCopia,
+  puedeEditarCopia,
+  puedeBorrarCopia,
   onEliminarCopia,
+  puedePublicar,
+  onPublicarCopia,
+  onDespublicarCopia,
   onSeleccionar,
 }: BibliotecaTemplatesProps) {
   const savedQuestionnairesReveal = useScrollReveal<HTMLElement>({
@@ -116,22 +126,54 @@ export default function BibliotecaTemplates({
             <ul className="saved-questionnaire-list">
               {copiasGuardadas.map((copia) => (
                 <li key={copia.id}>
-                  <span>{copia.nombre}</span>
-                  <button
-                    className="secondary-button"
-                    onClick={() => void onAbrirCopia(copia.id)}
-                    type="button"
-                  >
-                    Abrir y editar
-                  </button>
-                  {onEliminarCopia && (
+                  <div>
+                    <strong>{copia.nombre}</strong>
+                    <small>Creado por {copia.creadoPor}</small>
+                  </div>
+                  {puedeEditarCopia(copia) && (
                     <button
                       className="secondary-button"
-                      onClick={() => void onEliminarCopia(copia.id)}
+                      onClick={() => void onAbrirCopia(copia.id)}
                       type="button"
                     >
-                      Eliminar
+                      Abrir y editar
                     </button>
+                  )}
+                  {copia.estado === "publicado" ? (
+                    <span>Despublica primero</span>
+                  ) : (
+                    onEliminarCopia && puedeBorrarCopia(copia) && (
+                      <button
+                        className="secondary-button"
+                        onClick={() => void onEliminarCopia(copia.id)}
+                        type="button"
+                      >
+                        Eliminar
+                      </button>
+                    )
+                  )}
+                  {puedePublicar && copia.estado === "borrador" &&
+                    onPublicarCopia && (
+                      <button
+                        className="secondary-button"
+                        onClick={() => void onPublicarCopia(copia.id)}
+                        type="button"
+                      >
+                        Publicar
+                      </button>
+                    )}
+                  {puedePublicar && copia.estado === "publicado" &&
+                    onDespublicarCopia && (
+                      <button
+                        className="secondary-button"
+                        onClick={() => void onDespublicarCopia(copia.id)}
+                        type="button"
+                      >
+                        Despublicar
+                      </button>
+                    )}
+                  {!puedePublicar && (
+                    <small>Pide la publicación a un administrador.</small>
                   )}
                 </li>
               ))}

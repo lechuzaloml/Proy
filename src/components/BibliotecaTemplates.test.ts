@@ -1,50 +1,138 @@
 import { createElement } from "react";
+import { Timestamp } from "firebase/firestore";
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it, vi } from "vitest";
+import { validarCuestionario } from "../validation/validarCuestionario";
+import diagnosticoInicial from "../../templates/assessments/diagnostico-inicial.json";
+import {
+  puedeBorrarBorrador,
+  puedeEditarBorrador,
+  puedePublicar,
+} from "../lib/permisosCuestionarios";
+import type { DocumentoCuestionarioGuardado } from "../lib/documentoCuestionario";
 import BibliotecaTemplates from "./BibliotecaTemplates";
-import type { TemplateCatalogo } from "../templates/catalogo";
 
-const templates: TemplateCatalogo[] = [{
-  id: "template-prueba",
-  metadata: {
-    nombre: "Template de prueba",
-    formato: "Cuestionario",
-    caso_uso: "Prueba",
-    nicho: "General",
-    descripcion: "Descripción de prueba.",
-    usa_scoring: false,
-  },
-  configuracion: {},
-}];
+const validacion = validarCuestionario(diagnosticoInicial);
+if (!validacion.valido) {
+  throw new Error("El fixture debe ser un cuestionario válido.");
+}
 
-function renderBiblioteca(onCrearCopia?: (nombre: string, configuracion: unknown) => void) {
+const ahora = Timestamp.fromDate(new Date("2026-01-01T00:00:00.000Z"));
+
+function copia(
+  id: string,
+  estado: DocumentoCuestionarioGuardado["estado"],
+  creadoPor: string,
+): DocumentoCuestionarioGuardado {
+  return {
+    id,
+    nombre: `Cuestionario ${id}`,
+    estado,
+    ...(estado === "publicado" ? { versionActualId: "v1" } : {}),
+    configuracion: validacion.data,
+    creadoPor,
+    creadoEn: ahora,
+    actualizadoEn: ahora,
+  };
+}
+
+const borradorEditor = copia(
+  "personalizado-editor",
+  "borrador",
+  "editor@example.invalid",
+);
+const borradorAjeno = copia(
+  "personalizado-ajeno",
+  "borrador",
+  "otra@example.invalid",
+);
+const publicado = copia(
+  "personalizado-publicado",
+  "publicado",
+  "otra@example.invalid",
+);
+
+function renderBiblioteca({
+  copiasGuardadas,
+  correo,
+  rol,
+  permisos,
+}: {
+  copiasGuardadas: DocumentoCuestionarioGuardado[];
+  correo: string;
+  rol: "usuario" | "propietario";
+  permisos: { editarCuestionarios?: boolean; publicarCuestionarios?: boolean };
+}) {
   return renderToStaticMarkup(createElement(BibliotecaTemplates, {
-    templates,
+    templates: [],
     casosReferencia: [],
-    copiasGuardadas: [],
+    copiasGuardadas,
     cargandoCopias: false,
     errorBiblioteca: "",
     accesoCuenta: null,
-    onCrearCopia,
+    onCrearCopia: vi.fn(),
     onAbrirCopia: vi.fn(),
+    puedeEditarCopia: (item) =>
+      item.estado === "borrador" &&
+      puedeEditarBorrador(rol, permisos, item.creadoPor, correo),
+    puedeBorrarCopia: (item) =>
+      item.estado === "borrador" &&
+      puedeBorrarBorrador(rol, permisos, item.creadoPor, correo),
+    onEliminarCopia: vi.fn(),
+    puedePublicar: puedePublicar(rol, permisos),
+    onPublicarCopia: vi.fn(),
+    onDespublicarCopia: vi.fn(),
     onSeleccionar: vi.fn(),
   }));
 }
 
-describe("visibilidad de acciones en la biblioteca", () => {
-  it("oculta crear copia sin autorización y mantiene Probar", () => {
-    const markup = renderBiblioteca();
+describe("controles visibles de copias según el permiso del usuario", () => {
+  it("usuario solo editor ve sus borradores, puede editarlos y borrarlos, pero pide publicación", () => {
+    const markup = renderBiblioteca({
+      copiasGuardadas: [borradorEditor],
+      correo: "EDITOR@example.invalid",
+      rol: "usuario",
+      permisos: { editarCuestionarios: true },
+    });
 
-    expect(markup).toContain(">Probar</button>");
-    expect(markup).not.toContain("Usar como plantilla");
+    expect(markup).toContain("Creado por editor@example.invalid");
+    expect(markup).toContain("Abrir y editar");
+    expect(markup).toContain("Eliminar");
+    expect(markup).toContain("Pide la publicación a un administrador.");
+    expect(markup).not.toContain(">Publicar</button>");
   });
 
-  it("muestra crear copia cuando se proporciona el callback autorizado", () => {
-    const markup = renderBiblioteca(vi.fn());
+  it("usuario con editar y publicar puede publicar borradores ajenos sin editarlos ni eliminarlos", () => {
+    const markup = renderBiblioteca({
+      copiasGuardadas: [borradorEditor, borradorAjeno, publicado],
+      correo: "editor@example.invalid",
+      rol: "usuario",
+      permisos: {
+        editarCuestionarios: true,
+        publicarCuestionarios: true,
+      },
+    });
 
-    expect(markup.indexOf("Usar como plantilla")).toBeLessThan(markup.indexOf(">Probar</button>"));
-    expect(markup).toContain('class="submit-button template-copy-button"');
-    expect(markup).toContain('class="secondary-button template-preview-button"');
-    expect(markup).toContain("Usar como plantilla");
+    expect(markup.match(/>Abrir y editar<\/button>/g)).toHaveLength(1);
+    expect(markup.match(/>Eliminar<\/button>/g)).toHaveLength(1);
+    expect(markup.match(/>Publicar<\/button>/g)).toHaveLength(2);
+    expect(markup).toContain(">Despublicar</button>");
+    expect(markup).toContain("Despublica primero");
+    expect(markup).toContain("Creado por otra@example.invalid");
+  });
+
+  it("propietario puede editar y borrar borradores ajenos, publicar y despublicar", () => {
+    const markup = renderBiblioteca({
+      copiasGuardadas: [borradorEditor, borradorAjeno, publicado],
+      correo: "owner@example.invalid",
+      rol: "propietario",
+      permisos: {},
+    });
+
+    expect(markup.match(/>Abrir y editar<\/button>/g)).toHaveLength(2);
+    expect(markup.match(/>Eliminar<\/button>/g)).toHaveLength(2);
+    expect(markup.match(/>Publicar<\/button>/g)).toHaveLength(2);
+    expect(markup).toContain(">Despublicar</button>");
+    expect(markup).toContain("Despublica primero");
   });
 });

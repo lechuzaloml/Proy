@@ -22,13 +22,16 @@ const PERMISOS = [
   ["verLeads", "Ver leads"],
   ["gestionarLeads", "Gestionar leads"],
   ["editarCuestionarios", "Editar cuestionarios"],
+  ["publicarCuestionarios", "Publicar y despublicar cuestionarios"],
 ] as const;
+
+type PermisoMiembro = (typeof PERMISOS)[number][0];
 
 interface MiembroEmpresa {
   correo: string;
   rol: RolMiembroEmpresa;
   estado: "activo" | "inactivo";
-  permisos: Record<(typeof PERMISOS)[number][0], boolean>;
+  permisos: Record<PermisoMiembro, boolean>;
   creadoEn?: unknown;
 }
 
@@ -45,6 +48,9 @@ function parsearMiembro(data: DocumentData): MiembroEmpresa {
       verLeads: permisos.verLeads === true,
       gestionarLeads: permisos.gestionarLeads === true,
       editarCuestionarios: permisos.editarCuestionarios === true,
+      publicarCuestionarios:
+        permisos.editarCuestionarios === true &&
+        permisos.publicarCuestionarios === true,
     },
     creadoEn: data.creadoEn,
   };
@@ -54,6 +60,7 @@ const PERMISOS_VACIOS: MiembroEmpresa["permisos"] = {
   verLeads: false,
   gestionarLeads: false,
   editarCuestionarios: false,
+  publicarCuestionarios: false,
 };
 
 interface GestorMiembrosProps {
@@ -293,11 +300,24 @@ export default function GestorMiembros({
             <label key={clave}>
               <input
                 checked={permisos[clave]}
+                disabled={
+                  clave === "publicarCuestionarios" &&
+                  !permisos.editarCuestionarios
+                }
                 onChange={(evento) =>
-                  setPermisos((actuales) => ({
-                    ...actuales,
-                    [clave]: evento.target.checked,
-                  }))
+                  setPermisos((actuales) => {
+                    const siguientes = {
+                      ...actuales,
+                      [clave]: evento.target.checked,
+                    };
+                    if (
+                      clave === "editarCuestionarios" &&
+                      !evento.target.checked
+                    ) {
+                      siguientes.publicarCuestionarios = false;
+                    }
+                    return siguientes;
+                  })
                 }
                 type="checkbox"
               />

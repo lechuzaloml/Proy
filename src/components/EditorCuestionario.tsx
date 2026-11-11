@@ -27,6 +27,7 @@ import {
 interface EditorCuestionarioProps {
   id: string;
   nombre: string;
+  creadoPor?: string;
   cuestionario: Cuestionario;
   copiaGuardada: boolean;
   onGuardar: (
@@ -64,6 +65,7 @@ function etiquetaTipoPregunta(tipo: TipoPregunta): string {
 export default function EditorCuestionario({
   id,
   nombre: nombreInicial,
+  creadoPor,
   cuestionario: cuestionarioInicial,
   copiaGuardada,
   onGuardar,
@@ -245,6 +247,29 @@ export default function EditorCuestionario({
     }
   }
 
+  if (publicado) {
+    return (
+      <main className="custom-editor">
+        <h1>Despublica primero</h1>
+        <p>Un cuestionario publicado no se puede editar ni eliminar.</p>
+        {creadoPor && <small>Creado por {creadoPor}</small>}
+        {onDespublicar ? (
+          <button
+            className="secondary-button"
+            disabled={guardando}
+            onClick={() => void cambiarPublicacion("despublicar")}
+            type="button"
+          >
+            Despublicar
+          </button>
+        ) : (
+          <p>Pide a un administrador que despublique este cuestionario.</p>
+        )}
+        {errorGuardado && <p className="admin-error" role="alert">{errorGuardado}</p>}
+      </main>
+    );
+  }
+
   return (
     <main className="custom-editor">
       <header className="custom-editor-header">
@@ -265,6 +290,7 @@ export default function EditorCuestionario({
             ? "Los datos de contacto se solicitarán primero. Agrega las preguntas que quieras."
             : "Los cambios se aplican a esta copia, no a la plantilla original."}
         </p>
+        {creadoPor && <small>Creado por {creadoPor}</small>}
         <label className="custom-editor-name">
           Nombre del cuestionario
           <input
@@ -1077,8 +1103,7 @@ export default function EditorCuestionario({
           onClick={() => void validarYContinuar(
             (nombreEditado, data) => onGuardar(nombreEditado, data),
             "Cuestionario guardado correctamente.",
-          )
-          }
+          )}
           type="button"
         >
           {guardando ? "Guardando…" : "Guardar"}
@@ -1124,18 +1149,11 @@ export default function EditorCuestionario({
             }, "Cuestionario publicado correctamente.")}
             type="button"
           >
-            {publicado ? "Publicar cambios" : "Publicar"}
+            Publicar
           </button>
         )}
-        {copiaGuardada && publicado && onDespublicar && (
-          <button
-            className="secondary-button"
-            disabled={guardando}
-            onClick={() => void cambiarPublicacion("despublicar")}
-            type="button"
-          >
-            Despublicar
-          </button>
+        {copiaGuardada && !onPublicar && (
+          <p>Pide la publicación a un administrador.</p>
         )}
         <button
           className="submit-button"
@@ -1143,8 +1161,7 @@ export default function EditorCuestionario({
           onClick={() => void validarYContinuar(
             (nombreEditado, data) =>
               onPrevisualizar(nombreEditado, data),
-          )
-          }
+          )}
           type="button"
         >
           Previsualizar cuestionario
