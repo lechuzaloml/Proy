@@ -28,6 +28,12 @@ interface BibliotecaTemplatesProps {
   puedePublicar: boolean;
   onPublicarCopia?: (id: string) => void | Promise<void>;
   onDespublicarCopia?: (id: string) => void | Promise<void>;
+  usoCuestionarios?: {
+    usados: number;
+    limite: number;
+    cargando: boolean;
+    error: string;
+  };
   onSeleccionar: (
     id: string,
     nombre: string,
@@ -52,6 +58,7 @@ export default function BibliotecaTemplates({
   puedePublicar,
   onPublicarCopia,
   onDespublicarCopia,
+  usoCuestionarios,
   onSeleccionar,
 }: BibliotecaTemplatesProps) {
   const savedQuestionnairesReveal = useScrollReveal<HTMLElement>({
@@ -63,6 +70,14 @@ export default function BibliotecaTemplates({
   const referenceListReveal = useScrollReveal<HTMLDivElement>({
     staggerChildren: true,
   });
+  const alcanzoLimite = Boolean(
+    usoCuestionarios &&
+      usoCuestionarios.usados >= usoCuestionarios.limite,
+  );
+  const puedePublicarAhora = puedePublicar &&
+    !usoCuestionarios?.cargando &&
+    !usoCuestionarios?.error &&
+    !alcanzoLimite;
 
   return (
     <main className="template-library">
@@ -85,6 +100,26 @@ export default function BibliotecaTemplates({
         Elige una plantilla como punto de partida para crear tu propio
         cuestionario y adaptar sus preguntas, puntuación y resultados.
         </p>
+        {usoCuestionarios && (
+          <p aria-live="polite">
+            Cuestionarios publicados:{" "}
+            {usoCuestionarios.cargando
+              ? "cargando"
+              : `${usoCuestionarios.usados} de ${
+                Number.isFinite(usoCuestionarios.limite)
+                  ? usoCuestionarios.limite
+                  : "sin límite"
+              }`}
+          </p>
+        )}
+        {usoCuestionarios?.error && (
+          <p className="admin-error" role="alert">{usoCuestionarios.error}</p>
+        )}
+        {puedePublicar && alcanzoLimite && (
+          <p role="status">
+            Alcanzaste el límite de tu plan: despublica uno o cambia de plan.
+          </p>
+        )}
       </header>
 
       {errorBiblioteca && (
@@ -156,11 +191,20 @@ export default function BibliotecaTemplates({
                     onPublicarCopia && (
                       <button
                         className="secondary-button"
+                        disabled={!puedePublicarAhora}
                         onClick={() => void onPublicarCopia(copia.id)}
                         type="button"
                       >
                         Publicar
                       </button>
+                    )}
+                  {puedePublicar && copia.estado === "borrador" &&
+                    !puedePublicarAhora && !alcanzoLimite && (
+                      <small>
+                        {usoCuestionarios?.error
+                          ? "No se pudo comprobar el cupo para publicar."
+                          : "Consultando el cupo de publicación…"}
+                      </small>
                     )}
                   {puedePublicar && copia.estado === "publicado" &&
                     onDespublicarCopia && (

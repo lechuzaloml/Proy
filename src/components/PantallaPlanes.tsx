@@ -1,4 +1,5 @@
 import type { PlanRecomendado } from "../config/recomendaciones";
+import { limiteDePlan } from "../config/planes";
 
 interface PantallaPlanesProps {
   planes: PlanRecomendado[];
@@ -45,6 +46,7 @@ export default function PantallaPlanes({
       <section aria-label="Planes disponibles" className="available-plans">
         {planes.map((plan) => {
           const esRecomendado = plan.nombre === planRecomendadoNombre;
+          const limite = limiteDePlan(plan.planId);
           return (
             <article
               className={`recommendation-plan available-plan${esRecomendado ? " available-plan-recommended" : ""}`}
@@ -58,6 +60,9 @@ export default function PantallaPlanes({
               </div>
               <p className="plan-price">{plan.precio}</p>
               <p className="plan-price-note">{plan.notaPrecio}</p>
+              <p>
+                Cuestionarios publicados: hasta {limite} por empresa
+              </p>
 
               <ul
                 aria-label={`Beneficios de ${plan.nombre}`}
@@ -90,9 +95,9 @@ export default function PantallaPlanes({
 
               <a
                 className="submit-button plan-submit"
-                href="/suscripcion"
+                href={`/suscripcion?plan=${plan.planId}`}
               >
-                Probar gratis 7 días
+                Elegir {plan.nombre}
               </a>
             </article>
           );

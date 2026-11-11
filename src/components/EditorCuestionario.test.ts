@@ -111,6 +111,26 @@ describe("acciones del editor de copias", () => {
     expect(markup).not.toContain(">Eliminar</button>");
   });
 
+  it("deshabilita publicar y explica el límite alcanzado", () => {
+    const markup = renderToStaticMarkup(createElement(EditorCuestionario, {
+      id: "personalizado-limite",
+      nombre: "Copia guardada",
+      cuestionario: validacion.data,
+      copiaGuardada: true,
+      onGuardar: vi.fn(),
+      onPrevisualizar: vi.fn(),
+      onPublicar: vi.fn(),
+      publicacionBloqueada: true,
+      mensajePublicacionBloqueada:
+        "Alcanzaste el límite de tu plan: despublica uno o cambia de plan.",
+    }));
+
+    expect(markup).toContain(
+      "Alcanzaste el límite de tu plan: despublica uno o cambia de plan.",
+    );
+    expect(markup).toMatch(/<button[^>]*disabled=""[^>]*>Publicar<\/button>/);
+  });
+
   it("muestra controles para scoring, reglas, segmentos y puntos", () => {
     const markup = renderEditor(true);
 

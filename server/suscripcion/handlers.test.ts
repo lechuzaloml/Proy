@@ -195,7 +195,7 @@ describe("endpoints de suscripción con Stripe y Firebase simulados", () => {
     );
 
     await crearHandlerIniciar(dependencias)(
-      solicitud({ slug: "empresa-a", nombre: "Empresa A" }),
+      solicitud({ slug: "empresa-a", nombre: "Empresa A", planId: "inicial" }),
       respuesta,
     );
 
@@ -222,7 +222,7 @@ describe("endpoints de suscripción con Stripe y Firebase simulados", () => {
     const respuesta = new RespuestaSimulada();
 
     await crearHandlerIniciar(dependencias)(
-      solicitud({ slug: "empresa-a", nombre: "Empresa A" }),
+      solicitud({ slug: "empresa-a", nombre: "Empresa A", planId: "inicial" }),
       respuesta,
     );
 
@@ -242,6 +242,7 @@ describe("endpoints de suscripción con Stripe y Firebase simulados", () => {
             slug: "empresa-a",
             nombre: "Empresa A",
             correo: "duena@example.com",
+            planId: "pro",
           },
           customer: "cus_test",
           subscription: "sub_test",
@@ -261,7 +262,7 @@ describe("endpoints de suscripción con Stripe y Firebase simulados", () => {
     }
 
     expect(firestore.documentos.get("empresas/empresa-a")).toEqual(
-      expect.objectContaining({ nombre: "Empresa A", estado: "activa", planId: "prueba" }),
+      expect.objectContaining({ nombre: "Empresa A", estado: "activa", planId: "pro" }),
     );
     expect(firestore.documentos.get("empresas/empresa-a/miembros/duena@example.com"))
       .toEqual(expect.objectContaining({
@@ -282,7 +283,9 @@ describe("endpoints de suscripción con Stripe y Firebase simulados", () => {
       }));
     expect(firestore.documentos.get("pruebas/duena@example.com"))
       .toEqual(expect.objectContaining({ slug: "empresa-a" }));
-    expect(firestore.documentos.size).toBe(4);
+    expect(firestore.documentos.get("empresas/empresa-a/uso/cuestionarios"))
+      .toEqual(expect.objectContaining({ publicados: [] }));
+    expect(firestore.documentos.size).toBe(5);
     expect(
       (dependencias.stripe as unknown as {
         subscriptions: { cancel: ReturnType<typeof vi.fn> };
@@ -296,7 +299,7 @@ describe("endpoints de suscripción con Stripe y Firebase simulados", () => {
     const respuesta = new RespuestaSimulada();
 
     await crearHandlerIniciar(dependencias)(
-      solicitud({ slug: "empresa-a", nombre: "Empresa A" }),
+      solicitud({ slug: "empresa-a", nombre: "Empresa A", planId: "inicial" }),
       respuesta,
     );
 
@@ -588,7 +591,7 @@ describe("endpoints de suscripción con Stripe y Firebase simulados", () => {
     });
   });
 
-  it("el inicio ignora correo y plan del cliente y usa la identidad verificada y el precio configurado", async () => {
+  it("el inicio valida el plan y usa la identidad verificada y el precio configurado", async () => {
     const { dependencias } = crearDependencias();
     const stripe = dependencias.stripe as unknown as {
       checkout: { sessions: { create: ReturnType<typeof vi.fn> } };
@@ -615,16 +618,35 @@ describe("endpoints de suscripción con Stripe y Firebase simulados", () => {
           slug: "empresa-a",
           nombre: "Empresa A",
           correo: "duena@example.com",
+          planId: "avanzado",
         },
         subscription_data: expect.objectContaining({
           metadata: {
             slug: "empresa-a",
             nombre: "Empresa A",
             correo: "duena@example.com",
+            planId: "avanzado",
           },
         }),
       }),
     );
+  });
+
+  it("rechaza un plan desconocido antes de crear una sesión de Stripe", async () => {
+    const { dependencias } = crearDependencias();
+    const respuesta = new RespuestaSimulada();
+    await crearHandlerIniciar(dependencias)(
+      solicitud({
+        slug: "empresa-a",
+        nombre: "Empresa A",
+        planId: "interno",
+      }),
+      respuesta,
+    );
+    expect(respuesta.codigo).toBe(400);
+    expect((dependencias.stripe as unknown as {
+      checkout: { sessions: { create: ReturnType<typeof vi.fn> } };
+    }).checkout.sessions.create).not.toHaveBeenCalled();
   });
 
   it("la ruta firmada de Stripe no acepta un webhook sin firma", async () => {

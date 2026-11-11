@@ -5,7 +5,7 @@ export default defineConfig({
     include: [
       "src/**/*.test.ts",
       "functions/src/**/*.test.ts",
-      "server/suscripcion/**/*.test.ts",
+      "server/**/*.test.ts",
     ],
   },
 });

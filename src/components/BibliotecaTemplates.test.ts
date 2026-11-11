@@ -57,11 +57,18 @@ function renderBiblioteca({
   correo,
   rol,
   permisos,
+  usoCuestionarios,
 }: {
   copiasGuardadas: DocumentoCuestionarioGuardado[];
   correo: string;
   rol: "usuario" | "propietario";
   permisos: { editarCuestionarios?: boolean; publicarCuestionarios?: boolean };
+  usoCuestionarios?: {
+    usados: number;
+    limite: number;
+    cargando: boolean;
+    error: string;
+  };
 }) {
   return renderToStaticMarkup(createElement(BibliotecaTemplates, {
     templates: [],
@@ -82,6 +89,7 @@ function renderBiblioteca({
     puedePublicar: puedePublicar(rol, permisos),
     onPublicarCopia: vi.fn(),
     onDespublicarCopia: vi.fn(),
+    usoCuestionarios,
     onSeleccionar: vi.fn(),
   }));
 }
@@ -134,5 +142,26 @@ describe("controles visibles de copias según el permiso del usuario", () => {
     expect(markup.match(/>Publicar<\/button>/g)).toHaveLength(2);
     expect(markup).toContain(">Despublicar</button>");
     expect(markup).toContain("Despublica primero");
+  });
+
+  it("muestra el uso y deshabilita publicar cuando se alcanza el cupo", () => {
+    const markup = renderBiblioteca({
+      copiasGuardadas: [borradorEditor],
+      correo: "owner@example.invalid",
+      rol: "propietario",
+      permisos: {},
+      usoCuestionarios: {
+        usados: 3,
+        limite: 3,
+        cargando: false,
+        error: "",
+      },
+    });
+
+    expect(markup).toContain("Cuestionarios publicados: 3 de 3");
+    expect(markup).toContain(
+      "Alcanzaste el límite de tu plan: despublica uno o cambia de plan.",
+    );
+    expect(markup).toMatch(/<button[^>]*disabled=""[^>]*>Publicar<\/button>/);
   });
 });

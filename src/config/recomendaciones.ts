@@ -1,3 +1,5 @@
+import type { PlanSuscripcionId } from "./planes";
+
 export type EstadoBeneficio = "disponible" | "proximamente";
 
 export interface BeneficioPlan {
@@ -6,7 +8,7 @@ export interface BeneficioPlan {
 }
 
 const notaPrecio =
-  "Precio de ejemplo para esta demostración; pendiente de definición.";
+  "Precio de prueba: 1 USD. Los valores son provisionales.";
 
 const beneficios: BeneficioPlan[] = [
   {
@@ -23,7 +25,7 @@ const beneficios: BeneficioPlan[] = [
   },
   {
     texto: "Almacenamiento y panel de tus leads",
-    estado: "proximamente",
+    estado: "disponible",
   },
   {
     texto: "Conexión con el CRM y WhatsApp de Merkatics",
@@ -31,11 +33,12 @@ const beneficios: BeneficioPlan[] = [
   },
   {
     texto: "Personalización de tus propios cuestionarios",
-    estado: "proximamente",
+    estado: "disponible",
   },
 ];
 
 export interface PlanRecomendado {
+  planId: PlanSuscripcionId;
   nombre: string;
   precio: string;
   notaPrecio: string;
@@ -54,8 +57,9 @@ export const recomendaciones: Record<string, RecomendacionDiagnostico> = {
     templateRecomendadoId:
       "../../templates/forms/onboarding-para-agencia.json",
     plan: {
+      planId: "inicial",
       nombre: "Plan Inicial",
-      precio: "$19 USD / mes",
+      precio: "1 USD / mes",
       notaPrecio,
       beneficios,
       textoBoton: "Suscribirme al Plan Inicial",
@@ -66,8 +70,9 @@ export const recomendaciones: Record<string, RecomendacionDiagnostico> = {
     templateRecomendadoId:
       "../../templates/quizzes/test-madurez-marketing-digital.json",
     plan: {
+      planId: "pro",
       nombre: "Plan Pro",
-      precio: "$49 USD / mes",
+      precio: "1 USD / mes",
       notaPrecio,
       beneficios,
       textoBoton: "Suscribirme al Plan Pro",
@@ -78,8 +83,9 @@ export const recomendaciones: Record<string, RecomendacionDiagnostico> = {
     templateRecomendadoId:
       "../../templates/assessments/diagnostico-preparacion-comercial.json",
     plan: {
+      planId: "avanzado",
       nombre: "Plan Avanzado",
-      precio: "$99 USD / mes",
+      precio: "1 USD / mes",
       notaPrecio,
       beneficios,
       textoBoton: "Suscribirme al Plan Avanzado",

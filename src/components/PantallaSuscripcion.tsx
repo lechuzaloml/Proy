@@ -9,6 +9,11 @@ import {
 } from "firebase/auth";
 import { doc, getDoc } from "firebase/firestore";
 import { DIAS_PRUEBA, PRECIO, PRECIO_PROVISIONAL } from "../config/suscripcion";
+import {
+  limiteDePlan,
+  PLANES_SUSCRIPCION,
+  type PlanSuscripcionId,
+} from "../config/planes";
 import { CUESTIONARIO_ID } from "../config/firebaseDatos";
 import { CLAVE_EMPRESA_ACTIVA } from "../config/empresaActiva";
 import { auth } from "../lib/firebaseAuth";
@@ -29,11 +34,19 @@ function campoString(
   return typeof campo === "string" ? campo : null;
 }
 
+function leerPlanSeleccionado(): PlanSuscripcionId {
+  const planId = new URLSearchParams(window.location.search).get("plan");
+  return PLANES_SUSCRIPCION.find((plan) => plan.id === planId)?.id ?? "inicial";
+}
+
 export default function PantallaSuscripcion() {
   const [usuario, setUsuario] = useState<User | null>(null);
   const [authListo, setAuthListo] = useState(false);
   const [nombre, setNombre] = useState("");
   const [slug, setSlug] = useState("");
+  const [planId, setPlanId] = useState<PlanSuscripcionId>(
+    leerPlanSeleccionado,
+  );
   const [procesando, setProcesando] = useState(false);
   const [error, setError] = useState("");
   const [intentoPreparar, setIntentoPreparar] = useState(0);
@@ -185,7 +198,7 @@ export default function PantallaSuscripcion() {
           Authorization: `Bearer ${token}`,
           "Content-Type": "application/json",
         },
-        body: JSON.stringify({ slug, nombre }),
+        body: JSON.stringify({ slug, nombre, planId }),
       });
       const datos: unknown = await respuesta.json();
       if (!respuesta.ok) {
@@ -268,10 +281,10 @@ export default function PantallaSuscripcion() {
         <p className="landing-kicker">Suscripción</p>
         <h1 id="suscripcion-title">Probar gratis 7 días</h1>
         <p className="suscripcion-mode">
-          Modo de prueba: no se cobra dinero real
+          Modo de prueba: 1 USD. Los valores son provisionales.
         </p>
         <p className="suscripcion-resumen">
-          {DIAS_PRUEBA} días gratis; después {PRECIO}
+          {DIAS_PRUEBA} días de prueba; después {PRECIO}
           {PRECIO_PROVISIONAL ? " (precio provisional)" : ""}
         </p>
 
@@ -305,6 +318,23 @@ export default function PantallaSuscripcion() {
           </p>
         )}
         {error && <p className="admin-error" role="alert">{error}</p>}
+
+        <fieldset className="suscripcion-planes">
+          <legend>Elige tu plan</legend>
+          {PLANES_SUSCRIPCION.map((plan) => (
+            <label key={plan.id}>
+              <input
+                checked={planId === plan.id}
+                name="planId"
+                onChange={() => setPlanId(plan.id)}
+                type="radio"
+                value={plan.id}
+              />
+              {plan.nombre}: hasta {limiteDePlan(plan.id)} cuestionarios
+              publicados por empresa
+            </label>
+          ))}
+        </fieldset>
 
         <form className="suscripcion-form" onSubmit={(evento) => void iniciarPrueba(evento)}>
           <label>

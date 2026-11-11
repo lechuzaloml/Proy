@@ -35,6 +35,7 @@ import { db } from "../lib/firebase";
 import { CLAVE_EMPRESA_ACTIVA } from "../config/empresaActiva";
 import { CUESTIONARIO_ID } from "../config/firebaseDatos";
 import { useScrollReveal } from "../hooks/useScrollReveal";
+import { useUsoCuestionarios } from "../hooks/useUsoCuestionarios";
 import {
   filtrarOrdenarLeads,
   type LeadParaLista,
@@ -306,6 +307,11 @@ export default function AdminPanel() {
     window.location.pathname.replace(/\/+$/, "") === "/admin/plataforma";
   const empresaActiva =
     empresas.find(({ id }) => id === empresaIdActiva) ?? null;
+  const usoCuestionarios = useUsoCuestionarios(
+    db,
+    empresaActiva?.id ?? "",
+    empresaActiva?.planId ?? "inicial",
+  );
   const puedeAdministrarSuscripcion = Boolean(
     empresaActiva &&
       (!esPlataforma || empresaActiva.miembroEmpresa) &&
@@ -1000,6 +1006,21 @@ export default function AdminPanel() {
             Empresa: {empresaActiva.nombre} · {empresaActiva.estado} ·{" "}
             {empresaActiva.planId}
           </p>
+          <p aria-live="polite">
+            Cuestionarios publicados:{" "}
+            {usoCuestionarios.cargando
+              ? "cargando"
+              : `${usoCuestionarios.usados} de ${
+                Number.isFinite(usoCuestionarios.limite)
+                  ? usoCuestionarios.limite
+                  : "sin límite"
+              }`}
+          </p>
+          {usoCuestionarios.error && (
+            <p className="admin-error" role="alert">
+              {usoCuestionarios.error}
+            </p>
+          )}
           {empresas.length > 1 && (
             <label className="admin-company-select">
               Cambiar empresa

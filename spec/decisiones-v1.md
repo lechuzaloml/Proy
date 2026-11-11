@@ -55,3 +55,5 @@ sin modificar sus diez reglas.
     solo gestionan usuarios.
 18. Crear, publicar y borrar cuestionarios son permisos distintos; un publicado
     no se borra sin despublicar.
+19. Los planes limitan los cuestionarios publicados por empresa; publicar y
+    despublicar pasan por el servidor.

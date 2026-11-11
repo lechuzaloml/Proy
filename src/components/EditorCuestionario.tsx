@@ -41,6 +41,8 @@ interface EditorCuestionarioProps {
   urlPublica?: string;
   onPublicar?: (nombre: string, cuestionario: Cuestionario) => Promise<string>;
   onDespublicar?: () => Promise<void>;
+  publicacionBloqueada?: boolean;
+  mensajePublicacionBloqueada?: string;
   desdeCero?: boolean;
 }
 
@@ -76,6 +78,8 @@ export default function EditorCuestionario({
   urlPublica,
   onPublicar,
   onDespublicar,
+  publicacionBloqueada = false,
+  mensajePublicacionBloqueada,
   desdeCero = false,
 }: EditorCuestionarioProps) {
   const contactReveal = useScrollReveal<HTMLElement>();
@@ -1140,19 +1144,24 @@ export default function EditorCuestionario({
             Eliminar
           </button>
         )}
-        {copiaGuardada && onPublicar && (
-          <button
-            className="secondary-button"
-            disabled={guardando}
-            onClick={() => void validarYContinuar(async (nombreEditado, data) => {
-              setEnlacePublicado(await onPublicar(nombreEditado, data));
-            }, "Cuestionario publicado correctamente.")}
-            type="button"
-          >
-            Publicar
-          </button>
+        {copiaGuardada && !publicado && onPublicar && (
+          <>
+            <button
+              className="secondary-button"
+              disabled={guardando || publicacionBloqueada}
+              onClick={() => void validarYContinuar(async (nombreEditado, data) => {
+                setEnlacePublicado(await onPublicar(nombreEditado, data));
+              }, "Cuestionario publicado correctamente.")}
+              type="button"
+            >
+              Publicar
+            </button>
+            {publicacionBloqueada && mensajePublicacionBloqueada && (
+              <p role="status">{mensajePublicacionBloqueada}</p>
+            )}
+          </>
         )}
-        {copiaGuardada && !onPublicar && (
+        {copiaGuardada && !publicado && !onPublicar && (
           <p>Pide la publicación a un administrador.</p>
         )}
         <button

@@ -4,13 +4,9 @@ import {
   type User,
 } from "firebase/auth";
 import {
-  collection,
   doc,
   getDocFromServer,
-  getDocsFromServer,
   serverTimestamp,
-  updateDoc,
-  writeBatch,
 } from "firebase/firestore";
 import BibliotecaTemplates, {
   type CasoReferencia,
@@ -72,7 +68,9 @@ import {
 import type { DocumentoCuestionarioGuardado } from "./lib/documentoCuestionario";
 import {
   urlCopiaPublicada,
+  cambiarPublicacionCuestionario,
 } from "./lib/publicacionCuestionarios";
+import { useUsoCuestionarios } from "./hooks/useUsoCuestionarios";
 
 interface SeleccionCuestionario {
   id: string;
@@ -111,6 +109,7 @@ const PanelAdmin = lazy(() => import("./admin/AdminPanel"));
 
 interface AccesoCuestionarios {
   correo: string;
+  planId: string;
   rol: RolCuestionarios;
   permisos: PermisosCuestionarios;
   puedeEditar: boolean;
@@ -166,8 +165,12 @@ async function obtenerAccesoCuestionarios(
   if (plataforma.exists()) {
     const empresa = await getDocFromServer(doc(database, "empresas", empresaId));
     const empresaActiva = empresa.exists() && empresa.data().estado === "activa";
+    const datosEmpresa = empresa.data();
     return {
       correo,
+      planId: typeof datosEmpresa?.planId === "string"
+        ? datosEmpresa.planId
+        : "inicial",
       rol: "plataforma",
       permisos: {
         editarCuestionarios: true,
@@ -175,7 +178,7 @@ async function obtenerAccesoCuestionarios(
       },
       puedeEditar: true,
       puedePublicar: empresaActiva,
-      puedeDespublicar: true,
+      puedeDespublicar: empresaActiva,
     };
   }
 
@@ -197,13 +200,20 @@ async function obtenerAccesoCuestionarios(
       ? datos.permisos as PermisosCuestionarios
       : {};
   const administrador = esAdministradorEmpresa(rol);
+  const datosEmpresa = empresa.data();
+  const puedeEditar = administrador || permisos.editarCuestionarios === true;
   return {
     correo,
+    planId: typeof datosEmpresa?.planId === "string"
+      ? datosEmpresa.planId
+      : "inicial",
     rol,
     permisos,
-    puedeEditar: administrador || permisos.editarCuestionarios === true,
-    puedePublicar: puedePublicar(rol, permisos) && empresaActiva,
-    puedeDespublicar: puedePublicar(rol, permisos),
+    puedeEditar,
+    puedePublicar: (administrador ||
+      (puedeEditar && puedePublicar(rol, permisos))) && empresaActiva,
+    puedeDespublicar: (administrador ||
+      (puedeEditar && puedePublicar(rol, permisos))) && empresaActiva,
   };
 }
 
@@ -296,10 +306,25 @@ export default function App() {
   >([]);
   const [cargandoCopias, setCargandoCopias] = useState(false);
   const [errorBiblioteca, setErrorBiblioteca] = useState("");
+  const usoCuestionarios = useUsoCuestionarios(
+    db,
+    accesoCuestionarios ? empresaActivaId : "",
+    accesoCuestionarios?.planId ?? "inicial",
+  );
   const estadoAppRef = useRef(estadoApp);
   const intentosGuardadosRef = useRef(new Set<string>());
   const { seleccion, bienvenidaCompletada, mostrarPlanes, envio } = estadoApp;
   const puedeCrearCopias = accesoCuestionarios?.puedeEditar === true;
+  const alcanzoLimiteCuestionarios =
+    usoCuestionarios.usados >= usoCuestionarios.limite;
+  const publicacionBloqueada = usoCuestionarios.cargando ||
+    Boolean(usoCuestionarios.error) ||
+    alcanzoLimiteCuestionarios;
+  const mensajePublicacionBloqueada = alcanzoLimiteCuestionarios
+    ? "Alcanzaste el límite de tu plan: despublica uno o cambia de plan."
+    : usoCuestionarios.error
+    ? "No se pudo comprobar el cupo para publicar."
+    : "Consultando el cupo de publicación…";
   const calculo = envio?.calculo ?? null;
   const resultadoValidacion = seleccion
     ? validarCuestionario(seleccion.configuracion)
@@ -771,42 +796,17 @@ export default function App() {
 
   async function crearVersionYPublicar(
     copia: DocumentoCuestionarioGuardado,
-    correo: string,
   ): Promise<string> {
-    if (!db) {
-      throw new Error("Firebase no está configurado.");
+    const usuario = auth?.currentUser;
+    if (!usuario?.email || !usuario.emailVerified) {
+      throw new Error("Inicia sesión con un correo verificado para publicar.");
     }
-    const cuestionarioRef = doc(
-      db,
-      "empresas",
+    await cambiarPublicacionCuestionario(
+      "publicar",
       empresaActivaId,
-      "cuestionarios",
       copia.id,
+      await usuario.getIdToken(),
     );
-    const versiones = await getDocsFromServer(
-      collection(cuestionarioRef, "versiones"),
-    );
-    const numero = versiones.docs.reduce((mayor, version) => {
-      const valor = version.data().numero;
-      return typeof valor === "number" && Number.isFinite(valor)
-        ? Math.max(mayor, valor)
-        : mayor;
-    }, 0) + 1;
-    const versionId = crypto.randomUUID();
-    const versionRef = doc(collection(cuestionarioRef, "versiones"), versionId);
-    const batch = writeBatch(db);
-    batch.set(versionRef, {
-      numero,
-      configuracion: copia.configuracion,
-      publicadaEn: serverTimestamp(),
-      creadoPor: correo.toLowerCase(),
-    });
-    batch.update(cuestionarioRef, {
-      estado: "publicado",
-      versionActualId: versionId,
-      actualizadoEn: serverTimestamp(),
-    });
-    await batch.commit();
     const actualizada = await leerCuestionarioGuardado(
       empresaActivaId,
       copia.id,
@@ -835,7 +835,7 @@ export default function App() {
     if (!usuario?.email || !acceso?.puedePublicar || !acceso.puedeEditar) {
       throw new Error("No tienes permiso para publicar copias en esta empresa.");
     }
-    let existente = await leerCuestionarioGuardado(
+    const existente = await leerCuestionarioGuardado(
       empresaActivaId,
       seleccionActual.id,
     );
@@ -843,22 +843,7 @@ export default function App() {
       throw new Error("La copia guardada ya no existe.");
     }
     if (existente.estado === "publicado") {
-      if (!db) {
-        throw new Error("Firebase no está configurado.");
-      }
-      await updateDoc(
-        doc(db, "empresas", empresaActivaId, "cuestionarios", existente.id),
-        { estado: "borrador", actualizadoEn: serverTimestamp() },
-      );
-      existente = await leerCuestionarioGuardado(empresaActivaId, existente.id);
-      if (!existente) {
-        throw new Error("La copia dejó de existir al despublicarla.");
-      }
-      const despublicada = existente;
-      setCopiasGuardadas((copias) => [
-        despublicada,
-        ...copias.filter(({ id }) => id !== despublicada.id),
-      ]);
+      throw new Error("Despublica primero el cuestionario para editar el borrador.");
     }
     if (!puedeEditarCopia(acceso, existente)) {
       throw new Error("Solo puedes cambiar tus borradores o los de tu empresa como administrador.");
@@ -871,7 +856,7 @@ export default function App() {
     if (!guardada) {
       throw new Error("La copia guardada ya no existe.");
     }
-    const url = await crearVersionYPublicar(guardada, usuario.email);
+    const url = await crearVersionYPublicar(guardada);
     regresarBiblioteca();
     return url;
   }
@@ -888,7 +873,7 @@ export default function App() {
     if (!copia || copia.estado !== "borrador") {
       throw new Error("Solo se pueden publicar borradores; despublica primero el cuestionario.");
     }
-    await crearVersionYPublicar(copia, usuario.email);
+    await crearVersionYPublicar(copia);
   }
 
   async function despublicarCopiaPlantilla(id: string): Promise<void> {
@@ -899,16 +884,15 @@ export default function App() {
     if (!usuario || !acceso?.puedePublicar) {
       throw new Error("No tienes permiso para despublicar copias en esta empresa.");
     }
-    if (!db) {
-      throw new Error("Firebase no está configurado.");
-    }
     const copia = await leerCuestionarioGuardado(empresaActivaId, id);
     if (!copia || copia.estado !== "publicado") {
       throw new Error("El cuestionario ya no está publicado.");
     }
-    await updateDoc(
-      doc(db, "empresas", empresaActivaId, "cuestionarios", id),
-      { estado: "borrador", actualizadoEn: serverTimestamp() },
+    await cambiarPublicacionCuestionario(
+      "despublicar",
+      empresaActivaId,
+      id,
+      await usuario.getIdToken(),
     );
     const actualizada = await leerCuestionarioGuardado(empresaActivaId, id);
     if (actualizada) {
@@ -1032,6 +1016,9 @@ export default function App() {
         }
         onCrearCopia={puedeCrearCopias ? seleccionarCopiaPlantilla : undefined}
         onSeleccionar={seleccionarCuestionario}
+        usoCuestionarios={
+          accesoCuestionarios ? usoCuestionarios : undefined
+        }
         templates={catalogoTemplates}
       />
     );
@@ -1206,6 +1193,8 @@ export default function App() {
               ? () => despublicarCopiaPlantilla(seleccion.id)
               : undefined
           }
+          publicacionBloqueada={publicacionBloqueada}
+          mensajePublicacionBloqueada={mensajePublicacionBloqueada}
         />
       </>
     );

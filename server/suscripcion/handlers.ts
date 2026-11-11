@@ -4,6 +4,10 @@ import type {
   Transaction,
 } from "firebase-admin/firestore";
 import type Stripe from "stripe";
+import {
+  PLANES_SUSCRIPCION,
+  type PlanSuscripcionId,
+} from "../../src/config/planes.ts";
 import { DIAS_PRUEBA, PRECIO, PRECIO_PROVISIONAL } from "../../src/config/suscripcion.ts";
 import type { RespuestaApi, SolicitudApi } from "./contratos.ts";
 import {
@@ -32,6 +36,12 @@ export function validarNombre(nombre: unknown): nombre is string {
   return typeof nombre === "string" &&
     nombre.trim().length >= 1 &&
     nombre.trim().length <= 80;
+}
+
+function validarPlanSuscripcion(
+  planId: unknown,
+): planId is PlanSuscripcionId {
+  return PLANES_SUSCRIPCION.some((plan) => plan.id === planId);
 }
 
 type EstadoSuscripcion = "prueba" | "activa" | "pago_pendiente" | "cancelada";
@@ -177,12 +187,17 @@ export function crearHandlerIniciar(dependencias: DependenciasSuscripcion) {
     const body = leerObjeto(solicitud.body);
     const slug = body?.slug;
     const nombre = body?.nombre;
+    const planId = body?.planId;
     if (!validarSlug(slug)) {
       enviarError(respuesta, 400, "El identificador de empresa no es válido.");
       return;
     }
     if (!validarNombre(nombre)) {
       enviarError(respuesta, 400, "El nombre debe tener entre 1 y 80 caracteres.");
+      return;
+    }
+    if (!validarPlanSuscripcion(planId)) {
+      enviarError(respuesta, 400, "El plan seleccionado no es válido.");
       return;
     }
 
@@ -206,10 +221,16 @@ export function crearHandlerIniciar(dependencias: DependenciasSuscripcion) {
         slug,
         nombre: nombre.trim(),
         correo: identidad.correo,
+        planId,
+      };
+      const precioPorPlan: Record<PlanSuscripcionId, string> = {
+        inicial: dependencias.priceId,
+        pro: dependencias.priceId,
+        avanzado: dependencias.priceId,
       };
       const session = await dependencias.stripe.checkout.sessions.create({
         mode: "subscription",
-        line_items: [{ price: dependencias.priceId, quantity: 1 }],
+        line_items: [{ price: precioPorPlan[planId], quantity: 1 }],
         subscription_data: {
           trial_period_days: DIAS_PRUEBA,
           metadata,
@@ -403,6 +424,7 @@ async function registrarCheckout(
     slug: string;
     nombre: string;
     correo: string;
+    planId: PlanSuscripcionId;
     stripeCustomerId: string;
     stripeSubscriptionId: string;
     pruebaHasta: Date;
@@ -412,6 +434,7 @@ async function registrarCheckout(
     slug,
     nombre,
     correo,
+    planId,
     stripeCustomerId,
     stripeSubscriptionId,
     pruebaHasta,
@@ -419,6 +442,7 @@ async function registrarCheckout(
   const empresaRef = dependencias.firestore.doc(`empresas/${slug}`);
   const miembroRef = dependencias.firestore.doc(`empresas/${slug}/miembros/${correo}`);
   const suscripcionRef = dependencias.firestore.doc(`empresas/${slug}/suscripcion/actual`);
+  const usoRef = dependencias.firestore.doc(`empresas/${slug}/uso/cuestionarios`);
   const pruebaRef = dependencias.firestore.doc(`pruebas/${correo}`);
   const ahora = new Date();
 
@@ -447,7 +471,7 @@ async function registrarCheckout(
     transaccion.set(empresaRef, {
       nombre,
       estado: "activa",
-      planId: "prueba",
+      planId,
       creadoEn: ahora,
       actualizadoEn: ahora,
     });
@@ -471,6 +495,10 @@ async function registrarCheckout(
       precio: PRECIO,
       precioProvisional: PRECIO_PROVISIONAL,
       creadoEn: ahora,
+      actualizadoEn: ahora,
+    });
+    transaccion.set(usoRef, {
+      publicados: [],
       actualizadoEn: ahora,
     });
     transaccion.set(pruebaRef, { slug, creadoEn: ahora });
@@ -590,11 +618,14 @@ export function crearHandlerWebhook(dependencias: DependenciasSuscripcion) {
             : null);
         const nombre = metadataString(metadata, "nombre");
         const correo = metadataString(metadata, "correo")?.toLowerCase() ?? null;
+        const planMetadata = metadataString(metadata, "planId");
+        const planId = planMetadata ?? "inicial";
         const subscriptionId = idStripe(session.subscription);
         const customerId = idStripe(session.customer);
         if (
           !validarSlug(slug) ||
           !validarNombre(nombre) ||
+          !validarPlanSuscripcion(planId) ||
           !correo ||
           !PATRON_CORREO.test(correo) ||
           !subscriptionId ||
@@ -617,6 +648,7 @@ export function crearHandlerWebhook(dependencias: DependenciasSuscripcion) {
           slug,
           nombre: nombre.trim(),
           correo,
+          planId,
           stripeCustomerId: customerId,
           stripeSubscriptionId: subscriptionId,
           pruebaHasta: new Date(subscription.trial_end * 1000),
