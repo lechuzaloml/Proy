@@ -34,9 +34,24 @@ function campoString(
   return typeof campo === "string" ? campo : null;
 }
 
-function leerPlanSeleccionado(): PlanSuscripcionId {
-  const planId = new URLSearchParams(window.location.search).get("plan");
-  return PLANES_SUSCRIPCION.find((plan) => plan.id === planId)?.id ?? "inicial";
+export function resolverPlanInicial(search: string): {
+  planId: PlanSuscripcionId;
+  mostrarSelector: boolean;
+} {
+  const planId = new URLSearchParams(search).get("plan");
+  const planValido = PLANES_SUSCRIPCION.find((plan) => plan.id === planId);
+  return {
+    planId: planValido?.id ?? "pro",
+    mostrarSelector: !planValido,
+  };
+}
+
+export function crearCuerpoSolicitudInicio(
+  slug: string,
+  nombre: string,
+  planId: PlanSuscripcionId,
+): string {
+  return JSON.stringify({ slug, nombre, planId });
 }
 
 export default function PantallaSuscripcion() {
@@ -44,8 +59,14 @@ export default function PantallaSuscripcion() {
   const [authListo, setAuthListo] = useState(false);
   const [nombre, setNombre] = useState("");
   const [slug, setSlug] = useState("");
+  const [estadoPlanInicial] = useState(() =>
+    resolverPlanInicial(window.location.search),
+  );
   const [planId, setPlanId] = useState<PlanSuscripcionId>(
-    leerPlanSeleccionado,
+    estadoPlanInicial.planId,
+  );
+  const [mostrarSelector, setMostrarSelector] = useState(
+    estadoPlanInicial.mostrarSelector,
   );
   const [procesando, setProcesando] = useState(false);
   const [error, setError] = useState("");
@@ -198,7 +219,7 @@ export default function PantallaSuscripcion() {
           Authorization: `Bearer ${token}`,
           "Content-Type": "application/json",
         },
-        body: JSON.stringify({ slug, nombre, planId }),
+        body: crearCuerpoSolicitudInicio(slug, nombre, planId),
       });
       const datos: unknown = await respuesta.json();
       if (!respuesta.ok) {
@@ -319,22 +340,44 @@ export default function PantallaSuscripcion() {
         )}
         {error && <p className="admin-error" role="alert">{error}</p>}
 
-        <fieldset className="suscripcion-planes">
-          <legend>Elige tu plan</legend>
-          {PLANES_SUSCRIPCION.map((plan) => (
-            <label key={plan.id}>
-              <input
-                checked={planId === plan.id}
-                name="planId"
-                onChange={() => setPlanId(plan.id)}
-                type="radio"
-                value={plan.id}
-              />
-              {plan.nombre}: hasta {limiteDePlan(plan.id)} cuestionarios
-              publicados por empresa
-            </label>
-          ))}
-        </fieldset>
+        {mostrarSelector ? (
+          <fieldset className="suscripcion-planes">
+            <legend>Elige tu plan</legend>
+            {PLANES_SUSCRIPCION.map((plan) => (
+              <label key={plan.id}>
+                <input
+                  checked={planId === plan.id}
+                  name="planId"
+                  onChange={() => {
+                    setPlanId(plan.id);
+                    setMostrarSelector(false);
+                  }}
+                  type="radio"
+                  value={plan.id}
+                />
+                {plan.nombre}: hasta {limiteDePlan(plan.id)} cuestionarios
+                publicados por empresa
+              </label>
+            ))}
+          </fieldset>
+        ) : (
+          <div className="suscripcion-plan-elegido">
+            <p>
+              Plan elegido:{" "}
+              <strong>
+                {PLANES_SUSCRIPCION.find((plan) => plan.id === planId)?.nombre}
+              </strong>{" "}
+              - hasta {limiteDePlan(planId)} cuestionarios publicados
+            </p>
+            <button
+              className="secondary-button"
+              onClick={() => setMostrarSelector(true)}
+              type="button"
+            >
+              Cambiar plan
+            </button>
+          </div>
+        )}
 
         <form className="suscripcion-form" onSubmit={(evento) => void iniciarPrueba(evento)}>
           <label>
