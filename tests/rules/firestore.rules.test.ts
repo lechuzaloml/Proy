@@ -420,7 +420,7 @@ it("permite a una cuenta autorizada guardar el envío atómico de una copia sin 
   });
 });
 
-it("permite a un miembro solo de demo-a copiar, publicar y recibir un envío en demo-a", async () => {
+it("permite a un miembro solo de demo-a crear copias, pero reserva publicación para servidor", async () => {
     await environment.withSecurityRulesDisabled(async (context) => {
       const database = context.firestore();
       await setDoc(doc(database, `empresas/${COMPANY_DEMO_A}`), {
@@ -467,7 +467,26 @@ it("permite a un miembro solo de demo-a copiar, publicar y recibir un envío en 
       versionActualId: versionId,
       actualizadoEn: serverTimestamp(),
     });
-    await assertSucceeds(publish.commit());
+    await assertPermissionDenied(publish.commit());
+    await environment.withSecurityRulesDisabled(async (context) => {
+      const base = context.firestore();
+      await setDoc(doc(
+        base,
+        `empresas/${COMPANY_DEMO_A}/cuestionarios/${PERSONALIZED_QUESTIONNAIRE_ID}/versiones/${versionId}`,
+      ), {
+        numero: 1,
+        configuracion: documentoCopia().configuracion,
+        publicadaEn: new Date(),
+        creadoPor: DEMO_A_MEMBER_EMAIL,
+      });
+      await updateDoc(doc(
+        base,
+        `empresas/${COMPANY_DEMO_A}/cuestionarios/${PERSONALIZED_QUESTIONNAIRE_ID}`,
+      ), {
+        estado: "publicado",
+        versionActualId: versionId,
+      });
+    });
     await assertSucceeds(getDocs(collection(
       member,
       `empresas/${COMPANY_DEMO_A}/cuestionarios`,
@@ -505,7 +524,7 @@ it("permite a un miembro solo de demo-a copiar, publicar y recibir un envío en 
       completadoEn: serverTimestamp(),
     });
     await assertSucceeds(submission.commit());
-    await assertSucceeds(updateDoc(questionnaireRef, {
+    await assertPermissionDenied(updateDoc(questionnaireRef, {
       estado: "borrador",
       actualizadoEn: serverTimestamp(),
     }));
@@ -541,7 +560,7 @@ it("permite a un miembro solo de demo-a copiar, publicar y recibir un envío en 
         .toBe(PERSONALIZED_QUESTIONNAIRE_ID);
       expect(leadClearIa.exists()).toBe(false);
       expect(diagnosticoClearIa.exists()).toBe(false);
-      expect(cuestionarioDemoA.data()?.estado).toBe("borrador");
+      expect(cuestionarioDemoA.data()?.estado).toBe("publicado");
       expect(cuestionarioClearIa.data()?.estado).toBe("borrador");
       expect(cuestionarioClearIa.data()).not.toHaveProperty("versionActualId");
   });
@@ -890,7 +909,7 @@ describe("reglas locales de Firestore", () => {
     );
   });
 
-  it("permite publicar y despublicar con lotes atómicos desde el cliente", async () => {
+  it("reserva publicar, versionar y despublicar cuestionarios al servidor", async () => {
     await establecerMembresia(MEMBER_EMAIL, "usuario", {
       verLeads: true,
       editarCuestionarios: true,
@@ -918,7 +937,26 @@ describe("reglas locales de Firestore", () => {
       versionActualId: versionId,
       actualizadoEn: serverTimestamp(),
     });
-    await assertSucceeds(publicar.commit());
+    await assertPermissionDenied(publicar.commit());
+    await environment.withSecurityRulesDisabled(async (context) => {
+      const base = context.firestore();
+      await setDoc(doc(
+        base,
+        `empresas/${COMPANY_CLEARIA}/cuestionarios/${PERSONALIZED_QUESTIONNAIRE_ID}/versiones/${versionId}`,
+      ), {
+        numero: 1,
+        configuracion: documentoCopia().configuracion,
+        publicadaEn: new Date(),
+        creadoPor: MEMBER_EMAIL,
+      });
+      await updateDoc(doc(
+        base,
+        `empresas/${COMPANY_CLEARIA}/cuestionarios/${PERSONALIZED_QUESTIONNAIRE_ID}`,
+      ), {
+        estado: "publicado",
+        versionActualId: versionId,
+      });
+    });
 
     const visitante = environment.unauthenticatedContext().firestore();
     await assertSucceeds(getDoc(doc(
@@ -930,15 +968,15 @@ describe("reglas locales de Firestore", () => {
       `empresas/${COMPANY_CLEARIA}/cuestionarios/${PERSONALIZED_QUESTIONNAIRE_ID}/versiones/${versionId}`,
     )));
 
-    await assertSucceeds(updateDoc(cuestionarioRef, {
+    await assertPermissionDenied(updateDoc(cuestionarioRef, {
       estado: "borrador",
       actualizadoEn: serverTimestamp(),
     }));
-    await assertFails(getDoc(doc(
+    await assertSucceeds(getDoc(doc(
       visitante,
       `empresas/${COMPANY_CLEARIA}/cuestionarios/${PERSONALIZED_QUESTIONNAIRE_ID}`,
     )));
-    await assertFails(getDoc(doc(
+    await assertSucceeds(getDoc(doc(
       visitante,
       `empresas/${COMPANY_CLEARIA}/cuestionarios/${PERSONALIZED_QUESTIONNAIRE_ID}/versiones/${versionId}`,
     )));
@@ -1537,7 +1575,7 @@ describe("reglas locales de Firestore", () => {
     await assertPermissionDenied(lote.commit());
   });
 
-  it("usuario con editar y publicar crea versiones y no cambia nombre/configuración al publicar o despublicar", async () => {
+  it("usuario con editar y publicar no crea versiones ni modifica el estado desde el cliente", async () => {
     await establecerMembresia(EDITOR_EMAIL, "usuario", {
       editarCuestionarios: true,
       publicarCuestionarios: true,
@@ -1566,7 +1604,26 @@ describe("reglas locales de Firestore", () => {
       versionActualId: versionId,
       actualizadoEn: serverTimestamp(),
     });
-    await assertSucceeds(publicar.commit());
+    await assertPermissionDenied(publicar.commit());
+    await environment.withSecurityRulesDisabled(async (context) => {
+      const base = context.firestore();
+      await setDoc(doc(
+        base,
+        `empresas/${COMPANY_CLEARIA}/cuestionarios/editor-two-permissions/versiones/${versionId}`,
+      ), {
+        numero: 1,
+        configuracion: documentoCopia().configuracion,
+        publicadaEn: new Date(),
+        creadoPor: EDITOR_EMAIL,
+      });
+      await updateDoc(doc(
+        base,
+        `empresas/${COMPANY_CLEARIA}/cuestionarios/editor-two-permissions`,
+      ), {
+        estado: "publicado",
+        versionActualId: versionId,
+      });
+    });
 
     const nuevoAlPublicar = writeBatch(database);
     nuevoAlPublicar.set(doc(cuestionario, "versiones", "bad-publish-version"), {
@@ -1584,17 +1641,17 @@ describe("reglas locales de Firestore", () => {
     });
     await assertFails(nuevoAlPublicar.commit());
 
-    await assertSucceeds(updateDoc(cuestionario, {
+    await assertPermissionDenied(updateDoc(cuestionario, {
       estado: "borrador",
       actualizadoEn: serverTimestamp(),
     }));
-    await assertFails(updateDoc(cuestionario, {
+    await assertPermissionDenied(updateDoc(cuestionario, {
       estado: "publicado",
       versionActualId: versionId,
       nombre: "Nombre cambiado al republicar",
       actualizadoEn: serverTimestamp(),
     }));
-    await assertSucceeds(updateDoc(cuestionario, {
+    await assertPermissionDenied(updateDoc(cuestionario, {
       estado: "publicado",
       versionActualId: versionId,
       actualizadoEn: serverTimestamp(),
@@ -1629,7 +1686,7 @@ describe("reglas locales de Firestore", () => {
   it.each([
     ["admin", ADMIN_EMAIL],
     ["propietario", OWNER_EMAIL],
-  ] as const)("%s edita y borra borradores ajenos, publica y despublica, pero no borra publicados", async (
+  ] as const)("%s edita y borra borradores ajenos, pero requiere el servidor para publicar y despublicar", async (
     rol,
     correo,
   ) => {
@@ -1676,7 +1733,7 @@ describe("reglas locales de Firestore", () => {
     );
     await assertSucceeds(updateDoc(borrador, { nombre: `Editado por ${rol}` }));
     await assertSucceeds(deleteDoc(borrador));
-    await assertSucceeds(updateDoc(publicado, {
+    await assertPermissionDenied(updateDoc(publicado, {
       estado: "borrador",
       actualizadoEn: serverTimestamp(),
     }));
@@ -1693,11 +1750,11 @@ describe("reglas locales de Firestore", () => {
       versionActualId: versionId,
       actualizadoEn: serverTimestamp(),
     });
-    await assertSucceeds(republicar.commit());
+    await assertPermissionDenied(republicar.commit());
     await assertPermissionDenied(deleteDoc(publicado));
   });
 
-  it("administrador de plataforma puede editar, publicar, despublicar y borrar cuestionarios publicados", async () => {
+  it("administrador de plataforma necesita servidor para publicar y puede borrar publicados", async () => {
     const database = contextoMiembro(PLATFORM_ADMIN_EMAIL).firestore();
     const borrador = doc(
       database,
@@ -1727,8 +1784,21 @@ describe("reglas locales de Firestore", () => {
       versionActualId: versionId,
       actualizadoEn: serverTimestamp(),
     });
-    await assertSucceeds(publish.commit());
-    await assertSucceeds(updateDoc(publicado, {
+    await assertPermissionDenied(publish.commit());
+    await environment.withSecurityRulesDisabled(async (context) => {
+      const base = context.firestore();
+      await setDoc(doc(base, `${publicado.path}/versiones/${versionId}`), {
+        numero: 1,
+        configuracion: documentoCopia().configuracion,
+        publicadaEn: new Date(),
+        creadoPor: PLATFORM_ADMIN_EMAIL,
+      });
+      await updateDoc(doc(base, publicado.path), {
+        estado: "publicado",
+        versionActualId: versionId,
+      });
+    });
+    await assertPermissionDenied(updateDoc(publicado, {
       estado: "borrador",
       actualizadoEn: serverTimestamp(),
     }));
@@ -2211,7 +2281,7 @@ describe("reglas locales de Firestore", () => {
     }));
   });
 
-  it("no hay contador de borradores, versiones, miembros o seguimientos por empresa", async () => {
+  it("no hay contador de borradores, miembros o seguimientos; las versiones son del servidor", async () => {
     await prepararMiembrosDePrueba();
     await establecerMembresia(OWNER_EMAIL, "propietario", {}, COMPANY_MEMBER_ROLES);
     const database = contextoMiembro(OWNER_EMAIL).firestore();
@@ -2240,7 +2310,7 @@ describe("reglas locales de Firestore", () => {
         creadoPor: OWNER_EMAIL,
       });
     }
-    await assertSucceeds(versiones.commit());
+    await assertPermissionDenied(versiones.commit());
 
     const miembros = writeBatch(database);
     for (const correo of [

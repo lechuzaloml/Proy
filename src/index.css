@@ -10586,6 +10586,77 @@ button[aria-busy="true"] {
   }
 }
 
+.company-status,
+.company-owner-missing {
+  display: inline-block;
+  padding: 0.25rem 0.55rem;
+  border-radius: 999px;
+  font-size: 0.8rem;
+  font-weight: 700;
+}
+
+.company-status-activa {
+  background: #e8f4ec;
+  color: #23613b;
+}
+
+.company-status-suspendida,
+.company-owner-missing {
+  background: #fff0e5;
+  color: #8a3d12;
+}
+
+.company-delete-reason {
+  display: block;
+  max-width: 16rem;
+  margin-top: 0.4rem;
+  color: var(--color-dark-gray);
+}
+
+.company-delete-backdrop {
+  position: fixed;
+  z-index: 1000;
+  display: grid;
+  place-items: center;
+  padding: 1rem;
+  background: rgb(20 27 35 / 60%);
+  inset: 0;
+}
+
+.company-delete-dialog {
+  width: min(100%, 38rem);
+  max-height: min(90vh, 52rem);
+  overflow: auto;
+  background: var(--color-white);
+}
+
+.company-delete-dialog > label {
+  display: grid;
+  gap: 0.5rem;
+  margin-top: 1rem;
+}
+
+.company-delete-dialog > label > input:not([type="checkbox"]) {
+  min-height: 2.75rem;
+  padding: 0.6rem;
+  border: 1px solid var(--color-divider);
+  border-radius: 6px;
+}
+
+.company-delete-dialog .company-delete-release {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.65rem;
+}
+
+.company-delete-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 0.75rem;
+  margin-top: 1.5rem;
+}
+
 @media (min-width: 1024px) {
   .questionnaire[data-presentation] .question-content-card {
     min-height: 360px;

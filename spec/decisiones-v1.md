@@ -57,3 +57,5 @@ sin modificar sus diez reglas.
     no se borra sin despublicar.
 19. Los planes limitan los cuestionarios publicados por empresa; publicar y
     despublicar pasan por el servidor.
+20. Solo la plataforma elimina empresas, solo si están suspendidas o sin
+    propietario; se cancela su suscripción y se borran todos sus datos.

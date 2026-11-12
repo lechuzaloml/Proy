@@ -8,6 +8,7 @@ import {
   PLANES_SUSCRIPCION,
   type PlanSuscripcionId,
 } from "../../src/config/planes.ts";
+import { validarSlugEmpresaId } from "../../src/config/empresas.ts";
 import { DIAS_PRUEBA, PRECIO, PRECIO_PROVISIONAL } from "../../src/config/suscripcion.ts";
 import type { RespuestaApi, SolicitudApi } from "./contratos.ts";
 import {
@@ -15,21 +16,10 @@ import {
   type DependenciasSuscripcion,
 } from "./runtime.ts";
 
-const SLUG_RESERVADOS = new Set([
-  "admin",
-  "e",
-  "api",
-  "assets",
-  "static",
-  "login",
-  "clearia",
-]);
 const PATRON_CORREO = /^[^@\s]+@[^@\s]+\.[^@\s]+$/;
 
 export function validarSlug(slug: unknown): slug is string {
-  return typeof slug === "string" &&
-    /^[a-z0-9][a-z0-9-]{1,38}[a-z0-9]$/.test(slug) &&
-    !SLUG_RESERVADOS.has(slug);
+  return validarSlugEmpresaId(slug);
 }
 
 export function validarNombre(nombre: unknown): nombre is string {
@@ -694,12 +684,16 @@ export function crearHandlerWebhook(dependencias: DependenciasSuscripcion) {
           respuesta.status(200).json({ recibido: true, ignorado: true });
           return;
         }
-        await sincronizarSuscripcion(
+        const sincronizada = await sincronizarSuscripcion(
           dependencias,
           slug,
           subscriptionId,
           cambio,
         );
+        if (!sincronizada) {
+          respuesta.status(200).json({ recibido: true, ignorado: true });
+          return;
+        }
       }
       respuesta.status(200).json({ recibido: true });
     } catch (error: unknown) {

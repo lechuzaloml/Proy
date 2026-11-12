@@ -1,13 +1,5 @@
-const SLUGS_RESERVADOS = new Set([
-  "admin",
-  "e",
-  "api",
-  "assets",
-  "static",
-  "login",
-]);
+import { validarSlugEmpresaId } from "../config/empresas";
 
-const REGEX_SLUG = /^[a-z0-9][a-z0-9-]{1,38}[a-z0-9]$/;
 const REGEX_CORREO = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const REGEX_COLOR = /^#[0-9a-fA-F]{6}$/;
 
@@ -17,7 +9,7 @@ export interface MarcaEmpresa {
 }
 
 export function validarSlugEmpresa(valor: string): boolean {
-  return REGEX_SLUG.test(valor) && !SLUGS_RESERVADOS.has(valor);
+  return validarSlugEmpresaId(valor);
 }
 
 export function normalizarCorreoEmpresa(valor: string): string | null {

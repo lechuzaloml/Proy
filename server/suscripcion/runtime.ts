@@ -8,6 +8,7 @@ export interface DependenciasSuscripcion {
   auth: ReturnType<FirebaseAuth["getAuth"]>;
   firestore: ReturnType<FirebaseFirestore["getFirestore"]>;
   stripe: StripeClient;
+  stripeTestMode?: boolean;
   appUrl: string;
   priceId?: string;
   webhookSecret?: string;
@@ -232,6 +233,7 @@ export async function conDependencias(
     const clientes = await construirClientesUnaVez(configuracion);
     await ejecutar({
       ...clientes,
+      stripeTestMode: process.env.STRIPE_SECRET_KEY?.trim().startsWith("sk_test_") === true,
       appUrl: configuracion.appUrl,
       priceId: configuracion.priceId,
       webhookSecret: configuracion.webhookSecret,

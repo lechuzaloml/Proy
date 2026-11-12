@@ -5,10 +5,14 @@ import {
   getDoc,
   getDocs,
   serverTimestamp,
+  setDoc,
   updateDoc,
   writeBatch,
   type DocumentData,
 } from "firebase/firestore";
+import { esEmpresaProtegida, puedeEliminar } from "../config/empresas";
+import { CLAVE_EMPRESA_ACTIVA } from "../config/empresaActiva";
+import { auth } from "../lib/firebaseAuth";
 import { db } from "../lib/firebase";
 import GestorMiembros from "./GestorMiembros";
 import {
@@ -29,6 +33,10 @@ interface Empresa {
   planId: PlanEmpresa;
   estado: EstadoEmpresa;
   marca: MarcaEmpresa;
+  propietariosActivos: boolean;
+  miembros: number;
+  leads: number;
+  cuestionarios: number;
 }
 
 function empresaDesdeDocumento(
@@ -46,6 +54,10 @@ function empresaDesdeDocumento(
       ? data.planId
       : "inicial",
     estado: data.estado === "suspendida" ? "suspendida" : "activa",
+    propietariosActivos: false,
+    miembros: 0,
+    leads: 0,
+    cuestionarios: 0,
     marca: {
       colorPrimario: typeof marcaData.colorPrimario === "string"
         ? marcaData.colorPrimario
@@ -78,6 +90,11 @@ export default function ConsolaPlataforma({
   const [estadoEditado, setEstadoEditado] = useState<EstadoEmpresa>("activa");
   const [colorPrimario, setColorPrimario] = useState("#E2554F");
   const [logoUrl, setLogoUrl] = useState("");
+  const [correoPropietario, setCorreoPropietario] = useState("");
+  const [empresaPorEliminarId, setEmpresaPorEliminarId] = useState("");
+  const [idConfirmado, setIdConfirmado] = useState("");
+  const [liberarPrueba, setLiberarPrueba] = useState(false);
+  const [eliminando, setEliminando] = useState(false);
 
   const empresaSeleccionada =
     empresas.find(({ id }) => id === empresaSeleccionadaId) ?? null;
@@ -93,11 +110,28 @@ export default function ConsolaPlataforma({
     setError("");
     try {
       const resultado = await getDocs(collection(database, "empresas"));
-      const siguientes = resultado.docs
-        .map((snapshot) => empresaDesdeDocumento(snapshot.id, snapshot.data()))
-        .sort((primero, segundo) =>
-          primero.nombre.localeCompare(segundo.nombre),
+      const siguientes = await Promise.all(resultado.docs.map(async (snapshot) => {
+        const [miembros, leads, cuestionarios] = await Promise.all([
+          getDocs(collection(database, "empresas", snapshot.id, "miembros")),
+          getDocs(collection(database, "empresas", snapshot.id, "leads")),
+          getDocs(collection(database, "empresas", snapshot.id, "cuestionarios")),
+        ]);
+        const propietarioActivo = miembros.docs.some((miembro) =>
+          miembro.data().estado === "activo" &&
+          miembro.data().rol === "propietario",
         );
+        return {
+          ...empresaDesdeDocumento(snapshot.id, snapshot.data()),
+          propietariosActivos: propietarioActivo,
+          miembros: miembros.size,
+          leads: leads.size,
+          cuestionarios: cuestionarios.size,
+        };
+      })).then((empresasCargadas) =>
+        empresasCargadas.sort((primero, segundo) =>
+          primero.nombre.localeCompare(segundo.nombre),
+        ),
+      );
       setEmpresas(siguientes);
       setEmpresaSeleccionadaId((actual) =>
         siguientes.some(({ id }) => id === actual)
@@ -253,6 +287,99 @@ export default function ConsolaPlataforma({
     }
   }
 
+  async function asignarPropietario(evento: FormEvent<HTMLFormElement>) {
+    evento.preventDefault();
+    const database = db;
+    const empresa = empresaSeleccionada;
+    const correo = normalizarCorreoEmpresa(correoPropietario);
+    if (!database || !empresa || !correo) {
+      setError("Escribe un correo válido para asignar al propietario.");
+      return;
+    }
+
+    setGuardando(true);
+    setError("");
+    try {
+      const miembroRef = doc(database, "empresas", empresa.id, "miembros", correo);
+      const miembroExistente = await getDoc(miembroRef);
+      await setDoc(miembroRef, {
+        correo,
+        rol: "propietario",
+        permisos: {
+          verLeads: true,
+          gestionarLeads: true,
+          editarCuestionarios: true,
+          publicarCuestionarios: true,
+        },
+        estado: "activo",
+        ...(miembroExistente.exists() ? {} : { creadoEn: serverTimestamp() }),
+      }, { merge: true });
+      setCorreoPropietario("");
+      await recargarEmpresas();
+    } catch (assignError) {
+      setError(
+        assignError instanceof Error
+          ? assignError.message
+          : "No se pudo asignar el propietario.",
+      );
+    } finally {
+      setGuardando(false);
+    }
+  }
+
+  async function eliminarEmpresa() {
+    const empresaId = empresaPorEliminarId;
+    if (!empresaId || idConfirmado !== empresaId) {
+      return;
+    }
+    const usuario = auth?.currentUser;
+    if (!usuario) {
+      setError("Inicia sesión como administrador de plataforma para eliminar empresas.");
+      return;
+    }
+
+    setEliminando(true);
+    setError("");
+    try {
+      const token = await usuario.getIdToken();
+      const respuesta = await fetch("/api/empresas/eliminar", {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ empresaId, liberarPrueba }),
+      });
+      const resultado: unknown = await respuesta.json();
+      if (!respuesta.ok) {
+        const mensaje = typeof resultado === "object" && resultado !== null &&
+            "error" in resultado && typeof resultado.error === "string"
+          ? resultado.error
+          : "No se pudo eliminar la empresa.";
+        throw new Error(mensaje);
+      }
+
+      if (window.localStorage.getItem(CLAVE_EMPRESA_ACTIVA) === empresaId) {
+        window.localStorage.removeItem(CLAVE_EMPRESA_ACTIVA);
+      }
+      setEmpresaPorEliminarId("");
+      setIdConfirmado("");
+      setLiberarPrueba(false);
+      await recargarEmpresas();
+    } catch (deleteError) {
+      setError(
+        deleteError instanceof Error
+          ? deleteError.message
+          : "No se pudo eliminar la empresa.",
+      );
+    } finally {
+      setEliminando(false);
+    }
+  }
+
+  const empresaPorEliminar =
+    empresas.find(({ id }) => id === empresaPorEliminarId) ?? null;
+
   return (
     <main className="admin-page">
       <header className="admin-header">
@@ -281,6 +408,8 @@ export default function ConsolaPlataforma({
                   <th>ID</th>
                   <th>Plan</th>
                   <th>Estado</th>
+                  <th>Propiedad</th>
+                  <th>Acciones</th>
                 </tr>
               </thead>
               <tbody>
@@ -296,7 +425,47 @@ export default function ConsolaPlataforma({
                     </td>
                     <td>{empresa.id}</td>
                     <td>{empresa.planId}</td>
-                    <td>{empresa.estado}</td>
+                    <td>
+                      <span className={`company-status company-status-${empresa.estado}`}>
+                        {empresa.estado === "activa" ? "Activa" : "Inactiva"}
+                      </span>
+                    </td>
+                    <td>
+                      {empresa.propietariosActivos
+                        ? "Propietario activo"
+                        : <span className="company-owner-missing">Sin propietario</span>}
+                    </td>
+                    <td>
+                      {(() => {
+                        const protegida = esEmpresaProtegida(empresa.id);
+                        const elegible = puedeEliminar(
+                          empresa.estado,
+                          empresa.propietariosActivos,
+                        );
+                        const motivo = protegida
+                          ? "Empresa protegida."
+                          : elegible
+                          ? ""
+                          : "Debe suspender la empresa antes de eliminarla.";
+                        return (
+                          <>
+                            <button
+                              className="secondary-button"
+                              disabled={guardando || eliminando || protegida || !elegible}
+                              onClick={() => {
+                                setEmpresaPorEliminarId(empresa.id);
+                                setIdConfirmado("");
+                                setLiberarPrueba(false);
+                              }}
+                              type="button"
+                            >
+                              Eliminar empresa
+                            </button>
+                            {motivo && <small className="company-delete-reason">{motivo}</small>}
+                          </>
+                        );
+                      })()}
+                    </td>
                   </tr>
                 ))}
               </tbody>
@@ -420,7 +589,91 @@ export default function ConsolaPlataforma({
             empresaNombre={empresaSeleccionada.nombre}
             plataforma
           />
+          {!empresaSeleccionada.propietariosActivos && (
+            <section className="admin-card">
+              <h2>Asignar propietario</h2>
+              <p>
+                La empresa no tiene un propietario activo. Asigna un correo
+                para crear o actualizar su membresía con permisos completos.
+              </p>
+              <form className="admin-company-form" onSubmit={(evento) => void asignarPropietario(evento)}>
+                <label>
+                  Correo del propietario
+                  <input
+                    onChange={(evento) => setCorreoPropietario(evento.target.value)}
+                    required
+                    type="email"
+                    value={correoPropietario}
+                  />
+                </label>
+                <button className="secondary-button" disabled={guardando}>
+                  {guardando ? "Asignando…" : "Asignar propietario"}
+                </button>
+              </form>
+            </section>
+          )}
         </>
+      )}
+      {empresaPorEliminar && (
+        <div className="company-delete-backdrop">
+          <section
+            aria-labelledby="company-delete-title"
+            aria-modal="true"
+            className="company-delete-dialog admin-card"
+            role="alertdialog"
+          >
+            <h2 id="company-delete-title">
+              Eliminar {empresaPorEliminar.nombre}
+            </h2>
+            <p>
+              Se perderán {empresaPorEliminar.leads} leads,{" "}
+              {empresaPorEliminar.cuestionarios} cuestionarios y{" "}
+              {empresaPorEliminar.miembros} miembros, además de todos sus
+              diagnósticos, seguimientos, versiones y datos de suscripción.
+            </p>
+            <p>
+              Esta acción es irreversible. No se eliminarán las cuentas de
+              Google de sus miembros.
+            </p>
+            <label>
+              Escribe el ID exacto <strong>{empresaPorEliminar.id}</strong>
+              <input
+                autoComplete="off"
+                onChange={(evento) => setIdConfirmado(evento.target.value)}
+                value={idConfirmado}
+              />
+            </label>
+            <label className="company-delete-release">
+              <input
+                checked={liberarPrueba}
+                onChange={(evento) => setLiberarPrueba(evento.target.checked)}
+                type="checkbox"
+              />
+              Permitir otra prueba gratuita a este correo (solo para pruebas)
+            </label>
+            <div className="company-delete-actions">
+              <button
+                className="secondary-button"
+                disabled={eliminando}
+                onClick={() => {
+                  setEmpresaPorEliminarId("");
+                  setIdConfirmado("");
+                }}
+                type="button"
+              >
+                Cancelar
+              </button>
+              <button
+                className="submit-button"
+                disabled={eliminando || idConfirmado !== empresaPorEliminar.id}
+                onClick={() => void eliminarEmpresa()}
+                type="button"
+              >
+                {eliminando ? "Eliminando…" : "Eliminar definitivamente"}
+              </button>
+            </div>
+          </section>
+        </div>
       )}
     </main>
   );

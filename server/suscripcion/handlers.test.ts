@@ -398,6 +398,48 @@ describe("endpoints de suscripción con Stripe y Firebase simulados", () => {
       .toEqual(expect.objectContaining({ estado: "suspendida" }));
   });
 
+  it("ignora eventos de suscripción tardíos sin recrear una empresa eliminada", async () => {
+    const { dependencias, firestore } = crearDependencias();
+    firestore.documentos.set("plataformaAdmins/admin@example.com", {});
+    const construirEvento = (dependencias.stripe as unknown as {
+      webhooks: { constructEvent: ReturnType<typeof vi.fn> };
+    }).webhooks.constructEvent;
+    const eventos = [
+      {
+        type: "customer.subscription.updated",
+        data: { object: { id: "sub_test", status: "active", metadata: { slug: "empresa-a" } } },
+      },
+      {
+        type: "customer.subscription.deleted",
+        data: { object: { id: "sub_test", status: "canceled", metadata: { slug: "empresa-a" } } },
+      },
+      {
+        type: "invoice.paid",
+        data: { object: { subscription: "sub_test" } },
+      },
+      {
+        type: "invoice.payment_failed",
+        data: { object: { subscription: "sub_test" } },
+      },
+    ];
+
+    for (const [indice, evento] of eventos.entries()) {
+      construirEvento.mockReturnValue({ id: `evt_${indice}`, ...evento });
+      const respuesta = new RespuestaSimulada();
+      await crearHandlerWebhook(dependencias)(
+        solicitud(undefined, { "stripe-signature": "firma-test" }),
+        respuesta,
+      );
+      expect(respuesta.codigo).toBe(200);
+      expect(respuesta.body).toEqual({ recibido: true, ignorado: true });
+    }
+
+    expect(firestore.documentos.has("empresas/empresa-a")).toBe(false);
+    expect(firestore.documentos.has("empresas/empresa-a/suscripcion/actual"))
+      .toBe(false);
+    expect(firestore.documentos.size).toBe(1);
+  });
+
   it("crea el portal solo para el propietario/admin y el estado de respaldo no revela IDs", async () => {
     const { dependencias, firestore } = crearDependencias();
     firestore.documentos.set("empresas/empresa-a/miembros/duena@example.com", {
