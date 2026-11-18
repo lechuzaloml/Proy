@@ -39,6 +39,7 @@ interface RenderizadorCuestionarioProps {
   ) => void;
   unaPreguntaPorVista?: boolean;
   requiereConsentimiento?: boolean;
+  omitirContactoFinal?: boolean;
   presentacion?: Presentacion;
   personalizarResultados?: boolean;
 }
@@ -55,6 +56,7 @@ export default function RenderizadorCuestionario({
   onEstadoChange,
   unaPreguntaPorVista = false,
   requiereConsentimiento = false,
+  omitirContactoFinal = false,
   presentacion,
   personalizarResultados = false,
 }: RenderizadorCuestionarioProps) {
@@ -251,7 +253,10 @@ export default function RenderizadorCuestionario({
   }
 
   function enviarRespuestas() {
-    if (cuestionario.posicion_contacto === "inicio" && datosContacto) {
+    if (
+      (cuestionario.posicion_contacto === "inicio" || omitirContactoFinal) &&
+      datosContacto
+    ) {
       finalizar(datosContacto);
       return;
     }

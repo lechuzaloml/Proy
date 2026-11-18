@@ -59,3 +59,7 @@ sin modificar sus diez reglas.
     despublicar pasan por el servidor.
 20. Solo la plataforma elimina empresas, solo si están suspendidas o sin
     propietario; se cancela su suscripción y se borran todos sus datos.
+21. Cada empresa tiene un único popup/evento, publicado solo por aprobación
+    de la plataforma. La confirmación del evento no muestra puntaje total ni
+    segmento; muestra el perfil por sección únicamente si hay al menos dos
+    secciones.

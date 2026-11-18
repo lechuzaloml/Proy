@@ -14,9 +14,12 @@ import {
   doc,
   getDoc,
   getDocs,
+  limit,
+  query,
   serverTimestamp,
   setDoc,
   updateDoc,
+  where,
   writeBatch,
 } from "@firebase/firestore";
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it } from "vitest";
@@ -44,6 +47,9 @@ const OTHER_USER_EMAIL = "other-user@example.invalid";
 const NO_PERMISSIONS_EMAIL = "no-permissions@example.invalid";
 const EDITOR_EMAIL = "editor-only@example.invalid";
 const MANAGER_EMAIL = "manager-only@example.invalid";
+const COMPANY_INACTIVE = "demo-inactive";
+const POPUP_PUBLICADO = "demo-public";
+const POPUP_INACTIVO = COMPANY_INACTIVE;
 
 let environment: RulesTestEnvironment;
 type TestFirestore = ReturnType<RulesTestContext["firestore"]>;
@@ -186,6 +192,19 @@ async function seedFixtures(): Promise<void> {
         estado: "activa",
         planId: "test",
       }),
+      setDoc(doc(database, `empresas/${COMPANY_INACTIVE}`), {
+        nombre: "Empresa sintética inactiva",
+        estado: "suspendida",
+        planId: "test",
+      }),
+      setDoc(
+        doc(database, `popups/${POPUP_PUBLICADO}`),
+        documentoPopup("publicado"),
+      ),
+      setDoc(
+        doc(database, `popups/${POPUP_INACTIVO}`),
+        documentoPopup("publicado"),
+      ),
       setDoc(doc(
         database,
         `empresas/demo-public/cuestionarios/${DRAFT_QUESTIONNAIRE_ID}`,
@@ -207,6 +226,16 @@ function documentoMiembro(correo: string, rol: string) {
     rol,
     estado: "activo",
     permisos: {},
+  };
+}
+
+function documentoPopup(estado: string, cuestionarioId = PUBLISHED_QUESTIONNAIRE_ID) {
+  return {
+    titulo: "Evento sintético",
+    resumen: "Descripción sintética para pruebas.",
+    cuestionarioId,
+    estado,
+    actualizadoEn: serverTimestamp(),
   };
 }
 
@@ -656,6 +685,84 @@ afterAll(async () => {
 });
 
 describe("reglas locales de Firestore", () => {
+  it("admin de empresa solo escribe su popup y no puede publicarlo", async () => {
+    await prepararMiembrosDePrueba();
+    const database = contextoMiembro(ADMIN_EMAIL).firestore();
+    await assertSucceeds(setDoc(
+      doc(database, `popups/${COMPANY_MEMBER_ROLES}`),
+      documentoPopup("borrador", "cuestionario-aun-no-publicado"),
+    ));
+    await assertFails(updateDoc(
+      doc(database, `popups/${COMPANY_MEMBER_ROLES}`),
+      { estado: "publicado", actualizadoEn: serverTimestamp() },
+    ));
+    await assertFails(setDoc(
+      doc(database, `popups/${COMPANY_B}`),
+      documentoPopup("borrador", "cuestionario-aun-no-publicado"),
+    ));
+  });
+
+  it("un miembro de otra empresa no puede escribir el popup", async () => {
+    await prepararMiembrosDePrueba();
+    const database = contextoMiembro(USER_EMAIL).firestore();
+    await assertFails(setDoc(
+      doc(database, `popups/${COMPANY_B}`),
+      documentoPopup("borrador", "cuestionario-aun-no-publicado"),
+    ));
+  });
+
+  it("visitantes consultan publicados aunque la empresa esté inactiva, pero no pueden leerlos individualmente", async () => {
+    const database = environment.unauthenticatedContext().firestore();
+    const lectura = getDocs(query(
+      collection(database, "popups"),
+      where("estado", "==", "publicado"),
+      limit(10),
+    ));
+    await assertSucceeds(lectura);
+    const popups = await lectura;
+    expect(popups.docs.map(({ id }) => id)).toContain(POPUP_PUBLICADO);
+    expect(popups.docs.map(({ id }) => id)).toContain(POPUP_INACTIVO);
+    await assertSucceeds(getDoc(doc(database, `popups/${POPUP_PUBLICADO}`)));
+    await assertFails(getDoc(doc(database, `popups/${POPUP_INACTIVO}`)));
+    await assertFails(getDoc(doc(database, `popups/${COMPANY_MEMBER_ROLES}`)));
+  });
+
+  it("la plataforma puede aprobar un popup pendiente", async () => {
+    await environment.withSecurityRulesDisabled(async (context) => {
+      await setDoc(
+        doc(context.firestore(), `popups/${POPUP_PUBLICADO}`),
+        documentoPopup("pendiente"),
+      );
+    });
+    const database = contextoMiembro(PLATFORM_ADMIN_EMAIL).firestore();
+    await assertSucceeds(updateDoc(
+      doc(database, `popups/${POPUP_PUBLICADO}`),
+      { estado: "publicado", actualizadoEn: serverTimestamp() },
+    ));
+  });
+
+  it("suspender baja el popup a borrador en el mismo lote; reactivar no lo republica", async () => {
+    const database = contextoMiembro(PLATFORM_ADMIN_EMAIL).firestore();
+    const loteSuspension = writeBatch(database);
+    loteSuspension.update(doc(database, `empresas/${POPUP_PUBLICADO}`), {
+      estado: "suspendida",
+      actualizadoEn: serverTimestamp(),
+    });
+    loteSuspension.update(doc(database, `popups/${POPUP_PUBLICADO}`), {
+      estado: "borrador",
+      actualizadoEn: serverTimestamp(),
+    });
+    await assertSucceeds(loteSuspension.commit());
+
+    await assertSucceeds(updateDoc(
+      doc(database, `empresas/${POPUP_PUBLICADO}`),
+      { estado: "activa", actualizadoEn: serverTimestamp() },
+    ));
+    await assertSucceeds(getDoc(doc(database, `popups/${POPUP_PUBLICADO}`)));
+    const popup = await getDoc(doc(database, `popups/${POPUP_PUBLICADO}`));
+    expect(popup.data()?.estado).toBe("borrador");
+  });
+
   it("A: permite leer leads a un miembro activo con verLeads", async () => {
     const database = contextoMiembro().firestore();
     const lectura = getDocs(

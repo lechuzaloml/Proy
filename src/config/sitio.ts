@@ -82,7 +82,13 @@ export function obtenerTipoPie(
   esRegistroEvento = false,
 ): "completo" | "minimo" | "ninguno" {
   const ruta = pathname.replace(/\/+$/, "") || "/";
-  if (esRegistroEvento || ruta === "/c" || ruta.startsWith("/c/")) {
+  if (
+    esRegistroEvento ||
+    ruta === "/c" ||
+    ruta.startsWith("/c/") ||
+    ruta === "/e" ||
+    ruta.startsWith("/e/")
+  ) {
     return "ninguno";
   }
   if (ruta === "/admin" || ruta.startsWith("/admin/")) {

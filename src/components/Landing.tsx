@@ -1,11 +1,48 @@
-import { useEffect, useState, type ReactNode } from "react";
+import {
+  useEffect,
+  useRef,
+  useState,
+  type ReactNode,
+} from "react";
+import {
+  collection,
+  doc,
+  getDoc,
+  getDocs,
+  limit,
+  query,
+  where,
+} from "firebase/firestore";
 import { useScrollReveal } from "../hooks/useScrollReveal";
+import { db } from "../lib/firebase";
+import {
+  filtrarPopupsPublicadosActivos,
+  popupDesdeDatos,
+  type PopupListado,
+} from "../eventos/popups";
 
 interface LandingProps {
   onComenzar: () => void;
-  onAbrirRegistroEvento?: () => void;
+  onAbrirRegistroEvento?: (empresaId: string) => void;
   accesoCuenta: ReactNode;
 }
+
+const POPUP_DEMO: PopupListado = {
+  id: "clearia",
+  empresaNombre: "Clear-IA",
+  titulo: "Masterclass en vivo con Carlos Torres",
+  insignia: "Masterclass gratuita",
+  resumen:
+    "No te pierdas el webinar en vivo del 4 de noviembre. Únete a esta masterclass gratuita de 90 minutos y aprende cómo generar mejores leads, generar confianza y convertir más atención en clientes.",
+  fecha: "4 de noviembre · 90 minutos",
+  horarios: ["Reserva tu lugar"],
+  anfitrion: {
+    nombre: "Carlos Torres",
+    fotoUrl: "/pasted-image.png",
+  },
+  cuestionarioId: "",
+  estado: "publicado",
+};
 
 const retosNegocio = [
   {
@@ -34,6 +71,10 @@ export default function Landing({
   accesoCuenta,
 }: LandingProps) {
   const [modalAbierto, setModalAbierto] = useState(false);
+  const [popups, setPopups] = useState<PopupListado[]>([POPUP_DEMO]);
+  const [indicePopup, setIndicePopup] = useState(0);
+  const modalRef = useRef<HTMLDivElement>(null);
+  const cerrarRef = useRef<HTMLButtonElement>(null);
   const problemReveal = useScrollReveal<HTMLElement>();
   const sectionHeadingReveal = useScrollReveal<HTMLElement>();
   const solutionGridReveal = useScrollReveal<HTMLDivElement>({
@@ -42,7 +83,85 @@ export default function Landing({
   const nextStepReveal = useScrollReveal<HTMLElement>();
 
   useEffect(() => {
+    let cancelado = false;
+    async function cargarPopupsPublicados() {
+      const database = db;
+      if (!database) {
+        return;
+      }
+      try {
+        const resultado = await getDocs(query(
+          collection(database, "popups"),
+          where("estado", "==", "publicado"),
+          limit(10),
+        ));
+        const publicados = resultado.docs.flatMap((snapshot) => {
+          const popup = popupDesdeDatos(snapshot.id, snapshot.data());
+          return popup ? [popup] : [];
+        });
+        const empresaActiva = new Map<string, boolean>();
+        const nombresEmpresas = new Map<string, string>();
+        await Promise.all(publicados.map(async (popup) => {
+          try {
+            const empresa = await getDoc(doc(database, "empresas", popup.id));
+            empresaActiva.set(
+              popup.id,
+              empresa.exists() && empresa.data().estado === "activa",
+            );
+            if (empresa.exists()) {
+              const nombre = empresa.data().nombre;
+              nombresEmpresas.set(
+                popup.id,
+                typeof nombre === "string" && nombre.trim()
+                  ? nombre
+                  : popup.id,
+              );
+            }
+          } catch (fallo: unknown) {
+            console.error(
+              `No se pudo verificar la empresa del evento ${popup.id}.`,
+              fallo,
+            );
+            empresaActiva.set(popup.id, false);
+          }
+        }));
+        if (!cancelado) {
+          setPopups([
+            POPUP_DEMO,
+            ...filtrarPopupsPublicadosActivos(publicados, empresaActiva).map(
+              (popup) => ({
+                ...popup,
+                empresaNombre: nombresEmpresas.get(popup.id) ?? popup.id,
+              }),
+            ),
+          ]);
+        }
+      } catch (fallo: unknown) {
+        console.error("No se pudieron cargar los eventos publicados.", fallo);
+      }
+    }
+    void cargarPopupsPublicados();
+    return () => {
+      cancelado = true;
+    };
+  }, []);
+
+  useEffect(() => {
+    let mostrado = false;
+    try {
+      mostrado = window.sessionStorage.getItem("clearIaPopupVisto") === "1";
+    } catch (fallo: unknown) {
+      console.error("No se pudo consultar la sesión del popup.", fallo);
+    }
+    if (mostrado) {
+      return;
+    }
     const temporizador = window.setTimeout(() => {
+      try {
+        window.sessionStorage.setItem("clearIaPopupVisto", "1");
+      } catch (fallo: unknown) {
+        console.error("No se pudo guardar la sesión del popup.", fallo);
+      }
       setModalAbierto(true);
     }, 250);
 
@@ -54,21 +173,63 @@ export default function Landing({
       return;
     }
 
-    const cerrarAlEscape = (evento: KeyboardEvent) => {
+    const focoAnterior = document.activeElement instanceof HTMLElement
+      ? document.activeElement
+      : null;
+    cerrarRef.current?.focus();
+    const manejarTeclado = (evento: KeyboardEvent) => {
       if (evento.key === "Escape") {
         cerrarModal();
+        return;
+      }
+      if (evento.key === "ArrowRight") {
+        evento.preventDefault();
+        avanzarPopup(1);
+        return;
+      }
+      if (evento.key === "ArrowLeft") {
+        evento.preventDefault();
+        avanzarPopup(-1);
+        return;
+      }
+      if (evento.key !== "Tab" || !modalRef.current) {
+        return;
+      }
+      const elementos = Array.from(modalRef.current.querySelectorAll<HTMLElement>(
+        'button:not([disabled]), a[href], input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])',
+      ));
+      if (elementos.length === 0) {
+        evento.preventDefault();
+        return;
+      }
+      const primero = elementos[0];
+      const ultimo = elementos[elementos.length - 1];
+      if (!modalRef.current.contains(document.activeElement)) {
+        evento.preventDefault();
+        primero.focus();
+        return;
+      }
+      if (evento.shiftKey && document.activeElement === primero) {
+        evento.preventDefault();
+        ultimo.focus();
+      } else if (!evento.shiftKey && document.activeElement === ultimo) {
+        evento.preventDefault();
+        primero.focus();
       }
     };
 
     const overflowAnterior = document.body.style.overflow;
     document.body.style.overflow = "hidden";
-    window.addEventListener("keydown", cerrarAlEscape);
+    window.addEventListener("keydown", manejarTeclado);
 
     return () => {
       document.body.style.overflow = overflowAnterior;
-      window.removeEventListener("keydown", cerrarAlEscape);
+      window.removeEventListener("keydown", manejarTeclado);
+      focoAnterior?.focus();
     };
-  }, [modalAbierto]);
+  }, [modalAbierto, popups.length]);
+
+  const popupActivo = popups[indicePopup] ?? POPUP_DEMO;
 
   function cerrarModal() {
     setModalAbierto(false);
@@ -76,12 +237,19 @@ export default function Landing({
 
   function manejarAccionPromocional() {
     if (onAbrirRegistroEvento) {
+      const empresaId = popupActivo.id;
       cerrarModal();
-      onAbrirRegistroEvento();
+      onAbrirRegistroEvento(empresaId);
       return;
     }
     console.info("CTA promocional provisional: conectar la acción real del modal aquí.");
     cerrarModal();
+  }
+
+  function avanzarPopup(direccion: number) {
+    setIndicePopup((actual) =>
+      (actual + direccion + popups.length) % popups.length
+    );
   }
 
   return (
@@ -96,11 +264,14 @@ export default function Landing({
             }
           }}
           role="dialog"
+          aria-labelledby="promo-title"
+          aria-describedby="promo-description"
         >
-          <div className="promo-modal" aria-labelledby="promo-title">
+          <div className="promo-modal" ref={modalRef}>
             <button
               aria-label="Cerrar promoción"
               className="promo-modal-close"
+              ref={cerrarRef}
               onClick={cerrarModal}
               type="button"
             >
@@ -109,25 +280,25 @@ export default function Landing({
 
             <div className="promo-modal-content">
               <div className="promo-modal-copy">
-                <p className="promo-modal-kicker">Clear-IA</p>
-                <h2 id="promo-title">
-                  Masterclass en vivo con
-                  <br />
-                  Carlos Torres
-                </h2>
-                <p className="promo-modal-description">
-                  No te pierdas el webinar en vivo del 4 de noviembre. Únete a
-                  esta masterclass gratuita de 90 minutos y aprende cómo generar
-                  mejores leads, generar confianza y convertir más atención en
-                  clientes.
+                <p className="promo-modal-kicker">
+                  {popupActivo.empresaNombre ?? popupActivo.id}
                 </p>
+                <h2 aria-live="polite" id="promo-title">
+                  {popupActivo.titulo}
+                </h2>
+                <p className="promo-modal-description" id="promo-description">
+                  {popupActivo.resumen}
+                </p>
+                {popupActivo.fecha && (
+                  <p className="promo-modal-date">{popupActivo.fecha}</p>
+                )}
                 <div className="promo-modal-actions">
                   <button
                     className="submit-button promo-modal-primary"
                     onClick={manejarAccionPromocional}
                     type="button"
                   >
-                    Reserva tu plaza
+                    Registrarme
                   </button>
                   <button
                     className="promo-modal-secondary"
@@ -141,12 +312,47 @@ export default function Landing({
 
               <div aria-label="Imagen del ponente" className="promo-modal-visual">
                 <img
-                  alt="Carlos Torres"
+                  alt={popupActivo.anfitrion?.nombre ?? popupActivo.titulo}
                   className="promo-modal-visual-inner promo-modal-visual-image"
-                  src="/pasted-image.png"
+                  src={popupActivo.anfitrion?.fotoUrl ??
+                    popupActivo.imagenUrl ?? "/pasted-image.png"}
                 />
               </div>
             </div>
+            {popups.length > 1 && (
+              <nav aria-label="Navegación de eventos" className="promo-carousel-controls">
+                <button
+                  aria-label="Evento anterior"
+                  className="secondary-button"
+                  onClick={() => avanzarPopup(-1)}
+                  type="button"
+                >
+                  Anterior
+                </button>
+                <div aria-label="Seleccionar evento" className="promo-carousel-dots">
+                  {popups.map((popup, indice) => (
+                    <button
+                      aria-current={indice === indicePopup ? "true" : undefined}
+                      aria-label={`Mostrar evento ${indice + 1}: ${popup.titulo}`}
+                      className="promo-carousel-dot"
+                      key={`${popup.id}-${indice}`}
+                      onClick={() => setIndicePopup(indice)}
+                      type="button"
+                    >
+                      {indice + 1}
+                    </button>
+                  ))}
+                </div>
+                <button
+                  aria-label="Evento siguiente"
+                  className="secondary-button"
+                  onClick={() => avanzarPopup(1)}
+                  type="button"
+                >
+                  Siguiente
+                </button>
+              </nav>
+            )}
           </div>
         </div>
       )}

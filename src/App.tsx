@@ -22,6 +22,7 @@ import PantallaInicioTemplate from "./components/PantallaInicioTemplate";
 import PaginaRegistroEvento from "./components/PaginaRegistroEvento";
 import EditorCuestionario from "./components/EditorCuestionario";
 import CuestionarioPublico from "./components/CuestionarioPublico";
+import EventoEmpresaPublico from "./components/EventoEmpresaPublico";
 import { catalogoTemplates } from "./templates/catalogo";
 import { recomendaciones } from "./config/recomendaciones";
 import { obtenerPresentacionTemplate } from "./config/presentacionTemplates";
@@ -364,7 +365,12 @@ function Aplicacion({
   const segmentosPublicos = rutaActual.split("/");
   const rutaPublicaCopia = rutaActual === "/c" ||
     rutaActual.startsWith("/c/");
+  const rutaPublicaEvento = rutaActual === "/e" ||
+    rutaActual.startsWith("/e/");
   const empresaPublicaId = segmentosPublicos[2] ?? "";
+  const empresaEventoId = rutaPublicaEvento && segmentosPublicos.length === 3
+    ? segmentosPublicos[2]
+    : "";
   const cuestionarioPublicoId = segmentosPublicos[3] ?? "";
   const enlacePublicoValido = rutaPublicaCopia &&
     segmentosPublicos.length === 4 &&
@@ -451,7 +457,7 @@ function Aplicacion({
     return () => window.removeEventListener("storage", actualizarEmpresaActiva);
   }, []);
   useEffect(() => {
-    if (rutaPublicaCopia) {
+    if (rutaPublicaCopia || rutaPublicaEvento) {
       setAuthListo(true);
       return;
     }
@@ -501,7 +507,7 @@ function Aplicacion({
       revision += 1;
       cancelarAuth();
     };
-  }, [rutaActual, rutaPublicaCopia, empresaActivaId]);
+  }, [rutaActual, rutaPublicaCopia, rutaPublicaEvento, empresaActivaId]);
 
   useEffect(() => {
     let cancelado = false;
@@ -539,6 +545,10 @@ function Aplicacion({
       cancelado = true;
     };
   }, [puedeCrearCopias, usuarioSesion?.uid, empresaActivaId]);
+
+  if (rutaPublicaEvento) {
+    return <EventoEmpresaPublico empresaId={empresaEventoId} />;
+  }
 
   if (rutaPublicaCopia) {
     return (
@@ -1021,24 +1031,15 @@ function Aplicacion({
   }
 
   if (!bienvenidaCompletada) {
-    const templateRegistroEvento = catalogoTemplates.find(({ id }) =>
-      id.endsWith("/registro-evento-pagina-completa.json")
-    );
-
     return (
       <Landing
         accesoCuenta={
           <AccesoCuenta authListo={authListo} usuario={usuarioSesion} />
         }
-        onAbrirRegistroEvento={() => {
-          if (!templateRegistroEvento) {
-            return;
-          }
-          seleccionarCuestionario(
-            templateRegistroEvento.id,
-            templateRegistroEvento.metadata.nombre,
-            templateRegistroEvento.configuracion,
-          );
+        onAbrirRegistroEvento={(empresaId) => {
+          const ruta = `/e/${encodeURIComponent(empresaId)}`;
+          window.history.pushState({}, "", ruta);
+          setRutaActual(ruta);
         }}
         onComenzar={abrirDiagnostico}
       />

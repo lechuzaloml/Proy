@@ -4,9 +4,11 @@ import {
   doc,
   getDoc,
   getDocs,
+  query,
   serverTimestamp,
   setDoc,
   updateDoc,
+  where,
   writeBatch,
   type DocumentData,
 } from "firebase/firestore";
@@ -15,6 +17,11 @@ import { CLAVE_EMPRESA_ACTIVA } from "../config/empresaActiva";
 import { auth } from "../lib/firebaseAuth";
 import { db } from "../lib/firebase";
 import GestorMiembros from "./GestorMiembros";
+import {
+  popupDesdeDatos,
+  transicionarPopup,
+  type PopupListado,
+} from "../eventos/popups";
 import {
   normalizarCorreoEmpresa,
   normalizarUrlLogo,
@@ -95,6 +102,8 @@ export default function ConsolaPlataforma({
   const [idConfirmado, setIdConfirmado] = useState("");
   const [liberarPrueba, setLiberarPrueba] = useState(false);
   const [eliminando, setEliminando] = useState(false);
+  const [popupsRevision, setPopupsRevision] = useState<PopupListado[]>([]);
+  const [cargandoPopups, setCargandoPopups] = useState(false);
 
   const empresaSeleccionada =
     empresas.find(({ id }) => id === empresaSeleccionadaId) ?? null;
@@ -149,8 +158,45 @@ export default function ConsolaPlataforma({
     }
   }
 
+  async function recargarPopups() {
+    const database = db;
+    if (!database) {
+      setError("Firebase no está configurado.");
+      return;
+    }
+    setCargandoPopups(true);
+    try {
+      const resultado = await getDocs(query(
+        collection(database, "popups"),
+        where("estado", "in", ["pendiente", "publicado"]),
+      ));
+      const popups = await Promise.all(resultado.docs.map(async (snapshot) => {
+        const empresa = await getDoc(doc(database, "empresas", snapshot.id));
+        return popupDesdeDatos(
+          snapshot.id,
+          snapshot.data(),
+          empresa.exists() && typeof empresa.data().nombre === "string"
+            ? empresa.data().nombre
+            : snapshot.id,
+        );
+      }));
+      setPopupsRevision(popups.filter(
+        (popup): popup is PopupListado => popup !== null,
+      ));
+    } catch (loadError: unknown) {
+      setError(
+        loadError instanceof Error
+          ? `No se pudieron cargar los eventos: ${loadError.message}`
+          : "No se pudieron cargar los eventos.",
+      );
+    } finally {
+      setCargandoPopups(false);
+    }
+  }
+
   useEffect(() => {
     void recargarEmpresas();
+    void recargarPopups();
   }, []);
 
   useEffect(() => {
@@ -264,13 +310,32 @@ export default function ConsolaPlataforma({
     setGuardando(true);
     setError("");
     try {
-      await updateDoc(doc(database, "empresas", empresaSeleccionada.id), {
+      const empresaRef = doc(database, "empresas", empresaSeleccionada.id);
+      const lote = writeBatch(database);
+      lote.update(empresaRef, {
         nombre: nombreEditado.trim(),
         planId: planEditado,
         estado: estadoEditado,
         marca,
         actualizadoEn: serverTimestamp(),
       });
+      if (
+        estadoEditado === "suspendida" &&
+        empresaSeleccionada.estado !== "suspendida"
+      ) {
+        const popupRef = doc(database, "popups", empresaSeleccionada.id);
+        const popup = await getDoc(popupRef);
+        if (popup.exists()) {
+          lote.update(popupRef, {
+            estado: "borrador",
+            actualizadoEn: serverTimestamp(),
+          });
+        }
+      }
+      await lote.commit();
+      if (estadoEditado === "suspendida") {
+        await recargarPopups();
+      }
       setEmpresas((actuales) => actuales.map((empresa) =>
         empresa.id === empresaSeleccionada.id
           ? { ...empresa, nombre: nombreEditado.trim(), planId: planEditado, estado: estadoEditado, marca }
@@ -281,6 +346,35 @@ export default function ConsolaPlataforma({
         updateError instanceof Error
           ? updateError.message
           : "No se pudo actualizar la empresa.",
+      );
+    } finally {
+      setGuardando(false);
+    }
+  }
+
+  async function actualizarEstadoPopup(
+    popup: PopupListado,
+    accion: "aprobar" | "rechazar" | "despublicar",
+  ) {
+    const database = db;
+    const estado = transicionarPopup("plataforma", popup.estado, accion);
+    if (!database || !estado) {
+      setError("No se permite esta transición de estado.");
+      return;
+    }
+    setGuardando(true);
+    setError("");
+    try {
+      await updateDoc(doc(database, "popups", popup.id), {
+        estado,
+        actualizadoEn: serverTimestamp(),
+      });
+      await recargarPopups();
+    } catch (updateError: unknown) {
+      setError(
+        updateError instanceof Error
+          ? `No se pudo actualizar el evento: ${updateError.message}`
+          : "No se pudo actualizar el evento.",
       );
     } finally {
       setGuardando(false);
@@ -470,6 +564,73 @@ export default function ConsolaPlataforma({
                 ))}
               </tbody>
             </table>
+          </div>
+        )}
+      </section>
+
+      <section aria-labelledby="popups-review-heading" className="admin-card">
+        <h2 id="popups-review-heading">Eventos para revisión</h2>
+        {cargandoPopups ? (
+          <p role="status">Cargando eventos…</p>
+        ) : popupsRevision.length === 0 ? (
+          <p>No hay eventos pendientes ni publicados.</p>
+        ) : (
+          <div className="popup-review-list">
+            {popupsRevision.map((popup) => (
+              <article className="popup-review-card" key={popup.id}>
+                <div>
+                  <p className="eyebrow">
+                    {popup.empresaNombre ?? popup.id} · {popup.estado}
+                  </p>
+                  <h3>{popup.titulo}</h3>
+                  {popup.fecha && <p>{popup.fecha}</p>}
+                  <p>{popup.resumen}</p>
+                  {popup.horarios && (
+                    <p>Horarios: {popup.horarios.join(" · ")}</p>
+                  )}
+                  {popup.puntos?.map((punto) => (
+                    <p key={punto.titulo}>
+                      <strong>{punto.titulo}:</strong> {punto.texto}
+                    </p>
+                  ))}
+                </div>
+                <div className="popup-review-actions">
+                  {popup.estado === "pendiente" && (
+                    <>
+                      <button
+                        className="submit-button"
+                        disabled={guardando}
+                        onClick={() =>
+                          void actualizarEstadoPopup(popup, "aprobar")}
+                        type="button"
+                      >
+                        Aprobar
+                      </button>
+                      <button
+                        className="secondary-button"
+                        disabled={guardando}
+                        onClick={() =>
+                          void actualizarEstadoPopup(popup, "rechazar")}
+                        type="button"
+                      >
+                        Rechazar
+                      </button>
+                    </>
+                  )}
+                  {popup.estado === "publicado" && (
+                    <button
+                      className="secondary-button"
+                      disabled={guardando}
+                      onClick={() =>
+                        void actualizarEstadoPopup(popup, "despublicar")}
+                      type="button"
+                    >
+                      Despublicar
+                    </button>
+                  )}
+                </div>
+              </article>
+            ))}
           </div>
         )}
       </section>

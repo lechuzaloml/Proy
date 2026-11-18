@@ -22,6 +22,7 @@ export interface EntradaDocumentosDiagnostico {
   cuestionarioId: string;
   versionId: string;
   respuestas: RespuestasCuestionario;
+  respuestasAdicionales?: Record<string, RespuestaDiagnostico>;
   puntajeTotal?: number;
   segmento?: string;
   templateRecomendadoId: string;
@@ -193,7 +194,10 @@ export function construirDocumentoDiagnostico(
     leadId: entrada.id,
     cuestionarioId: entrada.cuestionarioId,
     versionId: entrada.versionId,
-    respuestas: respuestaLegible(entrada.cuestionario, entrada.respuestas),
+    respuestas: {
+      ...respuestaLegible(entrada.cuestionario, entrada.respuestas),
+      ...entrada.respuestasAdicionales,
+    },
     ...(entrada.resultado ? { resultado: entrada.resultado } : {}),
     ...(puntajeTotal !== undefined ? { puntajeTotal } : {}),
     ...(puntajeMaximo > 0 ? { puntajeMaximo } : {}),

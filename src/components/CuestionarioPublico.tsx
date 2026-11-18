@@ -12,15 +12,22 @@ import {
 import { obtenerPresentacionTemplate } from "../config/presentacionTemplates";
 import type { Cuestionario } from "../types/model";
 import { validarCuestionario } from "../validation/validarCuestionario";
+import type { DatosContacto } from "./FormularioContacto";
+import ConfirmacionEvento from "../eventos/ConfirmacionEvento";
 
 interface CuestionarioPublicoProps {
   empresaId: string;
   cuestionarioId: string;
+  datosContactoEvento?: {
+    contacto: DatosContacto;
+    horario: string;
+  };
 }
 
 export default function CuestionarioPublico({
   empresaId,
   cuestionarioId,
+  datosContactoEvento,
 }: CuestionarioPublicoProps) {
   const [cuestionario, setCuestionario] = useState<Cuestionario | null>(null);
   const [versionId, setVersionId] = useState("");
@@ -153,6 +160,16 @@ export default function CuestionarioPublico({
     );
   }
   if (envioCompletado && resultadoFinal) {
+    if (datosContactoEvento) {
+      return (
+        <ConfirmacionEvento
+          cuestionario={cuestionario}
+          horario={datosContactoEvento.horario}
+          nombre={datosContactoEvento.contacto.nombre}
+          respuestas={resultadoFinal.respuestas}
+        />
+      );
+    }
     return (
       <PantallaResultado
         calculo={resultadoFinal.calculo}
@@ -169,9 +186,21 @@ export default function CuestionarioPublico({
       {error && <p className="validation-errors" role="alert">{error}</p>}
       <RenderizadorCuestionario
         cuestionario={cuestionario}
+        estadoInicial={datosContactoEvento
+          ? {
+              respuestas: {},
+              datosContacto: datosContactoEvento.contacto,
+              consentimientoAceptado: true,
+              indicePreguntaActual: 0,
+              mostrarPreguntas: true,
+              mostrarBienvenida: false,
+            }
+          : null}
+        omitirContactoFinal={Boolean(datosContactoEvento)}
         unaPreguntaPorVista
         presentacion={obtenerPresentacionTemplate(cuestionario.id)}
         personalizarResultados={
+          !datosContactoEvento &&
           cuestionario.personalizar_resultado_con_ia === true
         }
         requiereConsentimiento
@@ -189,13 +218,16 @@ export default function CuestionarioPublico({
           setError("");
           setEnviando(true);
           const submissionId = crypto.randomUUID();
-          setResultadoFinal({
+          const resultado = {
             calculo,
             respuestas,
             contenidoPersonalizado,
             errorPersonalizacion,
-          });
-          setEnvioCompletado(true);
+          };
+          if (!datosContactoEvento) {
+            setResultadoFinal(resultado);
+            setEnvioCompletado(true);
+          }
           try {
             const resultadoGuardado = calculo.tipo === "segmentado"
               ? {
@@ -223,6 +255,18 @@ export default function CuestionarioPublico({
               cuestionarioId,
               versionId,
               respuestas,
+              ...(datosContactoEvento
+                ? {
+                    respuestasAdicionales: {
+                      horario_evento: {
+                        pregunta: "Horario elegido para el evento",
+                        tipo: "abierta" as const,
+                        valor: datosContactoEvento.horario,
+                        valorLegible: datosContactoEvento.horario,
+                      },
+                    },
+                  }
+                : {}),
               ...(calculo.tipo === "segmentado"
                 ? {
                     puntajeTotal: calculo.puntajeTotal,
@@ -231,7 +275,7 @@ export default function CuestionarioPublico({
                 : {}),
               templateRecomendadoId: "",
               planRecomendadoId: "",
-              origen: "formulario-publico",
+              origen: datosContactoEvento ? "evento" : "formulario-publico",
               resultado: resultadoGuardado,
               consentimientoAceptado: true,
               fecha: serverTimestamp(),
@@ -244,8 +288,17 @@ export default function CuestionarioPublico({
             if (!guardado) {
               throw new Error("La conexión con Firestore no está disponible.");
             }
+            if (datosContactoEvento) {
+              setResultadoFinal(resultado);
+              setEnvioCompletado(true);
+            }
           } catch (fallo: unknown) {
             console.error("No se pudo guardar el envío público.", fallo);
+            if (datosContactoEvento) {
+              setError(
+                "No se pudo guardar tu registro. Comprueba tu conexión e inténtalo nuevamente.",
+              );
+            }
           } finally {
             setEnviando(false);
           }

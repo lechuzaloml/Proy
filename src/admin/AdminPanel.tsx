@@ -43,6 +43,7 @@ import {
 } from "./funcionesLeads";
 import ConsolaPlataforma from "./ConsolaPlataforma";
 import GestorMiembros from "./GestorMiembros";
+import PanelMiEvento from "./PanelMiEvento";
 import {
   esAdministradorEmpresa,
   normalizarRolMiembro,
@@ -1106,6 +1107,18 @@ export default function AdminPanel() {
       )}
 
       {error && <p className="admin-error" role="alert">{error}</p>}
+
+      {!esPlataforma &&
+        empresaActiva.miembroEmpresa &&
+        esAdministradorEmpresa(empresaActiva.permisos.rol) && (
+          <PanelMiEvento
+            empresaId={empresaIdActiva}
+            empresaNombre={empresaActiva.nombre}
+            rol={empresaActiva.permisos.rol === "propietario"
+              ? "propietario"
+              : "admin"}
+          />
+        )}
 
       {leadSeleccionado ? (
         <DetalleLead

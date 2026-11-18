@@ -32,6 +32,8 @@ describe("configuración de presentación del sitio", () => {
     expect(obtenerTipoPie("/", true)).toBe("ninguno");
     expect(debeMostrarEncabezado("/c/empresa/cuestionario")).toBe(false);
     expect(obtenerTipoPie("/c/empresa/cuestionario")).toBe("ninguno");
+    expect(debeMostrarEncabezado("/e/empresa")).toBe(false);
+    expect(obtenerTipoPie("/e/empresa")).toBe("ninguno");
     expect(debeMostrarEncabezado("/admin/plataforma")).toBe(false);
     expect(obtenerTipoPie("/admin/plataforma")).toBe("minimo");
     expect(debeMostrarEncabezado("/suscripcion")).toBe(true);
