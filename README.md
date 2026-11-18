@@ -49,3 +49,69 @@ vayas a usar (Production, Preview o Development); no la agregues con prefijo
 `VITE_`. La función `api/personalizar.ts` expone el endpoint que usa la
 aplicación y lee esta variable en el servidor.
 
+## Base Django (migración Clear-IA)
+
+El proyecto Django está en `Merkatics2Django`; esta base no modifica la
+aplicación React/Firebase. Los comandos Django se ejecutan desde esa carpeta.
+Usa Python 3.10 o superior; la versión probada para esta base es Python 3.14.
+
+### Requisitos
+
+- Python 3.10+.
+- WampServer con MySQL iniciado.
+- Una base MySQL vacía con juego de caracteres `utf8mb4`. Por ejemplo, desde
+  phpMyAdmin crea `clear_ia_dev` con cotejamiento `utf8mb4_unicode_ci` y un
+  usuario con permisos sobre esa base. En MySQL 8, usa el plugin de autenticación
+  que esté habilitado en tu instalación (normalmente `caching_sha2_password`);
+  no configures una cuenta que dependa de `mysql_native_password` si el servidor
+  no carga ese plugin.
+- Las credenciales de Stripe, Google OAuth y Gemini son opcionales para esta
+  fase, excepto `STRIPE_SECRET_KEY`: usa un valor de prueba con prefijo
+  `sk_test_`. La aplicación se niega a arrancar con claves `sk_live_`.
+
+### Preparación en Windows PowerShell
+
+```powershell
+cd Merkatics2Django
+py -3.14 -m venv venv
+.\venv\Scripts\Activate.ps1
+python -m pip install -r requirements.txt
+Copy-Item .env.example .env
+```
+
+Edita `.env`: establece `SECRET_KEY`, `MYSQL_NAME`, `MYSQL_USER`,
+`MYSQL_PASSWORD`, `MYSQL_HOST` y `MYSQL_PORT`. No compartas ni subas `.env`.
+Genera un `SECRET_KEY` local con:
+
+```powershell
+python -c "from django.core.management.utils import get_random_secret_key; print(get_random_secret_key())"
+```
+
+`STRIPE_SECRET_KEY` debe seguir comenzando con `sk_test_`; los demás valores
+son marcadores de posición hasta implementar esas integraciones.
+
+```powershell
+python manage.py check
+python manage.py migrate
+python manage.py test --settings=config.settings_test
+python manage.py collectstatic --noinput
+python manage.py runserver
+```
+
+`settings_test` usa SQLite en memoria solo para pruebas unitarias; la
+configuración normal siempre usa MySQL. Para instalar en otra versión de
+Python, cambia `py -3.14` por la versión instalada que sea 3.10 o superior.
+
+En esta fase no hay modelos de negocio ni migraciones de aplicación. Las
+migraciones futuras se generarán con `makemigrations` y se aplicarán con
+`migrate`; no se usa un archivo `.sql` como esquema.
+
+### Stripe CLI (opcional)
+
+Stripe CLI no forma parte de `requirements.txt`. Puede instalarse por separado
+para reenviar webhooks de prueba durante una fase futura; alternativamente se
+puede configurar un endpoint webhook de prueba desde el Dashboard de Stripe.
+
+El inventario funcional, el mapeo de Firestore y el plan de fases están en
+[`Merkatics2Django/docs/plan-migracion.md`](Merkatics2Django/docs/plan-migracion.md).
+
