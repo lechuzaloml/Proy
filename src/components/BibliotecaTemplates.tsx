@@ -82,7 +82,6 @@ export default function BibliotecaTemplates({
   return (
     <main className="template-library">
       <header className="library-header">
-        <p className="eyebrow">Clear-IA</p>
         <h1>Biblioteca de templates</h1>
         <p>
         Elige una plantilla como punto de partida para crear tu propio

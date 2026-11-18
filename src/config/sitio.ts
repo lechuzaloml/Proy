@@ -101,5 +101,5 @@ export function debeMostrarEncabezado(
   pathname: string,
   esRegistroEvento = false,
 ): boolean {
-  return obtenerTipoPie(pathname, esRegistroEvento) === "completo";
+  return obtenerTipoPie(pathname, esRegistroEvento) !== "ninguno";
 }

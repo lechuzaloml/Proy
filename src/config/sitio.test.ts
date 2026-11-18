@@ -27,14 +27,15 @@ describe("configuración de presentación del sitio", () => {
     );
   });
 
-  it("excluye las páginas de evento y de empresa, y deja un pie mínimo en admin", () => {
+  it("mantiene el encabezado en biblioteca y admin, pero lo excluye de páginas de evento", () => {
+    expect(debeMostrarEncabezado("/")).toBe(true);
     expect(debeMostrarEncabezado("/", true)).toBe(false);
     expect(obtenerTipoPie("/", true)).toBe("ninguno");
     expect(debeMostrarEncabezado("/c/empresa/cuestionario")).toBe(false);
     expect(obtenerTipoPie("/c/empresa/cuestionario")).toBe("ninguno");
     expect(debeMostrarEncabezado("/e/empresa")).toBe(false);
     expect(obtenerTipoPie("/e/empresa")).toBe("ninguno");
-    expect(debeMostrarEncabezado("/admin/plataforma")).toBe(false);
+    expect(debeMostrarEncabezado("/admin/plataforma")).toBe(true);
     expect(obtenerTipoPie("/admin/plataforma")).toBe("minimo");
     expect(debeMostrarEncabezado("/suscripcion")).toBe(true);
     expect(obtenerTipoPie("/")).toBe("completo");
