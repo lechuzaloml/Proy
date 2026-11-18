@@ -70,10 +70,24 @@ export async function cambiarPublicacionCuestionario(
     },
     body: JSON.stringify({ empresaId, cuestionarioId }),
   });
-  const cuerpo: unknown = await respuesta.json();
+  const textoRespuesta = await respuesta.text();
+  if (!textoRespuesta.trim()) {
+    throw new Error(
+      `El servidor devolvió una respuesta vacía (HTTP ${respuesta.status}).`,
+    );
+  }
+  let cuerpo: unknown;
+  try {
+    cuerpo = JSON.parse(textoRespuesta) as unknown;
+  } catch {
+    throw new Error(
+      `El servidor devolvió una respuesta no válida (HTTP ${respuesta.status}).`,
+    );
+  }
   if (!respuesta.ok) {
     throw new Error(
-      leerErrorApi(cuerpo) ?? "No se pudo cambiar la publicación del cuestionario.",
+      leerErrorApi(cuerpo) ??
+        `No se pudo cambiar la publicación del cuestionario (HTTP ${respuesta.status}).`,
     );
   }
   if (

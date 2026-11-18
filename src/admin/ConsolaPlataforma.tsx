@@ -18,6 +18,8 @@ import { auth } from "../lib/firebaseAuth";
 import { db } from "../lib/firebase";
 import GestorMiembros from "./GestorMiembros";
 import {
+  estaVencido,
+  formatearFechaEvento,
   popupDesdeDatos,
   transicionarPopup,
   type PopupListado,
@@ -583,7 +585,19 @@ export default function ConsolaPlataforma({
                     {popup.empresaNombre ?? popup.id} · {popup.estado}
                   </p>
                   <h3>{popup.titulo}</h3>
-                  {popup.fecha && <p>{popup.fecha}</p>}
+                  {popup.fechaEvento && (
+                    <p>{formatearFechaEvento(popup.fechaEvento)}</p>
+                  )}
+                  {popup.venceEn ? (
+                    <p>
+                      Visible hasta {formatearFechaEvento(popup.venceEn)}
+                    </p>
+                  ) : (
+                    <p>Sin fecha de vencimiento</p>
+                  )}
+                  {estaVencido(popup) && (
+                    <p className="event-expired" role="status">Vencido</p>
+                  )}
                   <p>{popup.resumen}</p>
                   {popup.horarios && (
                     <p>Horarios: {popup.horarios.join(" · ")}</p>
@@ -599,7 +613,7 @@ export default function ConsolaPlataforma({
                     <>
                       <button
                         className="submit-button"
-                        disabled={guardando}
+                        disabled={guardando || estaVencido(popup)}
                         onClick={() =>
                           void actualizarEstadoPopup(popup, "aprobar")}
                         type="button"

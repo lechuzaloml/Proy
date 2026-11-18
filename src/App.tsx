@@ -89,13 +89,29 @@ export default function App() {
     pathname: leerRutaActual(),
     esRegistroEvento: false,
   }));
+  const [sesion, setSesion] = useState<{
+    authListo: boolean;
+    usuario: User | null;
+  }>({ authListo: false, usuario: null });
+  const rutaAdmin = vistaSitio.pathname === "/admin" ||
+    vistaSitio.pathname.startsWith("/admin/");
 
   return (
     <SiteFrame
+      accesoCuenta={!rutaAdmin && (
+        <AccesoCuenta
+          authListo={sesion.authListo}
+          compacto
+          usuario={sesion.usuario}
+        />
+      )}
       esRegistroEvento={vistaSitio.esRegistroEvento}
       pathname={vistaSitio.pathname}
     >
-      <Aplicacion onVistaChange={setVistaSitio} />
+      <Aplicacion
+        onSesionChange={setSesion}
+        onVistaChange={setVistaSitio}
+      />
     </SiteFrame>
   );
 }
@@ -321,8 +337,10 @@ const casosReferencia: CasoReferencia[] = [
 ];
 
 function Aplicacion({
+  onSesionChange,
   onVistaChange,
 }: {
+  onSesionChange: (sesion: { authListo: boolean; usuario: User | null }) => void;
   onVistaChange: (vista: VistaSitio) => void;
 }) {
   const [empresaActivaId, setEmpresaActivaId] = useState(
@@ -333,7 +351,6 @@ function Aplicacion({
   const [accesoCuestionarios, setAccesoCuestionarios] =
     useState<AccesoCuestionarios | null>(null);
   const [usuarioSesion, setUsuarioSesion] = useState<User | null>(null);
-  const [authListo, setAuthListo] = useState(false);
   const [copiasGuardadas, setCopiasGuardadas] = useState<
     DocumentoCuestionarioGuardado[]
   >([]);
@@ -458,7 +475,7 @@ function Aplicacion({
   }, []);
   useEffect(() => {
     if (rutaPublicaCopia || rutaPublicaEvento) {
-      setAuthListo(true);
+      onSesionChange({ authListo: true, usuario: null });
       return;
     }
     if (rutaActual === "/admin" || rutaActual.startsWith("/admin/")) {
@@ -466,7 +483,7 @@ function Aplicacion({
     }
     if (!auth || !db) {
       setUsuarioSesion(null);
-      setAuthListo(true);
+      onSesionChange({ authListo: true, usuario: null });
       setAccesoCuestionarios(null);
       return;
     }
@@ -478,7 +495,7 @@ function Aplicacion({
       (usuario) => {
         const revisionActual = ++revision;
         setUsuarioSesion(usuario);
-        setAuthListo(true);
+        onSesionChange({ authListo: true, usuario });
         setAccesoCuestionarios(null);
         if (!usuario) {
           return;
@@ -497,7 +514,7 @@ function Aplicacion({
       },
       (error) => {
         setUsuarioSesion(null);
-        setAuthListo(true);
+        onSesionChange({ authListo: true, usuario: null });
         setAccesoCuestionarios(null);
         console.error("No se pudo verificar la sesión para crear copias.", error);
       },
@@ -507,7 +524,13 @@ function Aplicacion({
       revision += 1;
       cancelarAuth();
     };
-  }, [rutaActual, rutaPublicaCopia, rutaPublicaEvento, empresaActivaId]);
+  }, [
+    onSesionChange,
+    rutaActual,
+    rutaPublicaCopia,
+    rutaPublicaEvento,
+    empresaActivaId,
+  ]);
 
   useEffect(() => {
     let cancelado = false;
@@ -1033,9 +1056,6 @@ function Aplicacion({
   if (!bienvenidaCompletada) {
     return (
       <Landing
-        accesoCuenta={
-          <AccesoCuenta authListo={authListo} usuario={usuarioSesion} />
-        }
         onAbrirRegistroEvento={(empresaId) => {
           const ruta = `/e/${encodeURIComponent(empresaId)}`;
           window.history.pushState({}, "", ruta);
@@ -1058,9 +1078,6 @@ function Aplicacion({
       );
     return (
       <BibliotecaTemplates
-        accesoCuenta={
-          <AccesoCuenta authListo={authListo} usuario={usuarioSesion} />
-        }
         casosReferencia={casosReferencia}
         copiasGuardadas={copiasVisibles}
         cargandoCopias={cargandoCopias}

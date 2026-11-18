@@ -76,7 +76,6 @@ function renderBiblioteca({
     copiasGuardadas,
     cargandoCopias: false,
     errorBiblioteca: "",
-    accesoCuenta: null,
     onCrearCopia: vi.fn(),
     onAbrirCopia: vi.fn(),
     puedeEditarCopia: (item) =>

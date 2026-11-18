@@ -1,3 +1,9 @@
+import { Timestamp } from "firebase/firestore";
+import {
+  DIAS_GRACIA,
+  MAX_DIAS_EVENTO_FIRESTORE,
+} from "../config/popups";
+
 export type EstadoPopup =
   | "borrador"
   | "pendiente"
@@ -16,7 +22,8 @@ export interface PopupEvento {
   insignia?: string;
   resumen: string;
   imagenUrl?: string;
-  fecha?: string;
+  fechaEvento?: Timestamp;
+  venceEn?: Timestamp;
   horarios?: string[];
   anfitrion?: {
     nombre: string;
@@ -45,6 +52,7 @@ export interface FormularioPopup {
   resumen: string;
   imagenUrl: string;
   fecha: string;
+  hora: string;
   horarios: string[];
   anfitrionNombre: string;
   anfitrionFotoUrl: string;
@@ -133,7 +141,12 @@ export function popupDesdeDatos(
     ...(typeof documento.imagenUrl === "string"
       ? { imagenUrl: documento.imagenUrl }
       : {}),
-    ...(typeof documento.fecha === "string" ? { fecha: documento.fecha } : {}),
+    ...(documento.fechaEvento instanceof Timestamp
+      ? { fechaEvento: documento.fechaEvento }
+      : {}),
+    ...(documento.venceEn instanceof Timestamp
+      ? { venceEn: documento.venceEn }
+      : {}),
     ...(horarios ? { horarios } : {}),
     ...(anfitrion ? { anfitrion } : {}),
     ...(puntos ? { puntos } : {}),
@@ -145,6 +158,16 @@ export function crearDocumentoPopup(
   formulario: FormularioPopup,
   estado: EstadoPopup,
 ): PopupEvento {
+  const fechaEvento = crearTimestampFechaEvento(
+    formulario.fecha,
+    formulario.hora,
+  );
+  if (
+    (estado === "pendiente" || estado === "publicado") &&
+    !fechaEvento
+  ) {
+    throw new Error("La fecha y hora del evento son obligatorias.");
+  }
   const anfitrion = {
     nombre: formulario.anfitrionNombre.trim(),
     ...(formulario.anfitrionFotoUrl.trim()
@@ -162,7 +185,12 @@ export function crearDocumentoPopup(
     ...(formulario.imagenUrl.trim()
       ? { imagenUrl: formulario.imagenUrl.trim() }
       : {}),
-    ...(formulario.fecha.trim() ? { fecha: formulario.fecha.trim() } : {}),
+    ...(fechaEvento
+      ? {
+          fechaEvento,
+          venceEn: calcularVenceEn(fechaEvento),
+        }
+      : {}),
     ...(formulario.horarios.some((horario) => horario.trim())
       ? {
           horarios: formulario.horarios
@@ -186,6 +214,8 @@ export function crearDocumentoPopup(
 
 export function validarFormularioEvento(
   formulario: FormularioPopup,
+  ahora: Date = new Date(),
+  exigirFechaEvento = false,
 ): string[] {
   const errores: string[] = [];
   if (!formulario.titulo.trim() || formulario.titulo.trim().length > 80) {
@@ -201,10 +231,24 @@ export function validarFormularioEvento(
     errores.push("cuestionarioId");
   }
   if (
-    formulario.insignia.trim().length > 60 ||
-    formulario.fecha.trim().length > 80
+    formulario.insignia.trim().length > 60
   ) {
     errores.push("longitud");
+  }
+  const fechaEvento = crearTimestampFechaEvento(
+    formulario.fecha,
+    formulario.hora,
+  );
+  if (
+    (exigirFechaEvento && !fechaEvento) ||
+    (Boolean(formulario.fecha) !== Boolean(formulario.hora)) ||
+    ((formulario.fecha || formulario.hora) && !fechaEvento) ||
+    (fechaEvento && (
+      !esFechaEventoHoyOFutura(fechaEvento.toDate(), ahora) ||
+      !venceDentroDelLimiteDeReglas(fechaEvento, ahora)
+    ))
+  ) {
+    errores.push("fechaEvento");
   }
   if (
     formulario.horarios.length > 4 ||
@@ -243,6 +287,149 @@ export function validarFormularioEvento(
     errores.push("anfitrionNombre");
   }
   return errores;
+}
+
+export function calcularVenceEn(
+  fechaEvento: Timestamp,
+  diasGracia = DIAS_GRACIA,
+): Timestamp {
+  if (!Number.isInteger(diasGracia) || diasGracia < 0) {
+    throw new Error("Los días de gracia deben ser un entero no negativo.");
+  }
+  const fecha = fechaEvento.toDate();
+  const venceEn = new Date(
+    fecha.getFullYear(),
+    fecha.getMonth(),
+    fecha.getDate() + diasGracia,
+    23,
+    59,
+    59,
+    999,
+  );
+  return Timestamp.fromDate(venceEn);
+}
+
+export function estaVencido(
+  popup: Pick<PopupEvento, "venceEn">,
+  ahora: Date | Timestamp = new Date(),
+): boolean {
+  if (!(popup.venceEn instanceof Timestamp)) {
+    return true;
+  }
+  const ahoraMs = ahora instanceof Timestamp ? ahora.toMillis() : ahora.getTime();
+  return popup.venceEn.toMillis() <= ahoraMs;
+}
+
+export function formatearFechaEvento(fechaEvento?: Timestamp): string {
+  if (!(fechaEvento instanceof Timestamp)) {
+    return "";
+  }
+  return new Intl.DateTimeFormat("es-MX", {
+    dateStyle: "long",
+    timeStyle: "short",
+  }).format(fechaEvento.toDate());
+}
+
+export function obtenerFechaFormulario(fechaEvento?: Timestamp): string {
+  if (!(fechaEvento instanceof Timestamp)) {
+    return "";
+  }
+  const fecha = fechaEvento.toDate();
+  return `${fecha.getFullYear()}-${String(fecha.getMonth() + 1).padStart(2, "0")}-${
+    String(fecha.getDate()).padStart(2, "0")
+  }`;
+}
+
+export function obtenerHoraFormulario(fechaEvento?: Timestamp): string {
+  if (!(fechaEvento instanceof Timestamp)) {
+    return "";
+  }
+  const fecha = fechaEvento.toDate();
+  return `${String(fecha.getHours()).padStart(2, "0")}:${
+    String(fecha.getMinutes()).padStart(2, "0")
+  }`;
+}
+
+export function motivoDescartePopup(
+  popup: Pick<
+    PopupEvento,
+    "estado" | "fechaEvento" | "venceEn" | "cuestionarioId"
+  > & {
+    id: string;
+  },
+  empresaActiva: boolean | undefined,
+  cuestionarioPublicado: boolean | undefined,
+  ahora: Date = new Date(),
+): string | null {
+  if (popup.estado !== "publicado") {
+    return "no está publicado";
+  }
+  if (!(popup.fechaEvento instanceof Timestamp)) {
+    return "no tiene fecha del evento";
+  }
+  if (!(popup.venceEn instanceof Timestamp)) {
+    return "no tiene fecha de vencimiento";
+  }
+  if (estaVencido(popup, ahora)) {
+    return "está vencido";
+  }
+  if (!empresaActiva) {
+    return "la empresa no existe o está inactiva";
+  }
+  if (!cuestionarioPublicado) {
+    return "el cuestionario no está publicado";
+  }
+  return null;
+}
+
+function crearTimestampFechaEvento(fecha: string, hora: string): Timestamp | null {
+  const coincidenciaFecha = /^(\d{4})-(\d{2})-(\d{2})$/.exec(fecha);
+  const coincidenciaHora = /^([01]\d|2[0-3]):([0-5]\d)$/.exec(hora);
+  if (!coincidenciaFecha || !coincidenciaHora) {
+    return null;
+  }
+  const [, anio, mes, dia] = coincidenciaFecha;
+  const [, horas, minutos] = coincidenciaHora;
+  const fechaLocal = new Date(
+    Number(anio),
+    Number(mes) - 1,
+    Number(dia),
+    Number(horas),
+    Number(minutos),
+  );
+  if (
+    fechaLocal.getFullYear() !== Number(anio) ||
+    fechaLocal.getMonth() !== Number(mes) - 1 ||
+    fechaLocal.getDate() !== Number(dia) ||
+    fechaLocal.getHours() !== Number(horas) ||
+    fechaLocal.getMinutes() !== Number(minutos)
+  ) {
+    return null;
+  }
+  return Timestamp.fromDate(fechaLocal);
+}
+
+function esFechaEventoHoyOFutura(fechaEvento: Date, ahora: Date): boolean {
+  const inicioDeHoy = new Date(
+    ahora.getFullYear(),
+    ahora.getMonth(),
+    ahora.getDate(),
+  );
+  const diaEvento = new Date(
+    fechaEvento.getFullYear(),
+    fechaEvento.getMonth(),
+    fechaEvento.getDate(),
+  );
+  return diaEvento >= inicioDeHoy;
+}
+
+function venceDentroDelLimiteDeReglas(
+  fechaEvento: Timestamp,
+  ahora: Date,
+): boolean {
+  const maximoVenceEn = ahora.getTime() +
+    MAX_DIAS_EVENTO_FIRESTORE * 24 * 60 * 60 * 1000;
+  return calcularVenceEn(fechaEvento).toMillis() <= maximoVenceEn;
 }
 
 export function validarRegistroEvento(
@@ -325,12 +512,24 @@ export function transicionarPopup(
 
 export function filtrarPopupsPublicadosActivos<T extends {
   id: string;
-  estado: string;
+  estado: EstadoPopup;
+  fechaEvento?: Timestamp;
+  venceEn?: Timestamp;
+  cuestionarioId: string;
 }>(
   popups: T[],
   empresasActivas: ReadonlyMap<string, boolean>,
+  cuestionariosPublicados: ReadonlyMap<string, boolean>,
+  ahora: Date = new Date(),
 ): T[] {
   return popups.filter((popup) =>
-    popup.estado === "publicado" && empresasActivas.get(popup.id) === true
+    motivoDescartePopup(
+      popup,
+      empresasActivas.get(popup.id),
+      cuestionariosPublicados.get(
+        `${popup.id}/${popup.cuestionarioId}`,
+      ),
+      ahora,
+    ) === null
   );
 }

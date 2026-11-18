@@ -1,4 +1,3 @@
-import type { ReactNode } from "react";
 import TarjetaTemplate from "./TarjetaTemplate";
 import type { TemplateCatalogo } from "../templates/catalogo";
 import { tienePortadaTemplate } from "./PantallaInicioTemplate";
@@ -18,7 +17,6 @@ interface BibliotecaTemplatesProps {
   copiasGuardadas: DocumentoCuestionarioGuardado[];
   cargandoCopias: boolean;
   errorBiblioteca: string;
-  accesoCuenta: ReactNode;
   onCrearCopia?: (nombre: string, configuracion: unknown) => void | Promise<void>;
   onCrearDesdeCero?: () => void | Promise<void>;
   onAbrirCopia: (id: string) => void | Promise<void>;
@@ -48,7 +46,6 @@ export default function BibliotecaTemplates({
   copiasGuardadas,
   cargandoCopias,
   errorBiblioteca,
-  accesoCuenta,
   onCrearCopia,
   onCrearDesdeCero,
   onAbrirCopia,
@@ -107,7 +104,6 @@ export default function BibliotecaTemplates({
             Alcanzaste el límite de tu plan: despublica uno o cambia de plan.
           </p>
         )}
-        <div className="library-account">{accesoCuenta}</div>
       </header>
 
       {errorBiblioteca && (

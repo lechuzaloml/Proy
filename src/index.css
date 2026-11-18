@@ -2259,33 +2259,6 @@ textarea {
   background: transparent;
 }
 
-.landing-account {
-  margin-left: auto;
-  letter-spacing: normal;
-}
-
-.landing-account .account-panel {
-  width: auto;
-  margin: 0;
-  padding: 0;
-  border: 0;
-  background: transparent;
-}
-
-.library-header > .account-panel.account-panel-closed {
-  width: auto;
-  gap: 0;
-  margin: 0 0 1rem;
-  padding: 0;
-  border: 0;
-  background: transparent;
-}
-
-.library-header > .account-panel {
-  width: 100%;
-  margin: 0 0 1rem;
-}
-
 .account-login-trigger {
   white-space: nowrap;
 }
@@ -3447,47 +3420,6 @@ textarea:focus-visible {
   height: 2.5rem;
 }
 
-.library-account {
-  min-width: 0;
-}
-
-.library-account > .account-panel {
-  display: flex;
-  width: auto;
-  align-items: center;
-  justify-content: flex-end;
-  gap: 0.75rem;
-  margin: 0;
-  padding: 0;
-  border: 0;
-  background: transparent;
-}
-
-.library-account > .account-panel > p:first-child {
-  margin: 0;
-  color: var(--color-dark-gray);
-  font-size: 0.85rem;
-  line-height: 1.4;
-  overflow-wrap: anywhere;
-}
-
-.library-account > .account-panel > p:first-child strong {
-  color: var(--color-graphite);
-}
-
-.library-account > .account-panel > .secondary-button {
-  flex: 0 0 auto;
-  min-height: 2.5rem;
-  margin: 0;
-  padding: 0.5rem 0.85rem;
-  font-size: 0.85rem;
-}
-
-.library-account > .account-panel > .account-note,
-.library-account > .account-panel > .admin-error {
-  flex-basis: 100%;
-}
-
 .template-library > .library-header {
   display: block;
   margin: 0 0 clamp(2.5rem, 6vw, 5rem);
@@ -3517,17 +3449,6 @@ textarea:focus-visible {
 @media (max-width: 640px) {
   .library-brand {
     align-items: flex-start;
-  }
-
-  .library-account > .account-panel {
-    flex-wrap: wrap;
-    justify-content: flex-end;
-    gap: 0.5rem;
-  }
-
-  .library-account > .account-panel > p:first-child {
-    flex-basis: 100%;
-    text-align: right;
   }
 
   .template-library > .library-header h1 {
@@ -3771,17 +3692,6 @@ textarea:focus-visible {
 .site-dialog-version {
   color: var(--color-dark-gray);
   font-size: 0.875rem;
-}
-
-.landing-account {
-  display: flex;
-  justify-content: flex-end;
-  margin: 0 0 1rem;
-  letter-spacing: normal;
-}
-
-.library-account {
-  margin-top: 1rem;
 }
 
 @media (max-width: 767px) {
@@ -6189,12 +6099,6 @@ button {
     height: 2.4rem;
   }
 
-  .landing-account .account-login-trigger {
-    min-height: 2.6rem;
-    padding-inline: 0.75rem;
-    font-size: 0.82rem;
-  }
-
   .landing-hero {
     padding: 3rem 0;
   }
@@ -6566,6 +6470,24 @@ button {
   background: var(--color-light-gray);
   color: var(--color-dark-gray);
   font-weight: 700;
+}
+
+.event-expiration {
+  margin: 0 0 0.75rem;
+  color: var(--color-dark-gray);
+  font-weight: 650;
+}
+
+.event-expired {
+  width: fit-content;
+  margin: 0 0 0.75rem;
+  padding: 0.35rem 0.7rem;
+  border: 1px solid var(--color-coral);
+  border-radius: 999px;
+  background: #fff2f1;
+  color: #9c2823;
+  font-size: 0.875rem;
+  font-weight: 750;
 }
 
 .event-editor-layout {
@@ -10691,53 +10613,10 @@ button[aria-busy="true"] {
   line-height: 1.05;
 }
 
-.library-header > .account-panel.account-panel-closed {
-  align-self: start;
-  margin: 0;
-}
-
-.library-header > .account-panel:not(.account-panel-closed) {
-  display: flex;
-  width: min(100%, 34rem);
-  align-items: center;
-  justify-self: end;
-  flex-wrap: wrap;
-  gap: 0.75rem;
-  margin: 0;
-  padding: 0.55rem 0.7rem;
-  border-color: var(--color-divider);
-  background: var(--color-white);
-}
-
-.library-header > .account-panel > p:first-child {
-  min-width: 0;
-  font-size: 0.85rem;
-  line-height: 1.4;
-  overflow-wrap: anywhere;
-}
-
-.library-header > .account-panel > .secondary-button {
-  flex: 0 0 auto;
-  min-height: 2.4rem;
-  padding: 0.45rem 0.7rem;
-  font-size: 0.85rem;
-}
-
-.library-header > .account-panel > .account-note,
-.library-header > .account-panel > .admin-error {
-  flex-basis: 100%;
-}
-
 .library-header > p:last-child {
   max-width: 42rem;
   font-size: 0.96rem;
   line-height: 1.55;
-}
-
-.library-header .account-login-trigger {
-  min-height: 2.5rem;
-  padding: 0.5rem 0.85rem;
-  font-size: 0.9rem;
 }
 
 .questionnaire-header h1,
@@ -10753,11 +10632,6 @@ button[aria-busy="true"] {
     padding: 1.25rem;
   }
 
-  .library-header > .account-panel:not(.account-panel-closed) {
-    width: 100%;
-    justify-self: stretch;
-    flex-wrap: wrap;
-  }
 }
 
 @media (max-width: 640px) {
@@ -11313,5 +11187,60 @@ button[aria-busy="true"] {
   .questionnaire[data-presentation] .question-step-navigation {
     gap: 0.5rem;
     padding-top: 1.5rem;
+  }
+}
+
+.site-header-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.account-panel-compact {
+  display: flex;
+  width: auto;
+  min-width: 0;
+  align-items: center;
+  gap: 0.5rem;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  background: transparent;
+}
+
+.account-panel-compact .account-login-trigger {
+  min-height: 2.5rem;
+  margin: 0;
+  padding: 0.5rem 0.75rem;
+  font-size: 0.875rem;
+}
+
+.account-header-status {
+  color: var(--color-dark-gray);
+  font-size: 0.85rem;
+  white-space: nowrap;
+}
+
+.account-header-unverified {
+  display: inline-flex;
+  width: 1.25rem;
+  height: 1.25rem;
+  flex: 0 0 auto;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid var(--color-coral);
+  border-radius: 50%;
+  color: var(--color-coral);
+  font-size: 0.8rem;
+  font-weight: 800;
+}
+
+@media (max-width: 767px) {
+  .site-header-actions {
+    gap: 0.35rem;
+  }
+
+  .account-panel-compact .account-login-trigger {
+    padding-inline: 0.55rem;
   }
 }

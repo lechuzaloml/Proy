@@ -18,6 +18,7 @@ import {
   query,
   serverTimestamp,
   setDoc,
+  Timestamp,
   updateDoc,
   where,
   writeBatch,
@@ -50,6 +51,7 @@ const MANAGER_EMAIL = "manager-only@example.invalid";
 const COMPANY_INACTIVE = "demo-inactive";
 const POPUP_PUBLICADO = "demo-public";
 const POPUP_INACTIVO = COMPANY_INACTIVE;
+const POPUP_VENCIDO = "demo-expired";
 
 let environment: RulesTestEnvironment;
 type TestFirestore = ReturnType<RulesTestContext["firestore"]>;
@@ -197,6 +199,11 @@ async function seedFixtures(): Promise<void> {
         estado: "suspendida",
         planId: "test",
       }),
+      setDoc(doc(database, `empresas/${POPUP_VENCIDO}`), {
+        nombre: "Empresa sintética con evento vencido",
+        estado: "activa",
+        planId: "test",
+      }),
       setDoc(
         doc(database, `popups/${POPUP_PUBLICADO}`),
         documentoPopup("publicado"),
@@ -204,6 +211,13 @@ async function seedFixtures(): Promise<void> {
       setDoc(
         doc(database, `popups/${POPUP_INACTIVO}`),
         documentoPopup("publicado"),
+      ),
+      setDoc(
+        doc(database, `popups/${POPUP_VENCIDO}`),
+        documentoPopup("publicado", PUBLISHED_QUESTIONNAIRE_ID, {
+          fechaEvento: new Date(Date.now() - 3 * 24 * 60 * 60 * 1000),
+          venceEn: new Date(Date.now() - 24 * 60 * 60 * 1000),
+        }),
       ),
       setDoc(doc(
         database,
@@ -229,12 +243,22 @@ function documentoMiembro(correo: string, rol: string) {
   };
 }
 
-function documentoPopup(estado: string, cuestionarioId = PUBLISHED_QUESTIONNAIRE_ID) {
+function documentoPopup(
+  estado: string,
+  cuestionarioId = PUBLISHED_QUESTIONNAIRE_ID,
+  fechas: { fechaEvento?: Date; venceEn?: Date } = {},
+) {
+  const fechaEvento = fechas.fechaEvento ??
+    new Date(Date.now() + 24 * 60 * 60 * 1000);
+  const venceEn = fechas.venceEn ??
+    new Date(fechaEvento.getTime() + 24 * 60 * 60 * 1000);
   return {
     titulo: "Evento sintético",
     resumen: "Descripción sintética para pruebas.",
     cuestionarioId,
     estado,
+    fechaEvento: Timestamp.fromDate(fechaEvento),
+    venceEn: Timestamp.fromDate(venceEn),
     actualizadoEn: serverTimestamp(),
   };
 }
@@ -260,6 +284,18 @@ async function prepararMiembrosDePrueba(): Promise<void> {
         documentoMiembro(correo, rol),
       )
     ));
+  });
+}
+
+async function prepararCuestionarioPublicado(
+  empresa: string,
+  cuestionarioId: string,
+): Promise<void> {
+  await environment.withSecurityRulesDisabled(async (context) => {
+    await setDoc(
+      doc(context.firestore(), `empresas/${empresa}/cuestionarios/${cuestionarioId}`),
+      { estado: "publicado" },
+    );
   });
 }
 
@@ -711,6 +747,47 @@ describe("reglas locales de Firestore", () => {
     ));
   });
 
+  it("permite crear un evento para revisión con fechas reales y vencimiento válido", async () => {
+    await prepararMiembrosDePrueba();
+    const cuestionarioId = "popup-questionnaire-valid";
+    await prepararCuestionarioPublicado(COMPANY_MEMBER_ROLES, cuestionarioId);
+    const database = contextoMiembro(OWNER_EMAIL).firestore();
+    await assertSucceeds(setDoc(
+      doc(database, `popups/${COMPANY_MEMBER_ROLES}`),
+      documentoPopup("pendiente", cuestionarioId),
+    ));
+  });
+
+  it("rechaza enviar a revisión un evento con vencimiento pasado", async () => {
+    await prepararMiembrosDePrueba();
+    const cuestionarioId = "popup-questionnaire-expired";
+    await prepararCuestionarioPublicado(COMPANY_MEMBER_ROLES, cuestionarioId);
+    const database = contextoMiembro(OWNER_EMAIL).firestore();
+    const ahora = Date.now();
+    await assertFails(setDoc(
+      doc(database, `popups/${COMPANY_MEMBER_ROLES}`),
+      documentoPopup("pendiente", cuestionarioId, {
+        fechaEvento: new Date(ahora - 2 * 24 * 60 * 60 * 1000),
+        venceEn: new Date(ahora - 24 * 60 * 60 * 1000),
+      }),
+    ));
+  });
+
+  it("rechaza un vencimiento anterior al inicio del evento", async () => {
+    await prepararMiembrosDePrueba();
+    const cuestionarioId = "popup-questionnaire-order";
+    await prepararCuestionarioPublicado(COMPANY_MEMBER_ROLES, cuestionarioId);
+    const database = contextoMiembro(OWNER_EMAIL).firestore();
+    const ahora = Date.now();
+    await assertFails(setDoc(
+      doc(database, `popups/${COMPANY_MEMBER_ROLES}`),
+      documentoPopup("pendiente", cuestionarioId, {
+        fechaEvento: new Date(ahora + 3 * 24 * 60 * 60 * 1000),
+        venceEn: new Date(ahora + 2 * 24 * 60 * 60 * 1000),
+      }),
+    ));
+  });
+
   it("visitantes consultan publicados aunque la empresa esté inactiva, pero no pueden leerlos individualmente", async () => {
     const database = environment.unauthenticatedContext().firestore();
     const lectura = getDocs(query(
@@ -722,8 +799,10 @@ describe("reglas locales de Firestore", () => {
     const popups = await lectura;
     expect(popups.docs.map(({ id }) => id)).toContain(POPUP_PUBLICADO);
     expect(popups.docs.map(({ id }) => id)).toContain(POPUP_INACTIVO);
+    expect(popups.docs.map(({ id }) => id)).toContain(POPUP_VENCIDO);
     await assertSucceeds(getDoc(doc(database, `popups/${POPUP_PUBLICADO}`)));
     await assertFails(getDoc(doc(database, `popups/${POPUP_INACTIVO}`)));
+    await assertFails(getDoc(doc(database, `popups/${POPUP_VENCIDO}`)));
     await assertFails(getDoc(doc(database, `popups/${COMPANY_MEMBER_ROLES}`)));
   });
 
@@ -738,6 +817,23 @@ describe("reglas locales de Firestore", () => {
     await assertSucceeds(updateDoc(
       doc(database, `popups/${POPUP_PUBLICADO}`),
       { estado: "publicado", actualizadoEn: serverTimestamp() },
+    ));
+  });
+
+  it("la plataforma puede despublicar un popup vencido", async () => {
+    await environment.withSecurityRulesDisabled(async (context) => {
+      await setDoc(
+        doc(context.firestore(), `popups/${POPUP_PUBLICADO}`),
+        documentoPopup("publicado", PUBLISHED_QUESTIONNAIRE_ID, {
+          fechaEvento: new Date(Date.now() - 3 * 24 * 60 * 60 * 1000),
+          venceEn: new Date(Date.now() - 24 * 60 * 60 * 1000),
+        }),
+      );
+    });
+    const database = contextoMiembro(PLATFORM_ADMIN_EMAIL).firestore();
+    await assertSucceeds(updateDoc(
+      doc(database, `popups/${POPUP_PUBLICADO}`),
+      { estado: "borrador", actualizadoEn: serverTimestamp() },
     ));
   });
 

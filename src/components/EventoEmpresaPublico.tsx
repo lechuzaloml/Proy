@@ -2,6 +2,8 @@ import { useEffect, useState, type FormEvent } from "react";
 import { doc, getDocFromServer } from "firebase/firestore";
 import { TEXTO_AVISO_PRIVACIDAD } from "../config/privacidad";
 import {
+  estaVencido,
+  formatearFechaEvento,
   popupDesdeDatos,
   validarRegistroEvento,
   type PopupListado,
@@ -72,6 +74,15 @@ export default function EventoEmpresaPublico({
             : nombreEmpresa(empresaId),
         );
         if (!popupCargado || popupCargado.estado !== "publicado") {
+          return;
+        }
+        if (estaVencido(popupCargado)) {
+          console.warn("[evento público] Evento no disponible", {
+            empresaId,
+            motivo: popupCargado.venceEn
+              ? "el evento está vencido"
+              : "no tiene fecha de vencimiento",
+          });
           return;
         }
 
@@ -216,8 +227,10 @@ export default function EventoEmpresaPublico({
                 src={popup.imagenUrl}
               />
             )}
-            {popup.fecha && (
-              <p className="registro-evento__date">{popup.fecha}</p>
+            {popup.fechaEvento && (
+              <p className="registro-evento__date">
+                {formatearFechaEvento(popup.fechaEvento)}
+              </p>
             )}
             <p>{popup.resumen}</p>
             <div className="registro-evento__schedule">

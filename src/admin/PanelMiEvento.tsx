@@ -11,7 +11,15 @@ import {
 } from "firebase/firestore";
 import { db } from "../lib/firebase";
 import {
+  DIAS_GRACIA,
+  MAX_DIAS_EVENTO_FIRESTORE,
+} from "../config/popups";
+import {
   crearDocumentoPopup,
+  estaVencido,
+  formatearFechaEvento,
+  obtenerFechaFormulario,
+  obtenerHoraFormulario,
   obtenerEstadoTrasEdicion,
   popupDesdeDatos,
   transicionarPopup,
@@ -27,6 +35,7 @@ const FORMULARIO_VACIO: FormularioPopup = {
   resumen: "",
   imagenUrl: "",
   fecha: "",
+  hora: "",
   horarios: [""],
   anfitrionNombre: "",
   anfitrionFotoUrl: "",
@@ -96,7 +105,8 @@ export default function PanelMiEvento({
             insignia: datosPopup.insignia ?? "",
             resumen: datosPopup.resumen,
             imagenUrl: datosPopup.imagenUrl ?? "",
-            fecha: datosPopup.fecha ?? "",
+            fecha: obtenerFechaFormulario(datosPopup.fechaEvento),
+            hora: obtenerHoraFormulario(datosPopup.fechaEvento),
             horarios: datosPopup.horarios?.length
               ? datosPopup.horarios
               : [""],
@@ -149,9 +159,17 @@ export default function PanelMiEvento({
       setError("Firebase no está configurado.");
       return;
     }
-    const errores = validarFormularioEvento(formulario);
+    const requiereFechaEvento = accion === "enviar-revision" ||
+      (popup?.estado === "publicado" && accion === "guardar-borrador");
+    const errores = validarFormularioEvento(
+      formulario,
+      new Date(),
+      requiereFechaEvento,
+    );
     if (errores.length) {
-      setError("Revisa los campos obligatorios, las URLs HTTPS y los límites indicados.");
+      setError(errores.includes("fechaEvento")
+        ? "La fecha y hora del evento son obligatorias para revisión y la fecha no puede ser anterior a hoy."
+        : "Revisa los campos obligatorios, las URLs HTTPS y los límites indicados.");
       return;
     }
     const estado = popup?.estado === "publicado" &&
@@ -185,7 +203,27 @@ export default function PanelMiEvento({
   }
 
   const errores = validarFormularioEvento(formulario);
+  const erroresRevision = validarFormularioEvento(
+    formulario,
+    new Date(),
+    true,
+  );
   const estado = popup?.estado;
+  const hoy = new Date();
+  const fechaMinima = `${hoy.getFullYear()}-${String(hoy.getMonth() + 1).padStart(2, "0")}-${
+    String(hoy.getDate()).padStart(2, "0")
+  }`;
+  const fechaMaxima = new Date(
+    hoy.getFullYear(),
+    hoy.getMonth(),
+    hoy.getDate() + MAX_DIAS_EVENTO_FIRESTORE - DIAS_GRACIA - 1,
+  );
+  const fechaMaximaFormulario = `${
+    fechaMaxima.getFullYear()
+  }-${String(fechaMaxima.getMonth() + 1).padStart(2, "0")}-${
+    String(fechaMaxima.getDate()).padStart(2, "0")
+  }`;
+  const fechaVistaPrevia = crearDocumentoPopup(formulario, "borrador").fechaEvento;
 
   return (
     <section aria-labelledby="mi-evento-heading" className="admin-card event-editor">
@@ -198,6 +236,25 @@ export default function PanelMiEvento({
           Estado: {estado ? estadoLegible(estado) : "Sin crear"}
         </p>
       </header>
+      {popup?.venceEn && (
+        <p className="event-expiration">
+          Visible hasta {formatearFechaEvento(popup.venceEn)}
+        </p>
+      )}
+      {popup && estaVencido(popup) && (
+        <>
+          <p className="event-expired" role="status">Vencido</p>
+          <p className="event-editor-hint">
+            Para reutilizarlo, cambia la fecha y la hora y envíalo de nuevo a
+            revisión.
+          </p>
+        </>
+      )}
+      {popup && !popup.venceEn && (
+        <p className="event-expired" role="status">
+          Sin fecha de vencimiento; cambia la fecha del evento y envíalo a revisión.
+        </p>
+      )}
       {cargando ? (
         <p aria-live="polite">Cargando evento…</p>
       ) : (
@@ -247,11 +304,21 @@ export default function PanelMiEvento({
               />
             </label>
             <label>
-              Fecha
+              Fecha del evento
               <input
-                maxLength={80}
+                min={fechaMinima}
+                max={fechaMaximaFormulario}
                 onChange={(evento) => cambiar({ fecha: evento.target.value })}
+                type="date"
                 value={formulario.fecha}
+              />
+            </label>
+            <label>
+              Hora del evento
+              <input
+                onChange={(evento) => cambiar({ hora: evento.target.value })}
+                type="time"
+                value={formulario.hora}
               />
             </label>
             <fieldset>
@@ -390,10 +457,12 @@ export default function PanelMiEvento({
               </select>
             </label>
             {error && <p className="admin-error" role="alert">{error}</p>}
-            {errores.length > 0 && (
+            {(errores.length > 0 ||
+              erroresRevision.includes("fechaEvento")) && (
               <p className="event-editor-hint">
                 Completa título, resumen, anfitrión y cuestionario; las imágenes
-                deben usar HTTPS. Horarios y puntos admiten hasta 4.
+                deben usar HTTPS. Horarios y puntos admiten hasta 4. La fecha y
+                hora son obligatorias para enviar a revisión.
               </p>
             )}
             <div className="event-editor-actions">
@@ -406,7 +475,7 @@ export default function PanelMiEvento({
               </button>
               <button
                 className="secondary-button"
-                disabled={guardando || errores.length > 0 || !formulario.cuestionarioId}
+                disabled={guardando || erroresRevision.length > 0}
                 onClick={() => void guardar("enviar-revision")}
                 type="button"
               >
@@ -435,7 +504,9 @@ export default function PanelMiEvento({
               {formulario.insignia || "Evento"}
             </span>
             <h3>{formulario.titulo || "Título del evento"}</h3>
-            {formulario.fecha && <p>{formulario.fecha}</p>}
+            {fechaVistaPrevia && (
+              <p>{formatearFechaEvento(fechaVistaPrevia)}</p>
+            )}
             <p>{formulario.resumen || "Aquí aparecerá el resumen."}</p>
             <ul>
               {formulario.horarios.filter(Boolean).map((horario) => (

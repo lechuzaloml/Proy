@@ -9,12 +9,14 @@ import SiteHeader from "./SiteHeader";
 interface SiteFrameProps {
   pathname: string;
   esRegistroEvento?: boolean;
+  accesoCuenta?: ReactNode;
   children: ReactNode;
 }
 
 export default function SiteFrame({
   pathname,
   esRegistroEvento = false,
+  accesoCuenta,
   children,
 }: SiteFrameProps) {
   const tipoPie = obtenerTipoPie(pathname, esRegistroEvento);
@@ -25,7 +27,7 @@ export default function SiteFrame({
 
   return (
     <div className="site-frame" id="top">
-      {mostrarEncabezado && <SiteHeader />}
+      {mostrarEncabezado && <SiteHeader accesoCuenta={accesoCuenta} />}
       <div className="site-frame-content">{children}</div>
       {tipoPie !== "ninguno" && (
         <SiteFooter minimo={tipoPie === "minimo"} />

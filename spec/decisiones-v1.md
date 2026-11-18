@@ -63,3 +63,5 @@ sin modificar sus diez reglas.
     de la plataforma. La confirmación del evento no muestra puntaje total ni
     segmento; muestra el perfil por sección únicamente si hay al menos dos
     secciones.
+22. Los eventos guardan fecha real y vencen automáticamente un día después
+    de su fecha.

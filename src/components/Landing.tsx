@@ -2,14 +2,12 @@ import {
   useEffect,
   useRef,
   useState,
-  type ReactNode,
 } from "react";
 import {
   collection,
   doc,
   getDoc,
   getDocs,
-  limit,
   query,
   where,
 } from "firebase/firestore";
@@ -17,6 +15,8 @@ import { useScrollReveal } from "../hooks/useScrollReveal";
 import { db } from "../lib/firebase";
 import {
   filtrarPopupsPublicadosActivos,
+  formatearFechaEvento,
+  motivoDescartePopup,
   popupDesdeDatos,
   type PopupListado,
 } from "../eventos/popups";
@@ -24,7 +24,6 @@ import {
 interface LandingProps {
   onComenzar: () => void;
   onAbrirRegistroEvento?: (empresaId: string) => void;
-  accesoCuenta: ReactNode;
 }
 
 const POPUP_DEMO: PopupListado = {
@@ -33,8 +32,7 @@ const POPUP_DEMO: PopupListado = {
   titulo: "Masterclass en vivo con Carlos Torres",
   insignia: "Masterclass gratuita",
   resumen:
-    "No te pierdas el webinar en vivo del 4 de noviembre. Únete a esta masterclass gratuita de 90 minutos y aprende cómo generar mejores leads, generar confianza y convertir más atención en clientes.",
-  fecha: "4 de noviembre · 90 minutos",
+    "Únete a esta masterclass gratuita de 90 minutos y aprende cómo generar mejores leads, generar confianza y convertir más atención en clientes.",
   horarios: ["Reserva tu lugar"],
   anfitrion: {
     nombre: "Carlos Torres",
@@ -65,14 +63,22 @@ const retosNegocio = [
   },
 ];
 
+function obtenerCodigoError(fallo: unknown): string {
+  return typeof fallo === "object" && fallo !== null &&
+      "code" in fallo && typeof fallo.code === "string"
+    ? fallo.code
+    : "error desconocido";
+}
+
 export default function Landing({
   onComenzar,
   onAbrirRegistroEvento,
-  accesoCuenta,
 }: LandingProps) {
   const [modalAbierto, setModalAbierto] = useState(false);
   const [popups, setPopups] = useState<PopupListado[]>([POPUP_DEMO]);
   const [indicePopup, setIndicePopup] = useState(0);
+  const [eventosCargados, setEventosCargados] = useState(false);
+  const [errorPopups, setErrorPopups] = useState("");
   const modalRef = useRef<HTMLDivElement>(null);
   const cerrarRef = useRef<HTMLButtonElement>(null);
   const problemReveal = useScrollReveal<HTMLElement>();
@@ -87,27 +93,60 @@ export default function Landing({
     async function cargarPopupsPublicados() {
       const database = db;
       if (!database) {
+        setErrorPopups("No se pudieron consultar los eventos publicados.");
+        setEventosCargados(true);
         return;
       }
       try {
         const resultado = await getDocs(query(
           collection(database, "popups"),
           where("estado", "==", "publicado"),
-          limit(10),
         ));
         const publicados = resultado.docs.flatMap((snapshot) => {
           const popup = popupDesdeDatos(snapshot.id, snapshot.data());
-          return popup ? [popup] : [];
+          if (!popup) {
+            console.warn("[carrusel] Popup descartado", {
+              empresaId: snapshot.id,
+              motivo: "el documento tiene un formato no válido",
+            });
+            return [];
+          }
+          return [popup];
+        });
+        const candidatos = publicados.filter((popup) => {
+          if (!popup.fechaEvento) {
+            console.warn("[carrusel] Popup descartado", {
+              empresaId: popup.id,
+              motivo: "no tiene fecha del evento",
+            });
+            return false;
+          }
+          if (!popup.venceEn) {
+            console.warn("[carrusel] Popup descartado", {
+              empresaId: popup.id,
+              motivo: "no tiene fecha de vencimiento",
+            });
+            return false;
+          }
+          if (motivoDescartePopup(popup, true, true) === "está vencido") {
+            console.warn("[carrusel] Popup descartado", {
+              empresaId: popup.id,
+              motivo: "el evento está vencido",
+            });
+            return false;
+          }
+          return true;
         });
         const empresaActiva = new Map<string, boolean>();
         const nombresEmpresas = new Map<string, string>();
-        await Promise.all(publicados.map(async (popup) => {
+        const cuestionarioPublicado = new Map<string, boolean>();
+        const erroresConsulta = new Map<string, string>();
+        await Promise.all(candidatos.map(async (popup) => {
           try {
             const empresa = await getDoc(doc(database, "empresas", popup.id));
-            empresaActiva.set(
-              popup.id,
-              empresa.exists() && empresa.data().estado === "activa",
-            );
+            const activa = empresa.exists() &&
+              empresa.data().estado === "activa";
+            empresaActiva.set(popup.id, activa);
             if (empresa.exists()) {
               const nombre = empresa.data().nombre;
               nombresEmpresas.set(
@@ -117,27 +156,82 @@ export default function Landing({
                   : popup.id,
               );
             }
+            if (!activa) {
+              return;
+            }
           } catch (fallo: unknown) {
-            console.error(
-              `No se pudo verificar la empresa del evento ${popup.id}.`,
-              fallo,
+            erroresConsulta.set(
+              popup.id,
+              `no se pudo verificar si la empresa está activa (${obtenerCodigoError(fallo)})`,
             );
             empresaActiva.set(popup.id, false);
+            return;
+          }
+          try {
+            const cuestionario = await getDoc(doc(
+              database,
+              "empresas",
+              popup.id,
+              "cuestionarios",
+              popup.cuestionarioId,
+            ));
+            cuestionarioPublicado.set(
+              `${popup.id}/${popup.cuestionarioId}`,
+              cuestionario.exists() &&
+                cuestionario.data().estado === "publicado",
+            );
+          } catch (fallo: unknown) {
+            erroresConsulta.set(
+              popup.id,
+              `no se pudo verificar el cuestionario publicado (${obtenerCodigoError(fallo)})`,
+            );
+            cuestionarioPublicado.set(
+              `${popup.id}/${popup.cuestionarioId}`,
+              false,
+            );
           }
         }));
         if (!cancelado) {
+          for (const popup of candidatos) {
+            const motivo = erroresConsulta.get(popup.id) ??
+              motivoDescartePopup(
+                popup,
+                empresaActiva.get(popup.id),
+                cuestionarioPublicado.get(
+                  `${popup.id}/${popup.cuestionarioId}`,
+                ),
+              );
+            if (motivo) {
+              console.warn("[carrusel] Popup descartado", {
+                empresaId: popup.id,
+                motivo,
+              });
+            }
+          }
           setPopups([
             POPUP_DEMO,
-            ...filtrarPopupsPublicadosActivos(publicados, empresaActiva).map(
+            ...filtrarPopupsPublicadosActivos(
+              candidatos,
+              empresaActiva,
+              cuestionarioPublicado,
+            ).map(
               (popup) => ({
                 ...popup,
                 empresaNombre: nombresEmpresas.get(popup.id) ?? popup.id,
               }),
             ),
           ]);
+          setErrorPopups("");
         }
       } catch (fallo: unknown) {
-        console.error("No se pudieron cargar los eventos publicados.", fallo);
+        console.error("[carrusel] No se pudieron cargar los eventos publicados.", fallo);
+        if (!cancelado) {
+          setErrorPopups("No se pudieron cargar los eventos publicados.");
+        }
+      } finally {
+        if (!cancelado) {
+          setEventosCargados(true);
+        }
       }
     }
     void cargarPopupsPublicados();
@@ -147,9 +241,15 @@ export default function Landing({
   }, []);
 
   useEffect(() => {
+    if (!eventosCargados) {
+      return;
+    }
+    const claveSesion = `clearIaPopupVisto:${
+      popups.map(({ id }) => id).sort().join("|")
+    }`;
     let mostrado = false;
     try {
-      mostrado = window.sessionStorage.getItem("clearIaPopupVisto") === "1";
+      mostrado = window.sessionStorage.getItem(claveSesion) === "1";
     } catch (fallo: unknown) {
       console.error("No se pudo consultar la sesión del popup.", fallo);
     }
@@ -158,7 +258,7 @@ export default function Landing({
     }
     const temporizador = window.setTimeout(() => {
       try {
-        window.sessionStorage.setItem("clearIaPopupVisto", "1");
+        window.sessionStorage.setItem(claveSesion, "1");
       } catch (fallo: unknown) {
         console.error("No se pudo guardar la sesión del popup.", fallo);
       }
@@ -166,7 +266,7 @@ export default function Landing({
     }, 250);
 
     return () => window.clearTimeout(temporizador);
-  }, []);
+  }, [eventosCargados, popups]);
 
   useEffect(() => {
     if (!modalAbierto) {
@@ -289,8 +389,10 @@ export default function Landing({
                 <p className="promo-modal-description" id="promo-description">
                   {popupActivo.resumen}
                 </p>
-                {popupActivo.fecha && (
-                  <p className="promo-modal-date">{popupActivo.fecha}</p>
+                {popupActivo.fechaEvento && (
+                  <p className="promo-modal-date">
+                    {formatearFechaEvento(popupActivo.fechaEvento)}
+                  </p>
                 )}
                 <div className="promo-modal-actions">
                   <button
@@ -358,7 +460,9 @@ export default function Landing({
       )}
 
       <main className="landing-page">
-        <div className="landing-account">{accesoCuenta}</div>
+        {errorPopups && (
+          <p className="admin-error" role="alert">{errorPopups}</p>
+        )}
         <section aria-labelledby="landing-title" className="landing-hero">
         <div className="landing-intro">
           <p className="landing-kicker">Una mirada clara a tu crecimiento</p>

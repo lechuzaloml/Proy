@@ -13,11 +13,13 @@ import { auth } from "../lib/firebaseAuth";
 interface AccesoCuentaProps {
   authListo: boolean;
   usuario: User | null;
+  compacto?: boolean;
 }
 
 export default function AccesoCuenta({
   authListo,
   usuario,
+  compacto = false,
 }: AccesoCuentaProps) {
   const [correo, setCorreo] = useState("");
   const [contrasena, setContrasena] = useState("");
@@ -106,10 +108,19 @@ export default function AccesoCuenta({
   }
 
   if (!authListo) {
-    return <p className="account-status" role="status">Comprobando sesión…</p>;
+    return compacto
+      ? <span className="account-header-status" role="status">Comprobando…</span>
+      : <p className="account-status" role="status">Comprobando sesión…</p>;
   }
 
   if (!auth) {
+    if (compacto) {
+      return (
+        <span className="account-header-status" role="status">
+          Acceso no disponible
+        </span>
+      );
+    }
     return (
       <section aria-label="Iniciar sesión" className="account-panel">
         <h2>Inicio de sesión no disponible</h2>
@@ -120,17 +131,33 @@ export default function AccesoCuenta({
 
   if (usuario) {
     return (
-      <section aria-label="Sesión de Clear-IA" className="account-panel">
-        <p>
-          Sesión iniciada como <strong>{usuario.email ?? "cuenta sin correo"}</strong>
-        </p>
-        {!usuario.emailVerified && (
+      <section
+        aria-label="Sesión de Clear-IA"
+        className={`account-panel${compacto ? " account-panel-compact" : ""}`}
+      >
+        {!compacto && (
+          <p>
+            Sesión iniciada como{" "}
+            <strong>{usuario.email ?? "cuenta sin correo"}</strong>
+          </p>
+        )}
+        {!compacto && !usuario.emailVerified && (
           <p className="account-note" role="status">
             Verifica el correo de esta cuenta para poder usar plantillas.
           </p>
         )}
+        {compacto && !usuario.emailVerified && (
+          <span
+            aria-label="Verifica el correo de esta cuenta para poder usar plantillas."
+            className="account-header-unverified"
+            role="status"
+            title="Verifica el correo de esta cuenta para poder usar plantillas."
+          >
+            !
+          </span>
+        )}
         <button
-          className="secondary-button"
+          className="secondary-button account-login-trigger"
           disabled={ocupado}
           onClick={() => void cerrarSesion()}
           type="button"
@@ -145,7 +172,9 @@ export default function AccesoCuenta({
   return (
     <section
       aria-label="Iniciar sesión"
-      className="account-panel account-panel-closed"
+      className={`account-panel account-panel-closed${
+        compacto ? " account-panel-compact" : ""
+      }`}
     >
       <button
         className="secondary-button account-login-trigger"

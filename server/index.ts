@@ -3,6 +3,8 @@ import express from "express";
 import { resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { procesarPersonalizacion } from "./personalizar.js";
+import despublicarCuestionario from "../api/cuestionarios/despublicar.ts";
+import publicarCuestionario from "../api/cuestionarios/publicar.ts";
 
 const root = resolve(fileURLToPath(new URL("..", import.meta.url)));
 dotenv.config({ path: resolve(root, ".env.local") });
@@ -15,6 +17,22 @@ app.use(express.json({ limit: "32kb" }));
 app.post("/api/personalizar", async (request, response) => {
   const resultado = await procesarPersonalizacion(request.body);
   response.status(resultado.status).json(resultado.body);
+});
+
+app.post("/api/cuestionarios/publicar", async (request, response, next) => {
+  try {
+    await publicarCuestionario(request, response);
+  } catch (error: unknown) {
+    next(error);
+  }
+});
+
+app.post("/api/cuestionarios/despublicar", async (request, response, next) => {
+  try {
+    await despublicarCuestionario(request, response);
+  } catch (error: unknown) {
+    next(error);
+  }
 });
 
 if (

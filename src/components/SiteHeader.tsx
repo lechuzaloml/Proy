@@ -1,7 +1,12 @@
 import { useEffect, useRef, useState } from "react";
+import type { ReactNode } from "react";
 import { configuracionSitio } from "../config/sitio";
 
-export default function SiteHeader() {
+interface SiteHeaderProps {
+  accesoCuenta?: ReactNode;
+}
+
+export default function SiteHeader({ accesoCuenta }: SiteHeaderProps) {
   const [menuAbierto, setMenuAbierto] = useState(false);
   const botonMenuRef = useRef<HTMLButtonElement>(null);
   const menuRef = useRef<HTMLElement>(null);
@@ -70,17 +75,6 @@ export default function SiteHeader() {
         >
           {configuracionSitio.nombreSitio}
         </a>
-        <button
-          aria-controls="site-navigation"
-          aria-expanded={menuAbierto}
-          aria-label={menuAbierto ? "Cerrar menú" : "Abrir menú"}
-          className="site-menu-toggle"
-          onClick={() => setMenuAbierto((abierto) => !abierto)}
-          ref={botonMenuRef}
-          type="button"
-        >
-          <span aria-hidden="true">{menuAbierto ? "×" : "☰"}</span>
-        </button>
         <nav
           aria-label="Navegación principal"
           className={`site-navigation${menuAbierto ? " is-open" : ""}`}
@@ -98,6 +92,20 @@ export default function SiteHeader() {
             </a>
           ))}
         </nav>
+        <div className="site-header-actions">
+          {accesoCuenta}
+          <button
+            aria-controls="site-navigation"
+            aria-expanded={menuAbierto}
+            aria-label={menuAbierto ? "Cerrar menú" : "Abrir menú"}
+            className="site-menu-toggle"
+            onClick={() => setMenuAbierto((abierto) => !abierto)}
+            ref={botonMenuRef}
+            type="button"
+          >
+            <span aria-hidden="true">{menuAbierto ? "×" : "☰"}</span>
+          </button>
+        </div>
       </div>
     </header>
   );
