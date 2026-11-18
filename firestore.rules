@@ -167,6 +167,42 @@ service cloud.firestore {
       return v is string && v.size() >= minimo && v.size() <= maximo;
     }
 
+    function popupValido(emp) {
+      return nuevo().keys().hasOnly([
+          'titulo','insignia','resumen','imagenUrl','fecha',
+          'horarios','anfitrion','puntos','cuestionarioId',
+          'estado','actualizadoEn'
+        ])
+        && nuevo().keys().hasAll([
+          'titulo','resumen','cuestionarioId','estado','actualizadoEn'
+        ])
+        && texto(nuevo().titulo, 1, 80)
+        && texto(nuevo().resumen, 1, 300)
+        && (!('insignia' in nuevo()) || texto(nuevo().insignia, 1, 60))
+        && (!('fecha' in nuevo()) || texto(nuevo().fecha, 1, 80))
+        && (!('imagenUrl' in nuevo()) ||
+          (texto(nuevo().imagenUrl, 9, 300)
+            && nuevo().imagenUrl.matches('^https://.*')))
+        && (!('horarios' in nuevo()) ||
+          (nuevo().horarios is list && nuevo().horarios.size() <= 4))
+        && (!('puntos' in nuevo()) ||
+          (nuevo().puntos is list && nuevo().puntos.size() <= 4))
+        && (!('anfitrion' in nuevo()) ||
+          (nuevo().anfitrion is map
+            && nuevo().anfitrion.keys().hasOnly(['nombre','fotoUrl'])
+            && texto(nuevo().anfitrion.nombre, 1, 80)
+            && (!('fotoUrl' in nuevo().anfitrion) ||
+              (texto(nuevo().anfitrion.fotoUrl, 9, 300)
+                && nuevo().anfitrion.fotoUrl.matches('^https://.*')))))
+        && texto(nuevo().cuestionarioId, 1, 100)
+        && nuevo().actualizadoEn == request.time
+        && (nuevo().estado in ['borrador','pendiente']
+          || (esPlataforma()
+            && nuevo().estado in ['publicado','rechazado']))
+        && (nuevo().estado == 'borrador'
+          || cuestionarioPublicado(emp, nuevo().cuestionarioId));
+    }
+
     function nuevo() {
       return request.resource.data;
     }
@@ -331,6 +367,21 @@ service cloud.firestore {
         allow update: if false;
         allow delete: if esAdminEmpresa(emp) || esPlataforma();
       }
+    }
+
+    match /popups/{emp} {
+      allow get: if (resource.data.estado == 'publicado' && empresaActiva(emp))
+        || esAdminEmpresa(emp)
+        || esPlataforma();
+
+      allow list: if (resource.data.estado == 'publicado' && empresaActiva(emp))
+        || esPlataforma();
+
+      allow create, update: if (esAdminEmpresa(emp) || esPlataforma())
+        && empresaActiva(emp)
+        && popupValido(emp);
+
+      allow delete: if esAdminEmpresa(emp) || esPlataforma();
     }
 
     match /{path=**}/miembros/{id} {

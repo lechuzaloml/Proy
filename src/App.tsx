@@ -71,6 +71,33 @@ import {
   cambiarPublicacionCuestionario,
 } from "./lib/publicacionCuestionarios";
 import { useUsoCuestionarios } from "./hooks/useUsoCuestionarios";
+import SiteFrame from "./components/SiteFrame";
+import type { AccionSitio } from "./config/sitio";
+
+interface VistaSitio {
+  pathname: string;
+  esRegistroEvento: boolean;
+}
+
+function leerRutaActual(): string {
+  return window.location.pathname.replace(/\/+$/, "") || "/";
+}
+
+export default function App() {
+  const [vistaSitio, setVistaSitio] = useState<VistaSitio>(() => ({
+    pathname: leerRutaActual(),
+    esRegistroEvento: false,
+  }));
+
+  return (
+    <SiteFrame
+      esRegistroEvento={vistaSitio.esRegistroEvento}
+      pathname={vistaSitio.pathname}
+    >
+      <Aplicacion onVistaChange={setVistaSitio} />
+    </SiteFrame>
+  );
+}
 
 interface SeleccionCuestionario {
   id: string;
@@ -292,10 +319,15 @@ const casosReferencia: CasoReferencia[] = [
   },
 ];
 
-export default function App() {
+function Aplicacion({
+  onVistaChange,
+}: {
+  onVistaChange: (vista: VistaSitio) => void;
+}) {
   const [empresaActivaId, setEmpresaActivaId] = useState(
     obtenerEmpresaActivaInicial,
   );
+  const [rutaActual, setRutaActual] = useState(leerRutaActual);
   const [estadoApp, setEstadoApp] = useState(obtenerEstadoInicial);
   const [accesoCuestionarios, setAccesoCuestionarios] =
     useState<AccesoCuestionarios | null>(null);
@@ -329,6 +361,14 @@ export default function App() {
   const resultadoValidacion = seleccion
     ? validarCuestionario(seleccion.configuracion)
     : null;
+  const segmentosPublicos = rutaActual.split("/");
+  const rutaPublicaCopia = rutaActual === "/c" ||
+    rutaActual.startsWith("/c/");
+  const empresaPublicaId = segmentosPublicos[2] ?? "";
+  const cuestionarioPublicoId = segmentosPublicos[3] ?? "";
+  const enlacePublicoValido = rutaPublicaCopia &&
+    segmentosPublicos.length === 4 &&
+    Boolean(empresaPublicaId && cuestionarioPublicoId);
   const esTemplateRegistroEventoActual =
     !!seleccion &&
     typeof seleccion.configuracion === "object" &&
@@ -338,6 +378,7 @@ export default function App() {
 
   useEffect(() => {
     function restaurarDesdeHistorial(evento: PopStateEvent) {
+      setRutaActual(leerRutaActual());
       const entrada = evento.state as EntradaHistorialAplicacion | null;
       const siguiente = entrada?.[CLAVE_HISTORIAL];
       if (siguiente) {
@@ -350,15 +391,52 @@ export default function App() {
     return () => window.removeEventListener("popstate", restaurarDesdeHistorial);
   }, []);
 
-  const rutaActual = window.location.pathname.replace(/\/+$/, "");
-  const segmentosPublicos = rutaActual.split("/");
-  const rutaPublicaCopia = rutaActual === "/c" ||
-    rutaActual.startsWith("/c/");
-  const empresaPublicaId = segmentosPublicos[2] ?? "";
-  const cuestionarioPublicoId = segmentosPublicos[3] ?? "";
-  const enlacePublicoValido = rutaPublicaCopia &&
-    segmentosPublicos.length === 4 &&
-    Boolean(empresaPublicaId && cuestionarioPublicoId);
+  useEffect(() => {
+    onVistaChange({
+      pathname: rutaActual,
+      esRegistroEvento: esTemplateRegistroEventoActual,
+    });
+  }, [esTemplateRegistroEventoActual, onVistaChange, rutaActual]);
+
+  useEffect(() => {
+    function manejarNavegacionSitio(evento: Event) {
+      const accion = (evento as CustomEvent<AccionSitio>).detail;
+      const estadoActual = estadoAppRef.current;
+      if (accion === "inicio") {
+        navegar({
+          ...estadoActual,
+          bienvenidaCompletada: false,
+          seleccion: null,
+          envio: null,
+          mostrarPlanes: false,
+          origenIntroduccionTemplate: null,
+          estadoCuestionario: null,
+        }, "/");
+      } else if (accion === "biblioteca") {
+        navegar({
+          ...estadoActual,
+          bienvenidaCompletada: true,
+          seleccion: null,
+          envio: null,
+          mostrarPlanes: false,
+          origenIntroduccionTemplate: null,
+          estadoCuestionario: null,
+        }, "/");
+      } else if (accion === "suscripcion" || accion === "admin") {
+        const ruta = accion === "admin" ? "/admin" : "/suscripcion";
+        window.history.pushState(
+          { ...(window.history.state ?? {}) },
+          "",
+          ruta,
+        );
+        setRutaActual(ruta);
+      }
+    }
+
+    window.addEventListener("site-navigation", manejarNavegacionSitio);
+    return () =>
+      window.removeEventListener("site-navigation", manejarNavegacionSitio);
+  }, []);
 
   useEffect(() => {
     function actualizarEmpresaActiva(evento: StorageEvent) {
@@ -483,7 +561,7 @@ export default function App() {
     );
   }
 
-  function navegar(siguiente: EstadoAplicacion) {
+  function navegar(siguiente: EstadoAplicacion, ruta = rutaActual) {
     siguiente = {
       ...siguiente,
       historialId: estadoAppRef.current.historialId + 1,
@@ -491,7 +569,9 @@ export default function App() {
     window.history.pushState(
       { ...(window.history.state ?? {}), [CLAVE_HISTORIAL]: siguiente },
       "",
+      ruta,
     );
+    setRutaActual(ruta);
     estadoAppRef.current = siguiente;
     setEstadoApp(siguiente);
   }

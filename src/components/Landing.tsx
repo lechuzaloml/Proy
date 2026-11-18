@@ -152,16 +152,7 @@ export default function Landing({
       )}
 
       <main className="landing-page">
-        <header className="landing-brand">
-          <img
-            alt=""
-            aria-hidden="true"
-            className="landing-brand-mark"
-            src="/merkatic-brand-mark.png"
-          />
-          <span>CLEAR-IA</span>
-          <div className="landing-account">{accesoCuenta}</div>
-        </header>
+        <div className="landing-account">{accesoCuenta}</div>
         <section aria-labelledby="landing-title" className="landing-hero">
         <div className="landing-intro">
           <p className="landing-kicker">Una mirada clara a tu crecimiento</p>
