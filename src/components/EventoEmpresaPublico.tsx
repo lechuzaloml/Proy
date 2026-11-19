@@ -46,6 +46,7 @@ export default function EventoEmpresaPublico({
   const [cargando, setCargando] = useState(true);
   const [disponible, setDisponible] = useState(false);
   const [imagenEventoFallida, setImagenEventoFallida] = useState(false);
+  const [fotoAnfitrionFallida, setFotoAnfitrionFallida] = useState(false);
   const [error, setError] = useState("");
 
   useEffect(() => {
@@ -133,6 +134,7 @@ export default function EventoEmpresaPublico({
         }
         if (!cancelado) {
           setImagenEventoFallida(false);
+          setFotoAnfitrionFallida(false);
           setPopup(popupCargado);
           setDisponible(true);
         }
@@ -261,10 +263,23 @@ export default function EventoEmpresaPublico({
                 <span className="registro-evento__host-label">Presenta</span>
                 {popup.anfitrion.fotoUrl && (
                   <div className="registro-evento__host-avatar">
-                    <img
-                      alt=""
-                      src={popup.anfitrion.fotoUrl}
-                    />
+                    {fotoAnfitrionFallida
+                      ? (
+                        <span
+                          aria-hidden="true"
+                          className="registro-evento__host-avatar-fallback"
+                        >
+                          {popup.anfitrion.nombre.trim().charAt(0).toUpperCase() ||
+                            "?"}
+                        </span>
+                      )
+                      : (
+                        <img
+                          alt=""
+                          onError={() => setFotoAnfitrionFallida(true)}
+                          src={popup.anfitrion.fotoUrl}
+                        />
+                      )}
                   </div>
                 )}
                 <strong>{popup.anfitrion.nombre}</strong>
