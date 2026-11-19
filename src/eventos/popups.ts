@@ -60,6 +60,16 @@ export interface FormularioPopup {
   cuestionarioId: string;
 }
 
+export interface ContextoDiagnosticoPopup {
+  rol: RolPopup;
+  estadoMiembro: "activo" | "inactivo" | null;
+  sesionVerificada: boolean;
+  empresaActiva: boolean;
+  cuestionarioPublicado: boolean;
+  ahora: Date;
+  actualizadoEnEsServerTimestamp: boolean;
+}
+
 export interface RegistroEvento {
   nombre: string;
   apellido: string;
@@ -212,6 +222,27 @@ export function crearDocumentoPopup(
   };
 }
 
+export function limpiarCamposOpcionalesPopup(
+  datos: PopupEvento,
+): PopupEvento {
+  const resultado = { ...datos };
+  if (resultado.insignia !== undefined && !resultado.insignia.trim()) {
+    delete resultado.insignia;
+  }
+  if (resultado.imagenUrl !== undefined && !resultado.imagenUrl.trim()) {
+    delete resultado.imagenUrl;
+  }
+  if (
+    resultado.anfitrion?.fotoUrl !== undefined &&
+    !resultado.anfitrion.fotoUrl.trim()
+  ) {
+    const anfitrion = { ...resultado.anfitrion };
+    delete anfitrion.fotoUrl;
+    resultado.anfitrion = anfitrion;
+  }
+  return resultado;
+}
+
 export function validarFormularioEvento(
   formulario: FormularioPopup,
   ahora: Date = new Date(),
@@ -286,6 +317,212 @@ export function validarFormularioEvento(
   ) {
     errores.push("anfitrionNombre");
   }
+  return errores;
+}
+
+export function diagnosticarPopup(
+  datos: unknown,
+  contexto: ContextoDiagnosticoPopup,
+): string[] {
+  if (!esMapaPopup(datos)) {
+    return ["Los datos del evento deben ser un objeto."];
+  }
+
+  const errores: string[] = [];
+  const camposPermitidos = new Set([
+    "titulo",
+    "insignia",
+    "resumen",
+    "imagenUrl",
+    "fecha",
+    "fechaEvento",
+    "venceEn",
+    "horarios",
+    "anfitrion",
+    "puntos",
+    "cuestionarioId",
+    "estado",
+    "actualizadoEn",
+  ]);
+  const camposDesconocidos = Object.keys(datos).filter(
+    (campo) => !camposPermitidos.has(campo),
+  );
+  if (camposDesconocidos.length) {
+    errores.push(
+      `Hay campos no permitidos: ${camposDesconocidos.join(", ")}.`,
+    );
+  }
+
+  const camposRequeridos = [
+    ["titulo", "el título"],
+    ["resumen", "el resumen"],
+    ["cuestionarioId", "el cuestionario"],
+    ["estado", "el estado"],
+    ["actualizadoEn", "la fecha de actualización"],
+  ] as const;
+  for (const [campo, etiqueta] of camposRequeridos) {
+    if (!(campo in datos)) {
+      errores.push(`Falta ${etiqueta}.`);
+    }
+  }
+
+  if ("titulo" in datos && !cumpleTexto(datos.titulo, 1, 80)) {
+    errores.push("El título debe tener entre 1 y 80 caracteres.");
+  }
+  if ("resumen" in datos && !cumpleTexto(datos.resumen, 1, 300)) {
+    errores.push("El resumen debe tener entre 1 y 300 caracteres.");
+  }
+  if (
+    "insignia" in datos &&
+    !cumpleTexto(datos.insignia, 1, 60)
+  ) {
+    errores.push("La insignia no puede estar vacía y debe tener hasta 60 caracteres.");
+  }
+  if (
+    "fecha" in datos &&
+    !cumpleTexto(datos.fecha, 1, 80)
+  ) {
+    errores.push("La fecha opcional debe tener entre 1 y 80 caracteres.");
+  }
+  if (
+    "imagenUrl" in datos &&
+    !cumpleUrlHttps(datos.imagenUrl, 300)
+  ) {
+    errores.push("La imagen debe ser una URL HTTPS de hasta 300 caracteres.");
+  }
+  if (
+    "horarios" in datos &&
+    (!Array.isArray(datos.horarios) || datos.horarios.length > 4)
+  ) {
+    errores.push("Los horarios deben ser una lista de hasta 4 elementos.");
+  }
+  if (
+    "puntos" in datos &&
+    (!Array.isArray(datos.puntos) || datos.puntos.length > 4)
+  ) {
+    errores.push("Los puntos deben ser una lista de hasta 4 elementos.");
+  }
+  if ("anfitrion" in datos) {
+    if (!esMapaPopup(datos.anfitrion)) {
+      errores.push("El anfitrión debe ser un objeto válido.");
+    } else {
+      const camposAnfitrionPermitidos = new Set(["nombre", "fotoUrl"]);
+      if (
+        Object.keys(datos.anfitrion).some(
+          (campo) => !camposAnfitrionPermitidos.has(campo),
+        )
+      ) {
+        errores.push("El anfitrión contiene campos no permitidos.");
+      }
+      if (!cumpleTexto(datos.anfitrion.nombre, 1, 80)) {
+        errores.push("El nombre del anfitrión debe tener entre 1 y 80 caracteres.");
+      }
+      if (
+        "fotoUrl" in datos.anfitrion &&
+        !cumpleUrlHttps(datos.anfitrion.fotoUrl, 300)
+      ) {
+        errores.push("La foto del anfitrión debe ser HTTPS y tener hasta 300 caracteres.");
+      }
+    }
+  }
+
+  if (
+    "fechaEvento" in datos &&
+    milisegundosTimestamp(datos.fechaEvento) === null
+  ) {
+    errores.push("La fecha del evento debe ser un timestamp.");
+  }
+  if ("venceEn" in datos && milisegundosTimestamp(datos.venceEn) === null) {
+    errores.push("La fecha de vencimiento debe ser un timestamp.");
+  }
+
+  const estado = datos.estado;
+  const estadoValido = typeof estado === "string" &&
+    ESTADOS_POPUP.includes(estado as EstadoPopup);
+  if ("estado" in datos && !estadoValido) {
+    errores.push("El estado debe ser borrador, pendiente, publicado o rechazado.");
+  }
+  const requiereVigencia = estado !== "borrador" && estado !== "rechazado";
+  const fechaEventoMs = milisegundosTimestamp(datos.fechaEvento);
+  const venceEnMs = milisegundosTimestamp(datos.venceEn);
+  if (requiereVigencia) {
+    if (!("fechaEvento" in datos)) {
+      errores.push("La fecha del evento es obligatoria para este estado.");
+    }
+    if (!("venceEn" in datos)) {
+      errores.push("La fecha de vencimiento es obligatoria para este estado.");
+    }
+    if (venceEnMs !== null) {
+      const ahoraMs = contexto.ahora.getTime();
+      if (venceEnMs <= ahoraMs) {
+        errores.push("La fecha de vencimiento debe estar en el futuro.");
+      }
+      if (
+        venceEnMs >
+        ahoraMs + MAX_DIAS_EVENTO_FIRESTORE * 24 * 60 * 60 * 1000
+      ) {
+        errores.push("La fecha de vencimiento no puede superar 400 días desde ahora.");
+      }
+    }
+    if (
+      fechaEventoMs !== null &&
+      venceEnMs !== null &&
+      venceEnMs < fechaEventoMs
+    ) {
+      errores.push("La fecha de vencimiento no puede ser anterior a la fecha del evento.");
+    }
+  }
+
+  if (
+    "cuestionarioId" in datos &&
+    !cumpleTexto(datos.cuestionarioId, 1, 100)
+  ) {
+    errores.push("El ID del cuestionario debe tener entre 1 y 100 caracteres.");
+  }
+  if ("actualizadoEn" in datos) {
+    const actualizadoEnMs = milisegundosTimestamp(datos.actualizadoEn);
+    const esTransformacionServidor =
+      contexto.actualizadoEnEsServerTimestamp &&
+      typeof datos.actualizadoEn === "object" &&
+      datos.actualizadoEn !== null &&
+      !(datos.actualizadoEn instanceof Date) &&
+      !(datos.actualizadoEn instanceof Timestamp);
+    if (
+      !esTransformacionServidor &&
+      actualizadoEnMs !== contexto.ahora.getTime()
+    ) {
+      errores.push("La fecha de actualización debe coincidir con la hora de Firestore.");
+    }
+  }
+
+  if (!contexto.sesionVerificada) {
+    errores.push("La sesión de la cuenta debe estar verificada.");
+  }
+  if (
+    contexto.rol !== "plataforma" &&
+    contexto.rol !== "admin" &&
+    contexto.rol !== "propietario"
+  ) {
+    errores.push("Se requiere el rol de administrador, propietario o plataforma.");
+  } else if (
+    contexto.rol !== "plataforma" &&
+    contexto.estadoMiembro !== "activo"
+  ) {
+    errores.push("La membresía de la empresa debe estar activa.");
+  }
+  if (!contexto.empresaActiva) {
+    errores.push("La empresa debe estar activa.");
+  }
+  if (
+    (estado === "publicado" || estado === "rechazado") &&
+    contexto.rol !== "plataforma"
+  ) {
+    errores.push("Solo la plataforma puede publicar o rechazar un evento.");
+  }
+  if (estado !== "borrador" && !contexto.cuestionarioPublicado) {
+    errores.push("El cuestionario debe estar publicado.");
+  }
+
   return errores;
 }
 
@@ -473,6 +710,36 @@ function urlHttpsOpcional(valor: string): boolean {
   } catch {
     return false;
   }
+}
+
+function esMapaPopup(valor: unknown): valor is Record<string, unknown> {
+  return typeof valor === "object" &&
+    valor !== null &&
+    !Array.isArray(valor) &&
+    !(valor instanceof Date) &&
+    !(valor instanceof Timestamp);
+}
+
+function milisegundosTimestamp(valor: unknown): number | null {
+  if (valor instanceof Timestamp) {
+    return valor.toMillis();
+  }
+  if (valor instanceof Date && !Number.isNaN(valor.getTime())) {
+    return valor.getTime();
+  }
+  return null;
+}
+
+function cumpleTexto(valor: unknown, minimo: number, maximo: number): boolean {
+  return typeof valor === "string" &&
+    Array.from(valor).length >= minimo &&
+    Array.from(valor).length <= maximo;
+}
+
+function cumpleUrlHttps(valor: unknown, maximo: number): boolean {
+  return typeof valor === "string" &&
+    cumpleTexto(valor, 9, maximo) &&
+    valor.startsWith("https://");
 }
 
 export function obtenerEstadoTrasEdicion(

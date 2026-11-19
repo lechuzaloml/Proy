@@ -1,5 +1,6 @@
 import { useEffect, useState, type FormEvent } from "react";
 import {
+  Timestamp,
   collection,
   doc,
   getDoc,
@@ -16,8 +17,10 @@ import {
 } from "../config/popups";
 import {
   crearDocumentoPopup,
+  diagnosticarPopup,
   estaVencido,
   formatearFechaEvento,
+  limpiarCamposOpcionalesPopup,
   obtenerFechaFormulario,
   obtenerHoraFormulario,
   obtenerEstadoTrasEdicion,
@@ -47,6 +50,9 @@ interface PanelMiEventoProps {
   empresaId: string;
   empresaNombre: string;
   rol: "admin" | "propietario";
+  estadoMiembro: "activo" | "inactivo" | null;
+  sesionVerificada: boolean;
+  empresaActiva: boolean;
 }
 
 function estadoLegible(estado: EstadoPopup): string {
@@ -58,10 +64,36 @@ function estadoLegible(estado: EstadoPopup): string {
   }[estado];
 }
 
+function tipoCampoEnviado(valor: unknown): string {
+  if (valor instanceof Timestamp) {
+    return "timestamp";
+  }
+  if (Array.isArray(valor)) {
+    return "lista";
+  }
+  if (valor === null) {
+    return "nulo";
+  }
+  if (typeof valor === "object") {
+    return "mapa";
+  }
+  return typeof valor;
+}
+
+function esRechazoPorPermisos(fallo: unknown): boolean {
+  return typeof fallo === "object" &&
+    fallo !== null &&
+    "code" in fallo &&
+    fallo.code === "permission-denied";
+}
+
 export default function PanelMiEvento({
   empresaId,
   empresaNombre,
   rol,
+  estadoMiembro,
+  sesionVerificada,
+  empresaActiva,
 }: PanelMiEventoProps) {
   const [formulario, setFormulario] = useState(FORMULARIO_VACIO);
   const [popup, setPopup] = useState<PopupEvento | null>(null);
@@ -159,19 +191,6 @@ export default function PanelMiEvento({
       setError("Firebase no está configurado.");
       return;
     }
-    const requiereFechaEvento = accion === "enviar-revision" ||
-      (popup?.estado === "publicado" && accion === "guardar-borrador");
-    const errores = validarFormularioEvento(
-      formulario,
-      new Date(),
-      requiereFechaEvento,
-    );
-    if (errores.length) {
-      setError(errores.includes("fechaEvento")
-        ? "La fecha y hora del evento son obligatorias para revisión y la fecha no puede ser anterior a hoy."
-        : "Revisa los campos obligatorios, las URLs HTTPS y los límites indicados.");
-      return;
-    }
     const estado = popup?.estado === "publicado" &&
         accion === "guardar-borrador"
       ? obtenerEstadoTrasEdicion(popup.estado)
@@ -181,22 +200,78 @@ export default function PanelMiEvento({
       return;
     }
 
+    const ahora = new Date();
+    const datos = limpiarCamposOpcionalesPopup({
+      ...crearDocumentoPopup(formulario, "borrador"),
+      estado,
+    });
+    const payload = {
+      ...datos,
+      actualizadoEn: serverTimestamp(),
+    };
+    const erroresDiagnostico = diagnosticarPopup(payload, {
+      rol,
+      estadoMiembro,
+      sesionVerificada,
+      empresaActiva,
+      cuestionarioPublicado: cuestionarios.some(
+        ({ id }) => id === formulario.cuestionarioId,
+      ),
+      ahora,
+      actualizadoEnEsServerTimestamp: true,
+    });
+    if (erroresDiagnostico.length) {
+      setError(`No se puede guardar el evento: ${erroresDiagnostico.join(" ")}`);
+      return;
+    }
+
+    const requiereFechaEvento = accion === "enviar-revision" ||
+      (popup?.estado === "publicado" && accion === "guardar-borrador");
+    const erroresFormulario = validarFormularioEvento(
+      formulario,
+      ahora,
+      requiereFechaEvento,
+    );
+    if (erroresFormulario.length) {
+      const mensajes: Record<string, string> = {
+        titulo: "El título es obligatorio y admite hasta 80 caracteres.",
+        resumen: "El resumen es obligatorio y admite hasta 300 caracteres.",
+        cuestionarioId: "Selecciona un cuestionario publicado.",
+        longitud: "La insignia admite hasta 60 caracteres.",
+        fechaEvento: "La fecha y hora deben ser válidas, no anteriores a hoy y respetar el límite de 400 días.",
+        horarios: "Los horarios admiten hasta 4 elementos válidos.",
+        puntos: "Los puntos admiten hasta 4 elementos completos.",
+        imagenUrl: "Las imágenes deben usar una URL HTTPS válida.",
+        anfitrionNombre: "El nombre del anfitrión es obligatorio y admite hasta 80 caracteres.",
+      };
+      setError(erroresFormulario.map((clave) => mensajes[clave]).join(" "));
+      return;
+    }
+
     setGuardando(true);
     setError("");
     try {
-      const datos = crearDocumentoPopup(formulario, estado);
-      await setDoc(doc(db, "popups", empresaId), {
-        ...datos,
-        actualizadoEn: serverTimestamp(),
-      });
+      console.warn(
+        "[Mi evento] Campos enviados a Firestore",
+        Object.entries(payload).map(([campo, valor]) => ({
+          campo,
+          tipo: campo === "actualizadoEn"
+            ? "serverTimestamp"
+            : tipoCampoEnviado(valor),
+        })),
+      );
+      await setDoc(doc(db, "popups", empresaId), payload);
       setPopup(datos);
       setModificado(false);
     } catch (fallo: unknown) {
-      setError(
-        fallo instanceof Error
-          ? `No se pudo guardar el evento: ${fallo.message}`
-          : "No se pudo guardar el evento.",
-      );
+      console.error("[Mi evento] Falló el guardado del evento.", {
+        tipo: fallo instanceof Error ? fallo.name : typeof fallo,
+      });
+      setError(esRechazoPorPermisos(fallo)
+        ? "Firestore rechazó el guardado. Verifica que las reglas publicadas sean las más recientes."
+        : fallo instanceof Error
+        ? `No se pudo guardar el evento: ${fallo.message}`
+        : "No se pudo guardar el evento.");
     } finally {
       setGuardando(false);
     }
@@ -261,6 +336,7 @@ export default function PanelMiEvento({
         <div className="event-editor-layout">
           <form
             className="event-editor-form"
+            noValidate
             onSubmit={(evento: FormEvent<HTMLFormElement>) => {
               evento.preventDefault();
               void guardar("guardar-borrador");
@@ -468,14 +544,14 @@ export default function PanelMiEvento({
             <div className="event-editor-actions">
               <button
                 className="submit-button"
-                disabled={guardando || errores.length > 0}
+                disabled={guardando}
                 type="submit"
               >
                 {guardando ? "Guardando…" : "Guardar borrador"}
               </button>
               <button
                 className="secondary-button"
-                disabled={guardando || erroresRevision.length > 0}
+                disabled={guardando}
                 onClick={() => void guardar("enviar-revision")}
                 type="button"
               >

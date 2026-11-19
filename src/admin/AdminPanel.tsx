@@ -1114,9 +1114,12 @@ export default function AdminPanel() {
           <PanelMiEvento
             empresaId={empresaIdActiva}
             empresaNombre={empresaActiva.nombre}
+            empresaActiva={empresaActiva.estado === "activa"}
             rol={empresaActiva.permisos.rol === "propietario"
               ? "propietario"
               : "admin"}
+            sesionVerificada={usuario?.emailVerified === true}
+            estadoMiembro={empresaActiva.miembroEmpresa ? "activo" : "inactivo"}
           />
         )}
 
