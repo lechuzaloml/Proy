@@ -78,6 +78,7 @@ export default function Landing({
   const [modalAbierto, setModalAbierto] = useState(false);
   const [popups, setPopups] = useState<PopupListado[]>([]);
   const [indicePopup, setIndicePopup] = useState(0);
+  const [indiceImagenPopup, setIndiceImagenPopup] = useState(0);
   const [eventosCargados, setEventosCargados] = useState(false);
   const [errorPopups, setErrorPopups] = useState("");
   const modalRef = useRef<HTMLDivElement>(null);
@@ -355,6 +356,32 @@ export default function Landing({
   }, [modalAbierto, popups.length]);
 
   const popupActivo = popups[indicePopup] ?? popups[0] ?? POPUP_DEMO;
+  const imagenesPopup: { src: string; alt: string }[] = [];
+  if (popupActivo.imagenUrl) {
+    imagenesPopup.push({
+      src: popupActivo.imagenUrl,
+      alt: popupActivo.titulo,
+    });
+  }
+  if (popupActivo.anfitrion?.fotoUrl) {
+    imagenesPopup.push({
+      src: popupActivo.anfitrion.fotoUrl,
+      alt: popupActivo.anfitrion.nombre,
+    });
+  }
+  const imagenesPopupUnicas = imagenesPopup.filter(
+    (imagen, indice, todas) =>
+      todas.findIndex((candidata) => candidata.src === imagen.src) === indice,
+  );
+  const imagenActualPopup = imagenesPopupUnicas[indiceImagenPopup];
+
+  useEffect(() => {
+    setIndiceImagenPopup(0);
+  }, [
+    popupActivo.id,
+    popupActivo.imagenUrl,
+    popupActivo.anfitrion?.fotoUrl,
+  ]);
 
   function cerrarModal() {
     setModalAbierto(false);
@@ -393,15 +420,17 @@ export default function Landing({
           aria-describedby="promo-description"
         >
           <div className="promo-modal" ref={modalRef}>
-            <button
-              aria-label="Cerrar promoción"
-              className="promo-modal-close"
-              ref={cerrarRef}
-              onClick={cerrarModal}
-              type="button"
-            >
-              ×
-            </button>
+            <div className="promo-modal-header">
+              <button
+                aria-label="Cerrar promoción"
+                className="promo-modal-close"
+                ref={cerrarRef}
+                onClick={cerrarModal}
+                type="button"
+              >
+                ×
+              </button>
+            </div>
 
             <div className="promo-modal-content">
               <div className="promo-modal-copy">
@@ -437,13 +466,27 @@ export default function Landing({
                 </div>
               </div>
 
-              <div aria-label="Imagen del ponente" className="promo-modal-visual">
-                <img
-                  alt={popupActivo.anfitrion?.nombre ?? popupActivo.titulo}
-                  className="promo-modal-visual-inner promo-modal-visual-image"
-                  src={popupActivo.anfitrion?.fotoUrl ??
-                    popupActivo.imagenUrl ?? "/pasted-image.png"}
-                />
+              <div aria-label="Imagen del evento" className="promo-modal-visual">
+                {imagenActualPopup ? (
+                  <img
+                    alt={imagenActualPopup.alt}
+                    className="promo-modal-visual-inner promo-modal-visual-image"
+                    onError={() => {
+                      setIndiceImagenPopup((actual) =>
+                        Math.min(actual + 1, imagenesPopupUnicas.length),
+                      );
+                    }}
+                    src={imagenActualPopup.src}
+                  />
+                ) : (
+                  <div
+                    aria-label="Imagen no disponible"
+                    className="promo-modal-visual-inner promo-modal-visual-image popup-image-fallback"
+                    role="img"
+                  >
+                    Imagen no disponible
+                  </div>
+                )}
               </div>
             </div>
             {popups.length > 1 && (

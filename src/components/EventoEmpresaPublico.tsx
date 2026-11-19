@@ -45,6 +45,7 @@ export default function EventoEmpresaPublico({
     useState<RegistroConfirmado | null>(null);
   const [cargando, setCargando] = useState(true);
   const [disponible, setDisponible] = useState(false);
+  const [imagenEventoFallida, setImagenEventoFallida] = useState(false);
   const [error, setError] = useState("");
 
   useEffect(() => {
@@ -131,6 +132,7 @@ export default function EventoEmpresaPublico({
           return;
         }
         if (!cancelado) {
+          setImagenEventoFallida(false);
           setPopup(popupCargado);
           setDisponible(true);
         }
@@ -221,11 +223,24 @@ export default function EventoEmpresaPublico({
             </span>
             <h1>{popup.titulo}</h1>
             {popup.imagenUrl && (
-              <img
-                alt=""
-                className="registro-evento__event-image"
-                src={popup.imagenUrl}
-              />
+              imagenEventoFallida
+                ? (
+                  <div
+                    aria-label="Imagen no disponible"
+                    className="registro-evento__event-image registro-evento__event-image-fallback popup-image-fallback"
+                    role="img"
+                  >
+                    Imagen no disponible
+                  </div>
+                )
+                : (
+                  <img
+                    alt=""
+                    className="registro-evento__event-image"
+                    onError={() => setImagenEventoFallida(true)}
+                    src={popup.imagenUrl}
+                  />
+                )
             )}
             {popup.fechaEvento && (
               <p className="registro-evento__date">

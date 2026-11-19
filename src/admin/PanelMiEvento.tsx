@@ -371,8 +371,14 @@ export default function PanelMiEvento({
               />
             </label>
             <label>
-              Imagen HTTPS (opcional)
+              Imagen de portada del evento (URL HTTPS, opcional)
+              <span className="event-editor-help" id="event-image-help">
+                Pega el enlace directo a una imagen pública. Se mostrará en la
+                página del evento; si no agregas una foto del anfitrión,
+                también se usará en el popup.
+              </span>
               <input
+                aria-describedby="event-image-help"
                 onChange={(evento) =>
                   cambiar({ imagenUrl: evento.target.value })}
                 type="url"
@@ -381,7 +387,11 @@ export default function PanelMiEvento({
             </label>
             <label>
               Fecha del evento
+              <span className="event-editor-help" id="event-date-help">
+                Día en que comienza la actividad.
+              </span>
               <input
+                aria-describedby="event-date-help"
                 min={fechaMinima}
                 max={fechaMaximaFormulario}
                 onChange={(evento) => cambiar({ fecha: evento.target.value })}
@@ -390,19 +400,30 @@ export default function PanelMiEvento({
               />
             </label>
             <label>
-              Hora del evento
+              Hora de inicio del evento
+              <span className="event-editor-help" id="event-time-help">
+                Es la hora principal que se muestra junto a la fecha; no es la
+                lista de horarios que el asistente puede elegir al registrarse.
+              </span>
               <input
+                aria-describedby="event-time-help"
                 onChange={(evento) => cambiar({ hora: evento.target.value })}
                 type="time"
                 value={formulario.hora}
               />
             </label>
             <fieldset>
-              <legend>Horarios (máximo 4)</legend>
+              <legend>Opciones de horario para registrarse (máximo 4)</legend>
+              <p className="event-editor-help" id="event-schedule-help">
+                Son las sesiones o turnos que la persona podrá elegir en el
+                formulario de registro. Si solo hay una sesión, agrega aquí su
+                horario; la fecha y hora de inicio se indican arriba.
+              </p>
               {formulario.horarios.map((horario, indice) => (
                 <div className="event-editor-inline" key={indice}>
                   <input
                     aria-label={`Horario ${indice + 1}`}
+                    aria-describedby="event-schedule-help"
                     maxLength={80}
                     onChange={(evento) => {
                       const horarios = [...formulario.horarios];
@@ -456,12 +477,18 @@ export default function PanelMiEvento({
               />
             </label>
             <fieldset>
-              <legend>Puntos del evento (máximo 4)</legend>
+              <legend>Temas o aprendizajes del evento (máximo 4)</legend>
+              <p className="event-editor-help" id="event-topics-help">
+                Son los temas que se cubrirán o lo que aprenderán los
+                asistentes; no son puntos de calificación. Aparecerán en la
+                página pública bajo “Lo que encontrarás”.
+              </p>
               {formulario.puntos.map((punto, indice) => (
                 <div className="event-editor-point" key={indice}>
                   <label>
-                    Título del punto {indice + 1}
+                    Tema o aprendizaje {indice + 1}
                     <input
+                      aria-describedby="event-topics-help"
                       maxLength={80}
                       onChange={(evento) => {
                         const puntos = [...formulario.puntos];
@@ -475,8 +502,9 @@ export default function PanelMiEvento({
                     />
                   </label>
                   <label>
-                    Descripción
+                    ¿Qué incluye este tema?
                     <textarea
+                      aria-describedby="event-topics-help"
                       maxLength={300}
                       onChange={(evento) => {
                         const puntos = [...formulario.puntos];

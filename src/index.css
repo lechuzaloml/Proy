@@ -6559,6 +6559,15 @@ button {
   line-height: 1.5;
 }
 
+.event-editor-help {
+  display: block;
+  margin: 0;
+  color: var(--color-gray);
+  font-size: 0.9rem;
+  font-weight: 400;
+  line-height: 1.5;
+}
+
 .event-preview {
   min-width: 0;
   padding: 1.25rem;
@@ -8304,8 +8313,11 @@ textarea {
 
 .promo-modal {
   position: relative;
+  display: flex;
+  flex-direction: column;
   width: min(100%, 980px);
-  max-height: min(90vh, 640px);
+  max-height: min(90vh, 720px);
+  max-height: min(90dvh, 720px);
   overflow: hidden;
   border: 1px solid var(--color-divider);
   border-radius: 18px;
@@ -8314,10 +8326,20 @@ textarea {
   animation: promo-modal-in 260ms ease-out both;
 }
 
+.promo-modal-header {
+  display: flex;
+  flex: 0 0 auto;
+  justify-content: flex-end;
+  padding: 0.65rem 1rem 0;
+}
+
 .promo-modal-content {
   display: grid;
+  flex: 1 1 auto;
   grid-template-columns: minmax(0, 1.3fr) minmax(270px, 0.92fr);
-  min-height: 420px;
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
 }
 
 .promo-modal-copy {
@@ -8383,10 +8405,6 @@ textarea {
 }
 
 .promo-modal-close {
-  position: absolute;
-  top: 1rem;
-  right: 1rem;
-  z-index: 1;
   width: 2.25rem;
   height: 2.25rem;
   border: 1px solid var(--color-divider);
@@ -8402,6 +8420,8 @@ textarea {
   display: flex;
   align-items: center;
   justify-content: center;
+  min-width: 0;
+  min-height: 0;
   padding: clamp(1rem, 2vw, 2rem);
   border-left: 1px solid var(--color-divider);
   background:
@@ -8422,10 +8442,35 @@ textarea {
 .promo-modal-visual-image {
   display: block;
   width: min(100%, 380px);
-  height: 100%;
-  max-height: 420px;
-  min-height: 300px;
+  height: min(50vh, 420px);
+  height: min(50dvh, 420px);
+  min-height: 0;
   border-radius: 18px;
+  object-fit: contain;
+}
+
+.promo-carousel-controls {
+  flex: 0 0 auto;
+  padding-bottom: max(1rem, env(safe-area-inset-bottom));
+}
+
+.popup-image-fallback {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1.5rem;
+  border: 1px solid var(--color-divider);
+  border-radius: 18px;
+  background:
+    radial-gradient(circle at 25% 20%, rgb(247 201 187 / 70%), transparent 36%),
+    linear-gradient(135deg, #fff4ef, #eaf0ff);
+  color: var(--color-graphite);
+  font-weight: 700;
+  text-align: center;
+}
+
+.registro-evento__event-image-fallback {
+  height: clamp(12rem, 30vw, 18rem);
 }
 
 @keyframes promo-modal-in {
@@ -8447,12 +8492,17 @@ textarea {
 
   .promo-modal {
     width: min(100%, 440px);
-    max-height: min(90vh, 640px);
+    max-height: calc(100vh - 2rem);
+    max-height: calc(100dvh - 2rem);
   }
 
   .promo-modal-content {
     grid-template-columns: minmax(0, 1fr);
     min-height: 0;
+  }
+
+  .promo-modal-header {
+    padding: 0.5rem 0.75rem 0;
   }
 
   .promo-modal-copy {
@@ -8468,9 +8518,19 @@ textarea {
   }
 
   .promo-modal-visual {
-    min-height: 180px;
+    min-height: 0;
+    padding: 0.75rem;
     border-left: 0;
     border-top: 1px solid var(--color-divider);
+  }
+
+  .promo-modal-visual-image {
+    height: min(32vh, 220px);
+    height: min(32dvh, 220px);
+  }
+
+  .registro-evento__event-image-fallback {
+    height: 12rem;
   }
 }
 
