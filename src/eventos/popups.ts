@@ -24,6 +24,7 @@ export interface PopupEvento {
   imagenUrl?: string;
   fechaEvento?: Timestamp;
   venceEn?: Timestamp;
+  actualizadoEn?: Timestamp;
   horarios?: string[];
   anfitrion?: {
     nombre: string;
@@ -156,6 +157,9 @@ export function popupDesdeDatos(
       : {}),
     ...(documento.venceEn instanceof Timestamp
       ? { venceEn: documento.venceEn }
+      : {}),
+    ...(documento.actualizadoEn instanceof Timestamp
+      ? { actualizadoEn: documento.actualizadoEn }
       : {}),
     ...(horarios ? { horarios } : {}),
     ...(anfitrion ? { anfitrion } : {}),

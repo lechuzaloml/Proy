@@ -11,6 +11,7 @@ import {
   limpiarCamposOpcionalesPopup,
   motivoDescartePopup,
   obtenerEstadoTrasEdicion,
+  popupDesdeDatos,
   transicionarPopup,
   validarFormularioEvento,
   validarRegistroEvento,
@@ -361,6 +362,30 @@ describe("funciones puras de eventos por empresa", () => {
     expect(limpio.anfitrion).not.toHaveProperty("fotoUrl");
   });
 
+  it("interpreta campos guardados de Firestore y conserva el ID del documento", () => {
+    const fechaEvento = Timestamp.fromDate(new Date(2026, 0, 5, 10));
+    const venceEn = Timestamp.fromDate(new Date(2026, 0, 6, 23, 59));
+    const actualizadoEn = Timestamp.fromDate(new Date(2026, 0, 1));
+    const popup = popupDesdeDatos("empresa-real-id", {
+      titulo: "Evento vigente",
+      resumen: "Descripción",
+      cuestionarioId: "cuestionario-real-id",
+      estado: "publicado",
+      fechaEvento,
+      venceEn,
+      actualizadoEn,
+    });
+
+    expect(popup).toMatchObject({
+      id: "empresa-real-id",
+      estado: "publicado",
+      cuestionarioId: "cuestionario-real-id",
+      fechaEvento,
+      venceEn,
+      actualizadoEn,
+    });
+  });
+
   it("valida longitudes, límites de listas y URLs HTTPS del formulario", () => {
     const ahora = new Date(2026, 0, 1, 12);
     expect(validarFormularioEvento(formularioValido, ahora)).toEqual([]);
@@ -499,11 +524,38 @@ describe("funciones puras de eventos por empresa", () => {
         venceEn,
         cuestionarioId: "cuestionario-e",
       },
+      {
+        id: "pendiente",
+        estado: "pendiente" as const,
+        fechaEvento: Timestamp.fromDate(new Date(2026, 0, 5)),
+        venceEn,
+        cuestionarioId: "cuestionario-f",
+      },
+      {
+        id: "rechazado",
+        estado: "rechazado" as const,
+        fechaEvento: Timestamp.fromDate(new Date(2026, 0, 5)),
+        venceEn,
+        cuestionarioId: "cuestionario-g",
+      },
     ];
     expect(filtrarPopupsPublicadosActivos(
       popups,
-      new Map([["activa", true], ["inactiva", false], ["vencido", true]]),
-      new Map([["activa/cuestionario-a", true], ["inactiva/cuestionario-b", true]]),
+      new Map([
+        ["activa", true],
+        ["inactiva", false],
+        ["vencido", true],
+        ["borrador", true],
+        ["pendiente", true],
+        ["rechazado", true],
+      ]),
+      new Map([
+        ["activa/cuestionario-a", true],
+        ["inactiva/cuestionario-b", true],
+        ["borrador/cuestionario-e", true],
+        ["pendiente/cuestionario-f", true],
+        ["rechazado/cuestionario-g", true],
+      ]),
       new Date(2026, 0, 1),
     )).toEqual([popups[0]]);
     expect(motivoDescartePopup(popups[2], true, false, new Date(2026, 0, 1)))

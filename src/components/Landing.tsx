@@ -7,7 +7,7 @@ import {
   collection,
   doc,
   getDoc,
-  getDocs,
+  onSnapshot,
   query,
   where,
 } from "firebase/firestore";
@@ -90,153 +90,162 @@ export default function Landing({
 
   useEffect(() => {
     let cancelado = false;
-    async function cargarPopupsPublicados() {
-      const database = db;
-      if (!database) {
-        setErrorPopups("No se pudieron consultar los eventos publicados.");
-        setEventosCargados(true);
-        return;
-      }
-      try {
-        const resultado = await getDocs(query(
-          collection(database, "popups"),
-          where("estado", "==", "publicado"),
-        ));
-        const publicados = resultado.docs.flatMap((snapshot) => {
-          const popup = popupDesdeDatos(snapshot.id, snapshot.data());
-          if (!popup) {
-            console.warn("[carrusel] Popup descartado", {
-              empresaId: snapshot.id,
-              motivo: "el documento tiene un formato no válido",
-            });
-            return [];
-          }
-          return [popup];
-        });
-        const candidatos = publicados.filter((popup) => {
-          if (!popup.fechaEvento) {
-            console.warn("[carrusel] Popup descartado", {
-              empresaId: popup.id,
-              motivo: "no tiene fecha del evento",
-            });
-            return false;
-          }
-          if (!popup.venceEn) {
-            console.warn("[carrusel] Popup descartado", {
-              empresaId: popup.id,
-              motivo: "no tiene fecha de vencimiento",
-            });
-            return false;
-          }
-          if (motivoDescartePopup(popup, true, true) === "está vencido") {
-            console.warn("[carrusel] Popup descartado", {
-              empresaId: popup.id,
-              motivo: "el evento está vencido",
-            });
-            return false;
-          }
-          return true;
-        });
-        const empresaActiva = new Map<string, boolean>();
-        const nombresEmpresas = new Map<string, string>();
-        const cuestionarioPublicado = new Map<string, boolean>();
-        const erroresConsulta = new Map<string, string>();
-        await Promise.all(candidatos.map(async (popup) => {
-          try {
-            const empresa = await getDoc(doc(database, "empresas", popup.id));
-            const activa = empresa.exists() &&
-              empresa.data().estado === "activa";
-            empresaActiva.set(popup.id, activa);
-            if (empresa.exists()) {
-              const nombre = empresa.data().nombre;
-              nombresEmpresas.set(
-                popup.id,
-                typeof nombre === "string" && nombre.trim()
-                  ? nombre
-                  : popup.id,
-              );
+    let revisionConsulta = 0;
+    const database = db;
+    if (!database) {
+      setErrorPopups("No se pudieron consultar los eventos publicados.");
+      setEventosCargados(true);
+      return;
+    }
+
+    const consulta = query(
+      collection(database, "popups"),
+      where("estado", "==", "publicado"),
+    );
+    const cancelarSuscripcion = onSnapshot(
+      consulta,
+      (resultado) => {
+        const revision = ++revisionConsulta;
+        void (async () => {
+          const publicados = resultado.docs.flatMap((snapshot) => {
+            const popup = popupDesdeDatos(snapshot.id, snapshot.data());
+            if (!popup) {
+              console.warn("[carrusel] Popup descartado", {
+                empresaId: snapshot.id,
+                motivo: "el documento tiene un formato no válido",
+              });
+              return [];
             }
-            if (!activa) {
-              return;
-            }
-          } catch (fallo: unknown) {
-            erroresConsulta.set(
-              popup.id,
-              `no se pudo verificar si la empresa está activa (${obtenerCodigoError(fallo)})`,
-            );
-            empresaActiva.set(popup.id, false);
-            return;
-          }
-          try {
-            const cuestionario = await getDoc(doc(
-              database,
-              "empresas",
-              popup.id,
-              "cuestionarios",
-              popup.cuestionarioId,
-            ));
-            cuestionarioPublicado.set(
-              `${popup.id}/${popup.cuestionarioId}`,
-              cuestionario.exists() &&
-                cuestionario.data().estado === "publicado",
-            );
-          } catch (fallo: unknown) {
-            erroresConsulta.set(
-              popup.id,
-              `no se pudo verificar el cuestionario publicado (${obtenerCodigoError(fallo)})`,
-            );
-            cuestionarioPublicado.set(
-              `${popup.id}/${popup.cuestionarioId}`,
-              false,
-            );
-          }
-        }));
-        if (!cancelado) {
-          for (const popup of candidatos) {
-            const motivo = erroresConsulta.get(popup.id) ??
-              motivoDescartePopup(
-                popup,
-                empresaActiva.get(popup.id),
-                cuestionarioPublicado.get(
-                  `${popup.id}/${popup.cuestionarioId}`,
-                ),
-              );
-            if (motivo) {
+            return [popup];
+          });
+          const candidatos = publicados.filter((popup) => {
+            if (!popup.fechaEvento) {
               console.warn("[carrusel] Popup descartado", {
                 empresaId: popup.id,
-                motivo,
+                motivo: "no tiene fecha del evento",
               });
+              return false;
             }
-          }
-          setPopups([
-            POPUP_DEMO,
-            ...filtrarPopupsPublicadosActivos(
-              candidatos,
-              empresaActiva,
-              cuestionarioPublicado,
-            ).map(
-              (popup) => ({
+            if (!popup.venceEn) {
+              console.warn("[carrusel] Popup descartado", {
+                empresaId: popup.id,
+                motivo: "no tiene fecha de vencimiento",
+              });
+              return false;
+            }
+            if (motivoDescartePopup(popup, true, true) === "está vencido") {
+              console.warn("[carrusel] Popup descartado", {
+                empresaId: popup.id,
+                motivo: "el evento está vencido",
+              });
+              return false;
+            }
+            return true;
+          });
+          const empresaActiva = new Map<string, boolean>();
+          const nombresEmpresas = new Map<string, string>();
+          const cuestionarioPublicado = new Map<string, boolean>();
+          const erroresConsulta = new Map<string, string>();
+          await Promise.all(candidatos.map(async (popup) => {
+            try {
+              const empresa = await getDoc(doc(database, "empresas", popup.id));
+              const activa = empresa.exists() &&
+                empresa.data().estado === "activa";
+              empresaActiva.set(popup.id, activa);
+              if (empresa.exists()) {
+                const nombre = empresa.data().nombre;
+                nombresEmpresas.set(
+                  popup.id,
+                  typeof nombre === "string" && nombre.trim()
+                    ? nombre
+                    : popup.id,
+                );
+              }
+              if (!activa) {
+                return;
+              }
+            } catch (fallo: unknown) {
+              erroresConsulta.set(
+                popup.id,
+                `no se pudo verificar si la empresa está activa (${obtenerCodigoError(fallo)})`,
+              );
+              empresaActiva.set(popup.id, false);
+              return;
+            }
+            try {
+              const cuestionario = await getDoc(doc(
+                database,
+                "empresas",
+                popup.id,
+                "cuestionarios",
+                popup.cuestionarioId,
+              ));
+              cuestionarioPublicado.set(
+                `${popup.id}/${popup.cuestionarioId}`,
+                cuestionario.exists() &&
+                  cuestionario.data().estado === "publicado",
+              );
+            } catch (fallo: unknown) {
+              erroresConsulta.set(
+                popup.id,
+                `no se pudo verificar el cuestionario publicado (${obtenerCodigoError(fallo)})`,
+              );
+              cuestionarioPublicado.set(
+                `${popup.id}/${popup.cuestionarioId}`,
+                false,
+              );
+            }
+          }));
+          if (!cancelado && revision === revisionConsulta) {
+            for (const popup of candidatos) {
+              const motivo = erroresConsulta.get(popup.id) ??
+                motivoDescartePopup(
+                  popup,
+                  empresaActiva.get(popup.id),
+                  cuestionarioPublicado.get(
+                    `${popup.id}/${popup.cuestionarioId}`,
+                  ),
+                );
+              if (motivo) {
+                console.warn("[carrusel] Popup descartado", {
+                  empresaId: popup.id,
+                  motivo,
+                });
+              }
+            }
+            setPopups([
+              POPUP_DEMO,
+              ...filtrarPopupsPublicadosActivos(
+                candidatos,
+                empresaActiva,
+                cuestionarioPublicado,
+              ).map((popup) => ({
                 ...popup,
                 empresaNombre: nombresEmpresas.get(popup.id) ?? popup.id,
-              }),
-            ),
-          ]);
-          setErrorPopups("");
-        }
-      } catch (fallo: unknown) {
+              })),
+            ]);
+            setErrorPopups("");
+            setEventosCargados(true);
+          }
+        })().catch((fallo: unknown) => {
+          console.error("[carrusel] No se pudieron cargar los eventos publicados.", fallo);
+          if (!cancelado && revision === revisionConsulta) {
+            setErrorPopups("No se pudieron cargar los eventos publicados.");
+            setEventosCargados(true);
+          }
+        });
+      },
+      (fallo: unknown) => {
         console.error("[carrusel] No se pudieron cargar los eventos publicados.", fallo);
         if (!cancelado) {
           setErrorPopups("No se pudieron cargar los eventos publicados.");
-        }
-      } finally {
-        if (!cancelado) {
           setEventosCargados(true);
         }
-      }
-    }
-    void cargarPopupsPublicados();
+      },
+    );
     return () => {
       cancelado = true;
+      cancelarSuscripcion();
     };
   }, []);
 
@@ -245,7 +254,9 @@ export default function Landing({
       return;
     }
     const claveSesion = `clearIaPopupVisto:${
-      popups.map(({ id }) => id).sort().join("|")
+      popups.map(({ id, actualizadoEn }) =>
+        `${id}:${actualizadoEn?.toMillis() ?? ""}`
+      ).sort().join("|")
     }`;
     let mostrado = false;
     try {
