@@ -804,3 +804,10 @@ export function filtrarPopupsPublicadosActivos<T extends {
     ) === null
   );
 }
+
+export function seleccionarPopupsInicio(
+  elegibles: PopupListado[],
+  predeterminado: PopupListado,
+): PopupListado[] {
+  return elegibles.length > 0 ? elegibles : [predeterminado];
+}

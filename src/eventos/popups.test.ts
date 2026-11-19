@@ -12,6 +12,7 @@ import {
   motivoDescartePopup,
   obtenerEstadoTrasEdicion,
   popupDesdeDatos,
+  seleccionarPopupsInicio,
   transicionarPopup,
   validarFormularioEvento,
   validarRegistroEvento,
@@ -384,6 +385,27 @@ describe("funciones puras de eventos por empresa", () => {
       venceEn,
       actualizadoEn,
     });
+  });
+
+  it("usa el popup predeterminado solo cuando no hay eventos elegibles", () => {
+    const predeterminado = {
+      id: "demo",
+      titulo: "Demo",
+      resumen: "Demo",
+      cuestionarioId: "",
+      estado: "publicado" as const,
+    };
+    const evento = {
+      id: "empresa-a",
+      titulo: "Evento",
+      resumen: "Descripción",
+      cuestionarioId: "cuestionario-a",
+      estado: "publicado" as const,
+    };
+
+    expect(seleccionarPopupsInicio([evento], predeterminado)).toEqual([evento]);
+    expect(seleccionarPopupsInicio([], predeterminado))
+      .toEqual([predeterminado]);
   });
 
   it("valida longitudes, límites de listas y URLs HTTPS del formulario", () => {

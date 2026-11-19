@@ -18,6 +18,7 @@ import {
   formatearFechaEvento,
   motivoDescartePopup,
   popupDesdeDatos,
+  seleccionarPopupsInicio,
   type PopupListado,
 } from "../eventos/popups";
 
@@ -75,7 +76,7 @@ export default function Landing({
   onAbrirRegistroEvento,
 }: LandingProps) {
   const [modalAbierto, setModalAbierto] = useState(false);
-  const [popups, setPopups] = useState<PopupListado[]>([POPUP_DEMO]);
+  const [popups, setPopups] = useState<PopupListado[]>([]);
   const [indicePopup, setIndicePopup] = useState(0);
   const [eventosCargados, setEventosCargados] = useState(false);
   const [errorPopups, setErrorPopups] = useState("");
@@ -104,8 +105,12 @@ export default function Landing({
     );
     const cancelarSuscripcion = onSnapshot(
       consulta,
+      { includeMetadataChanges: true },
       (resultado) => {
         const revision = ++revisionConsulta;
+        if (resultado.metadata.fromCache && resultado.empty) {
+          return;
+        }
         void (async () => {
           const publicados = resultado.docs.flatMap((snapshot) => {
             const popup = popupDesdeDatos(snapshot.id, snapshot.data());
@@ -197,6 +202,11 @@ export default function Landing({
             }
           }));
           if (!cancelado && revision === revisionConsulta) {
+            const elegibles = filtrarPopupsPublicadosActivos(
+              candidatos,
+              empresaActiva,
+              cuestionarioPublicado,
+            );
             for (const popup of candidatos) {
               const motivo = erroresConsulta.get(popup.id) ??
                 motivoDescartePopup(
@@ -213,17 +223,13 @@ export default function Landing({
                 });
               }
             }
-            setPopups([
-              POPUP_DEMO,
-              ...filtrarPopupsPublicadosActivos(
-                candidatos,
-                empresaActiva,
-                cuestionarioPublicado,
-              ).map((popup) => ({
+            setPopups(seleccionarPopupsInicio(
+              elegibles.map((popup) => ({
                 ...popup,
                 empresaNombre: nombresEmpresas.get(popup.id) ?? popup.id,
               })),
-            ]);
+              POPUP_DEMO,
+            ));
             setErrorPopups("");
             setEventosCargados(true);
           }
@@ -231,14 +237,21 @@ export default function Landing({
           console.error("[carrusel] No se pudieron cargar los eventos publicados.", fallo);
           if (!cancelado && revision === revisionConsulta) {
             setErrorPopups("No se pudieron cargar los eventos publicados.");
+            setPopups([]);
+            setModalAbierto(false);
             setEventosCargados(true);
           }
         });
       },
       (fallo: unknown) => {
-        console.error("[carrusel] No se pudieron cargar los eventos publicados.", fallo);
+        console.error("[carrusel] Error de suscripción a eventos publicados.", {
+          codigo: obtenerCodigoError(fallo),
+          error: fallo,
+        });
         if (!cancelado) {
           setErrorPopups("No se pudieron cargar los eventos publicados.");
+          setPopups([]);
+          setModalAbierto(false);
           setEventosCargados(true);
         }
       },
@@ -250,34 +263,35 @@ export default function Landing({
   }, []);
 
   useEffect(() => {
-    if (!eventosCargados) {
+    if (!eventosCargados || errorPopups || popups.length === 0) {
       return;
     }
-    const claveSesion = `clearIaPopupVisto:${
-      popups.map(({ id, actualizadoEn }) =>
-        `${id}:${actualizadoEn?.toMillis() ?? ""}`
-      ).sort().join("|")
-    }`;
-    let mostrado = false;
-    try {
-      mostrado = window.sessionStorage.getItem(claveSesion) === "1";
-    } catch (fallo: unknown) {
-      console.error("No se pudo consultar la sesión del popup.", fallo);
-    }
-    if (mostrado) {
-      return;
+    const tieneEventosPublicados = popups[0] !== POPUP_DEMO;
+    const claveSesion = "clearIaPopupVisto:default";
+    if (!tieneEventosPublicados) {
+      let mostrado = false;
+      try {
+        mostrado = window.sessionStorage.getItem(claveSesion) === "1";
+      } catch (fallo: unknown) {
+        console.error("No se pudo consultar la sesión del popup.", fallo);
+      }
+      if (mostrado) {
+        return;
+      }
     }
     const temporizador = window.setTimeout(() => {
-      try {
-        window.sessionStorage.setItem(claveSesion, "1");
-      } catch (fallo: unknown) {
-        console.error("No se pudo guardar la sesión del popup.", fallo);
+      if (!tieneEventosPublicados) {
+        try {
+          window.sessionStorage.setItem(claveSesion, "1");
+        } catch (fallo: unknown) {
+          console.error("No se pudo guardar la sesión del popup.", fallo);
+        }
       }
       setModalAbierto(true);
     }, 250);
 
     return () => window.clearTimeout(temporizador);
-  }, [eventosCargados, popups]);
+  }, [eventosCargados, errorPopups, popups]);
 
   useEffect(() => {
     if (!modalAbierto) {
@@ -340,7 +354,7 @@ export default function Landing({
     };
   }, [modalAbierto, popups.length]);
 
-  const popupActivo = popups[indicePopup] ?? POPUP_DEMO;
+  const popupActivo = popups[indicePopup] ?? popups[0] ?? POPUP_DEMO;
 
   function cerrarModal() {
     setModalAbierto(false);
