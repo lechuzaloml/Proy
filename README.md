@@ -79,6 +79,46 @@ python -m pip install -r requirements.txt
 Copy-Item .env.example .env
 ```
 
+### Activar el entorno virtual
+
+Desde la raíz del proyecto (`PROYECTO\Proy`), entra primero en la carpeta
+Django y activa su entorno virtual.
+
+En PowerShell:
+
+```powershell
+cd Merkatics2Django
+.\venv\Scripts\Activate.ps1
+```
+
+Si PowerShell bloquea la ejecución del script, puedes abrir una sesión normal
+sin cambiar la configuración global del equipo:
+
+```powershell
+powershell -ExecutionPolicy Bypass -NoProfile
+.\venv\Scripts\Activate.ps1
+```
+
+En Símbolo del sistema (CMD):
+
+```bat
+cd Merkatics2Django
+venv\Scripts\activate.bat
+```
+
+Cuando el entorno está activo, el nombre `(venv)` aparece al inicio del
+indicador de terminal. Para salir del entorno virtual, ejecuta:
+
+```text
+deactivate
+```
+
+Solo necesitas crear el entorno virtual una vez:
+
+```powershell
+py -3.14 -m venv venv
+```
+
 Edita `.env`: establece `SECRET_KEY`, `MYSQL_NAME`, `MYSQL_USER`,
 `MYSQL_PASSWORD`, `MYSQL_HOST` y `MYSQL_PORT`. No compartas ni subas `.env`.
 Genera un `SECRET_KEY` local con:
