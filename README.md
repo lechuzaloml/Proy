@@ -65,9 +65,9 @@ Usa Python 3.10 o superior; la versión probada para esta base es Python 3.14.
   que esté habilitado en tu instalación (normalmente `caching_sha2_password`);
   no configures una cuenta que dependa de `mysql_native_password` si el servidor
   no carga ese plugin.
-- Las credenciales de Stripe, Google OAuth y Gemini son opcionales para esta
-  fase, excepto `STRIPE_SECRET_KEY`: usa un valor de prueba con prefijo
-  `sk_test_`. La aplicación se niega a arrancar con claves `sk_live_`.
+- Google OAuth para iniciar sesión; crea un cliente OAuth de tipo aplicación
+  web en Google Cloud y registra `http://localhost:8000` como origen autorizado.
+  `GOOGLE_CLIENT_ID` es el identificador público del cliente, no un secreto.
 
 ### Preparación en Windows PowerShell
 
@@ -120,15 +120,19 @@ py -3.14 -m venv venv
 ```
 
 Edita `.env`: establece `SECRET_KEY`, `MYSQL_NAME`, `MYSQL_USER`,
-`MYSQL_PASSWORD`, `MYSQL_HOST` y `MYSQL_PORT`. No compartas ni subas `.env`.
+`MYSQL_PASSWORD`, `MYSQL_HOST`, `MYSQL_PORT` y el `GOOGLE_CLIENT_ID` del cliente
+web creado en Google Cloud. No compartas ni subas `.env`.
 Genera un `SECRET_KEY` local con:
 
 ```powershell
 python -c "from django.core.management.utils import get_random_secret_key; print(get_random_secret_key())"
 ```
 
-`STRIPE_SECRET_KEY` debe seguir comenzando con `sk_test_`; los demás valores
-son marcadores de posición hasta implementar esas integraciones.
+La página de acceso carga el script oficial de Google Identity Services desde
+`https://accounts.google.com/gsi/client`. El botón de Google envía el
+`credential` al servidor, que verifica la firma, expiración, audiencia y correo
+verificado usando `google-auth`. No guardes ese token: solo se conserva el UID
+del usuario en la sesión.
 
 ```powershell
 python manage.py check
@@ -138,13 +142,19 @@ python manage.py collectstatic --noinput
 python manage.py runserver
 ```
 
+Después de iniciar sesión por primera vez con la cuenta que administrará la
+plataforma, créala explícitamente desde la terminal:
+
+```powershell
+python manage.py crear_admin_plataforma correo@ejemplo.com
+```
+
 `settings_test` usa SQLite en memoria solo para pruebas unitarias; la
 configuración normal siempre usa MySQL. Para instalar en otra versión de
 Python, cambia `py -3.14` por la versión instalada que sea 3.10 o superior.
 
-En esta fase no hay modelos de negocio ni migraciones de aplicación. Las
-migraciones futuras se generarán con `makemigrations` y se aplicarán con
-`migrate`; no se usa un archivo `.sql` como esquema.
+El acceso, las empresas, las membresías y los permisos están implementados en
+Django con migraciones propias. No se usa un archivo `.sql` como esquema.
 
 ### Stripe CLI (opcional)
 

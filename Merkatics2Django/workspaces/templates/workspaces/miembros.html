@@ -1,0 +1,51 @@
+{% extends "users/base.html" %}
+{% block title %}Miembros · {{ workspace.nombre }}{% endblock %}
+{% block content %}
+<div class="page-heading">
+  <div>
+    <p class="eyebrow">{{ workspace.nombre }}</p>
+    <h1>Miembros</h1>
+  </div>
+  <a href="{% url 'selector_workspace' %}">Cambiar empresa</a>
+</div>
+<section class="card">
+  <h2>Personas con acceso</h2>
+  {% if membresias %}
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>Correo</th><th>Rol</th><th>Estado</th><th></th></tr></thead>
+        <tbody>
+        {% for fila in membresias %}
+          <tr>
+            <td>{{ fila.membresia.correo }}</td>
+            <td>{{ fila.membresia.get_rol_display }}</td>
+            <td>{{ fila.membresia.get_estado_display }}</td>
+            <td>
+              {% if fila.puede_gestionar %}
+                <a href="{% url 'miembro_detalle' workspace_uid=workspace.uid uid=fila.membresia.uid %}">Administrar</a>
+              {% endif %}
+            </td>
+          </tr>
+        {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  {% else %}
+    <p>No hay miembros registrados.</p>
+  {% endif %}
+</section>
+{% if puede_agregar %}
+<section class="card">
+  <h2>Agregar miembro</h2>
+  <form method="post">
+    {% csrf_token %}
+    {{ form.non_field_errors }}
+    <label for="{{ form.correo.id_for_label }}">Correo</label>
+    {{ form.correo }}{{ form.correo.errors }}
+    <label for="{{ form.rol.id_for_label }}">Rol</label>
+    {{ form.rol }}{{ form.rol.errors }}
+    <button class="button" type="submit">Agregar</button>
+  </form>
+</section>
+{% endif %}
+{% endblock %}

@@ -1,0 +1,26 @@
+{% extends "users/base.html" %}
+{% block title %}Tus empresas · merkatics-ClearIa{% endblock %}
+{% block content %}
+<section>
+  <h1>Selecciona una empresa</h1>
+  {% if membresias %}
+    <div class="card-list">
+      {% for membresia in membresias %}
+        <article class="card workspace-card">
+          <div class="brand-mark" aria-hidden="true"></div>
+          <div>
+            <h2>{{ membresia.workspace.nombre }}</h2>
+            <p>{{ membresia.rol|capfirst }}</p>
+            <a class="button" href="{% url 'miembros' workspace_uid=membresia.workspace.uid %}">Abrir empresa</a>
+          </div>
+        </article>
+      {% endfor %}
+    </div>
+  {% else %}
+    <p class="card">Esta cuenta no tiene acceso</p>
+  {% endif %}
+  {% if es_plataforma %}
+    <p><a href="{% url 'consola_plataforma' %}">Consola de plataforma</a></p>
+  {% endif %}
+</section>
+{% endblock %}

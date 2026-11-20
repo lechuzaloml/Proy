@@ -1,0 +1,21 @@
+{% extends "users/base.html" %}
+{% block title %}Editar {{ workspace.nombre }} · merkatics-ClearIa{% endblock %}
+{% block content %}
+<section class="card narrow">
+  <a href="{% url 'consola_plataforma' %}">← Volver a empresas</a>
+  <h1>{{ workspace.nombre }}</h1>
+  <p>Estado: {{ workspace.get_estado_display }}</p>
+  <form method="post">
+    {% csrf_token %}
+    {{ form.as_p }}
+    <button class="button" type="submit">Guardar cambios</button>
+  </form>
+  <div class="actions">
+    {% if workspace.estado == "activa" %}
+      <form method="post">{% csrf_token %}<button class="button danger" name="accion" value="suspender">Suspender empresa</button></form>
+    {% else %}
+      <form method="post">{% csrf_token %}<button class="button secondary" name="accion" value="reactivar">Reactivar empresa</button></form>
+    {% endif %}
+  </div>
+</section>
+{% endblock %}

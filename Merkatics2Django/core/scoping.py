@@ -13,13 +13,13 @@ def workspace_access_required(view_func):
     def wrapped(request, *args, **kwargs):
         workspace = getattr(request, "workspace", None)
         membership = getattr(request, "workspace_membership", None)
-        user = getattr(request, "user", None)
+        user = getattr(request, "usuario", None)
         if (
             workspace is None
             or membership is None
             or user is None
-            or not getattr(user, "is_authenticated", False)
-            or not getattr(membership, "activo", False)
+            or not getattr(user, "activo", False)
+            or getattr(membership, "estado", None) != "activo"
             or getattr(membership, "usuario_id", None) != getattr(user, "pk", None)
             or getattr(membership, "workspace_id", None) != workspace.pk
         ):

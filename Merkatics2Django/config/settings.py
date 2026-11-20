@@ -27,10 +27,6 @@ CSRF_TRUSTED_ORIGINS = [
 ]
 
 STRIPE_SECRET_KEY = os.getenv("STRIPE_SECRET_KEY", "").strip()
-if not STRIPE_SECRET_KEY.startswith("sk_test_"):
-    raise ImproperlyConfigured(
-        "Stripe sandbox es obligatorio: STRIPE_SECRET_KEY debe comenzar con sk_test_."
-    )
 STRIPE_PRICE_ID = os.getenv("STRIPE_PRICE_ID", "").strip()
 STRIPE_WEBHOOK_SECRET = os.getenv("STRIPE_WEBHOOK_SECRET", "").strip()
 GOOGLE_CLIENT_ID = os.getenv("GOOGLE_CLIENT_ID", "").strip()
@@ -38,6 +34,7 @@ GEMINI_API_KEY = os.getenv("GEMINI_API_KEY", "").strip()
 
 INSTALLED_APPS = [
     "django.contrib.staticfiles",
+    "django.contrib.sessions",
     "core",
     "users",
     "workspaces",
@@ -50,8 +47,10 @@ INSTALLED_APPS = [
 MIDDLEWARE = [
     "django.middleware.security.SecurityMiddleware",
     "whitenoise.middleware.WhiteNoiseMiddleware",
+    "django.contrib.sessions.middleware.SessionMiddleware",
     "django.middleware.common.CommonMiddleware",
     "django.middleware.csrf.CsrfViewMiddleware",
+    "users.middleware.UsuarioMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
 ]
 
@@ -61,7 +60,12 @@ TEMPLATES = [
         "BACKEND": "django.template.backends.django.DjangoTemplates",
         "DIRS": [],
         "APP_DIRS": True,
-        "OPTIONS": {"context_processors": []},
+        "OPTIONS": {
+            "context_processors": [
+                "django.template.context_processors.request",
+                "django.template.context_processors.csrf",
+            ]
+        },
     }
 ]
 WSGI_APPLICATION = "config.wsgi.application"
@@ -69,7 +73,7 @@ WSGI_APPLICATION = "config.wsgi.application"
 DATABASES = {
     "default": {
         "ENGINE": "django.db.backends.mysql",
-        "NAME": os.getenv("MYSQL_NAME", "clear_ia_dev"),
+        "NAME": os.getenv("MYSQL_NAME", "merkatics"),
         "USER": os.getenv("MYSQL_USER", "clear_ia"),
         "PASSWORD": os.getenv("MYSQL_PASSWORD", ""),
         "HOST": os.getenv("MYSQL_HOST", "127.0.0.1"),
@@ -103,6 +107,7 @@ CSRF_COOKIE_HTTPONLY = True
 CSRF_COOKIE_SAMESITE = "Lax"
 SESSION_COOKIE_HTTPONLY = True
 SESSION_COOKIE_SAMESITE = "Lax"
+SESSION_COOKIE_AGE = 60 * 60 * 24 * 14
 SECURE_CONTENT_TYPE_NOSNIFF = True
 X_FRAME_OPTIONS = "DENY"
 

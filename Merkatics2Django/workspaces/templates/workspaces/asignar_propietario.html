@@ -1,0 +1,14 @@
+{% extends "users/base.html" %}
+{% block title %}Asignar propietario · merkatics-ClearIa{% endblock %}
+{% block content %}
+<section class="card narrow">
+  <a href="{% url 'consola_plataforma' %}">← Volver a empresas</a>
+  <h1>Asignar propietario</h1>
+  <p>{{ workspace.nombre }} no tiene propietario. El correo puede acceder después de entrar con Google.</p>
+  <form method="post">
+    {% csrf_token %}
+    {{ form.as_p }}
+    <button class="button" type="submit">Asignar propietario</button>
+  </form>
+</section>
+{% endblock %}

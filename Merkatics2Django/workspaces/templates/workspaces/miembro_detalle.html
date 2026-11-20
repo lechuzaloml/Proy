@@ -1,0 +1,37 @@
+{% extends "users/base.html" %}
+{% block title %}Administrar miembro · {{ workspace.nombre }}{% endblock %}
+{% block content %}
+<section class="card">
+  <a href="{% url 'miembros' workspace_uid=workspace.uid %}">← Volver a miembros</a>
+  <h1>{{ objetivo.correo }}</h1>
+  <p>Estado: {{ objetivo.get_estado_display }}</p>
+  <form method="post">
+    {% csrf_token %}
+    <input type="hidden" name="accion" value="guardar">
+    {{ form.non_field_errors }}
+    <label for="{{ form.rol.id_for_label }}">Rol</label>
+    {{ form.rol }}{{ form.rol.errors }}
+    <fieldset>
+      <legend>Permisos del rol Usuario</legend>
+      {% for field in form %}
+        {% if field.name != "rol" %}
+          <label class="checkbox">{{ field }} {{ field.label }}</label>
+          {{ field.errors }}
+        {% endif %}
+      {% endfor %}
+    </fieldset>
+    <button class="button" type="submit">Guardar cambios</button>
+  </form>
+  <div class="actions">
+    {% if objetivo.estado == "activo" %}
+      <form method="post">{% csrf_token %}<button class="button secondary" name="accion" value="desactivar">Desactivar</button></form>
+    {% else %}
+      <form method="post">{% csrf_token %}<button class="button secondary" name="accion" value="activar">Reactivar</button></form>
+    {% endif %}
+    <form method="post">
+      {% csrf_token %}
+      <button class="button danger" name="accion" value="quitar">Quitar</button>
+    </form>
+  </div>
+</section>
+{% endblock %}

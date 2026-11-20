@@ -1,0 +1,33 @@
+from django.core.management.base import BaseCommand, CommandError
+from django.core.exceptions import ValidationError
+from django.core.validators import validate_email
+
+from users.models import AdminPlataforma, Usuario
+
+
+class Command(BaseCommand):
+    help = "Crea un administrador de plataforma para el correo indicado."
+
+    def add_arguments(self, parser):
+        parser.add_argument("correo")
+
+    def handle(self, *args, **options):
+        correo = options["correo"].strip().lower()
+        try:
+            validate_email(correo)
+        except ValidationError as exc:
+            raise CommandError("Indica un correo válido.") from exc
+        if len(correo) > 191:
+            raise CommandError("El correo no puede superar 191 caracteres.")
+
+        usuario, _ = Usuario.objects.get_or_create(
+            correo=correo,
+            defaults={"nombre": correo},
+        )
+        if not usuario.activo:
+            raise CommandError("La cuenta está desactivada; reactívala antes de asignar el rol.")
+        admin, created = AdminPlataforma.objects.get_or_create(usuario=usuario)
+        if created:
+            self.stdout.write(self.style.SUCCESS(f"Administrador creado para {correo}."))
+        else:
+            self.stdout.write(f"{correo} ya era administrador de plataforma.")

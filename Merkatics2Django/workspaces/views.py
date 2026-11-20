@@ -1,0 +1,364 @@
+from functools import wraps
+from urllib.parse import quote
+
+from django.db import IntegrityError, transaction
+from django.http import Http404, HttpResponseNotAllowed
+from django.shortcuts import get_object_or_404, redirect, render
+from django.urls import reverse
+
+from users.models import AdminPlataforma, Usuario
+from workspaces.forms import (
+    AltaMembresiaForm,
+    CrearWorkspaceForm,
+    EditarWorkspaceForm,
+    EdicionMembresiaForm,
+)
+from workspaces.models import Membresia, Workspace
+from workspaces.permisos import (
+    puede_agregar_miembro,
+    puede_cambiar_estado_miembro,
+    puede_editar_miembro,
+    puede_quitar_miembro,
+)
+
+
+PERMISOS_FORM = (
+    "ver_leads",
+    "gestionar_leads",
+    "editar_cuestionarios",
+    "publicar_cuestionarios",
+)
+
+
+def usuario_requerido(view):
+    @wraps(view)
+    def wrapped(request, *args, **kwargs):
+        if request.usuario is None:
+            login_url = reverse("acceso")
+            return redirect(f"{login_url}?next={quote(request.get_full_path())}")
+        return view(request, *args, **kwargs)
+
+    return wrapped
+
+
+def plataforma_requerida(view):
+    @wraps(view)
+    @usuario_requerido
+    def wrapped(request, *args, **kwargs):
+        if not AdminPlataforma.objects.filter(usuario=request.usuario).exists():
+            raise Http404
+        return view(request, *args, **kwargs)
+
+    return wrapped
+
+
+def _workspace_y_membresia(request, workspace_uid):
+    workspace = get_object_or_404(Workspace, uid=workspace_uid)
+    membresia = get_object_or_404(
+        Membresia.objects.para(workspace),
+        usuario=request.usuario,
+        estado=Membresia.Estado.ACTIVO,
+    )
+    return workspace, membresia
+
+
+@usuario_requerido
+def selector_workspace(request):
+    membresias = (
+        Membresia.objects.sin_alcance()
+        .filter(usuario=request.usuario, estado=Membresia.Estado.ACTIVO)
+        .select_related("workspace")
+        .order_by("workspace__nombre")
+    )
+    return render(
+        request,
+        "workspaces/selector.html",
+        {
+            "membresias": membresias,
+            "es_plataforma": AdminPlataforma.objects.filter(
+                usuario=request.usuario
+            ).exists(),
+        },
+    )
+
+
+@usuario_requerido
+def miembros(request, workspace_uid):
+    workspace, actor = _workspace_y_membresia(request, workspace_uid)
+    allowed_roles = []
+    if actor.rol == Membresia.Rol.PROPIETARIO:
+        allowed_roles.append((Membresia.Rol.ADMIN, "Admin"))
+    allowed_roles.append((Membresia.Rol.USUARIO, "Usuario"))
+    if request.method == "POST":
+        if not any(
+            puede_agregar_miembro(actor, role)
+            for role, _label in allowed_roles
+        ):
+            raise Http404
+        form = AltaMembresiaForm(request.POST, roles=allowed_roles)
+        if form.is_valid():
+            correo = form.cleaned_data["correo"]
+            user = Usuario.objects.filter(correo=correo).first()
+            try:
+                Membresia.objects.para(workspace).create(
+                    correo=correo,
+                    usuario=user,
+                    rol=form.cleaned_data["rol"],
+                )
+            except IntegrityError:
+                if not Membresia.objects.para(workspace).filter(correo=correo).exists():
+                    raise
+                form.add_error("correo", "Ya existe una membresía para este correo.")
+            else:
+                return redirect("miembros", workspace_uid=workspace.uid)
+    elif request.method == "GET":
+        form = AltaMembresiaForm(roles=allowed_roles)
+    else:
+        return HttpResponseNotAllowed(["GET", "POST"])
+
+    members = Membresia.objects.para(workspace).order_by("correo")
+    membership_rows = [
+        {
+            "membresia": member,
+            "puede_gestionar": puede_editar_miembro(actor, member),
+        }
+        for member in members
+    ]
+    return render(
+        request,
+        "workspaces/miembros.html",
+        {
+            "workspace": workspace,
+            "actor": actor,
+            "membresias": membership_rows,
+            "form": form,
+            "puede_agregar": puede_agregar_miembro(
+                actor,
+                Membresia.Rol.ADMIN
+                if actor.rol == Membresia.Rol.PROPIETARIO
+                else Membresia.Rol.USUARIO,
+            ),
+        },
+        status=400 if request.method == "POST" and not form.is_valid() else 200,
+    )
+
+
+@usuario_requerido
+def miembro_detalle(request, workspace_uid, uid):
+    workspace, actor = _workspace_y_membresia(request, workspace_uid)
+    objetivo = get_object_or_404(Membresia.objects.para(workspace), uid=uid)
+    if not puede_editar_miembro(actor, objetivo):
+        raise Http404
+
+    roles = [(Membresia.Rol.USUARIO, "Usuario")]
+    if actor.rol == Membresia.Rol.PROPIETARIO:
+        roles.insert(0, (Membresia.Rol.ADMIN, "Admin"))
+
+    if request.method == "POST":
+        action = request.POST.get("accion")
+        if action in {"activar", "desactivar"}:
+            if not puede_cambiar_estado_miembro(actor, objetivo):
+                raise Http404
+            objetivo.estado = (
+                Membresia.Estado.ACTIVO
+                if action == "activar"
+                else Membresia.Estado.INACTIVO
+            )
+            objetivo.save(update_fields=["estado", "actualizado"])
+            return redirect("miembros", workspace_uid=workspace.uid)
+        if action == "quitar":
+            if not puede_quitar_miembro(actor, objetivo):
+                raise Http404
+            objetivo.delete()
+            return redirect("miembros", workspace_uid=workspace.uid)
+        if action == "guardar":
+            form = EdicionMembresiaForm(request.POST, roles=roles)
+            if form.is_valid():
+                rol = form.cleaned_data["rol"]
+                if not puede_editar_miembro(actor, objetivo, rol_nuevo=rol):
+                    raise Http404
+                objetivo.rol = rol
+                for permission in PERMISOS_FORM:
+                    setattr(objetivo, permission, form.cleaned_data[permission])
+                objetivo.save(update_fields=["rol", *PERMISOS_FORM, "actualizado"])
+                return redirect("miembros", workspace_uid=workspace.uid)
+        else:
+            raise Http404
+    elif request.method == "GET":
+        form = EdicionMembresiaForm(
+            initial={
+                "rol": objetivo.rol,
+                **{permission: getattr(objetivo, permission) for permission in PERMISOS_FORM},
+            },
+            roles=roles,
+        )
+    else:
+        return HttpResponseNotAllowed(["GET", "POST"])
+
+    return render(
+        request,
+        "workspaces/miembro_detalle.html",
+        {"workspace": workspace, "objetivo": objetivo, "form": form},
+        status=400 if request.method == "POST" and not form.is_valid() else 200,
+    )
+
+
+@plataforma_requerida
+def consola_plataforma(request):
+    if request.method != "GET":
+        return HttpResponseNotAllowed(["GET"])
+    workspaces = [
+        {
+            "workspace": workspace,
+            "tiene_propietario": Membresia.objects.para(workspace)
+            .filter(rol=Membresia.Rol.PROPIETARIO)
+            .exists(),
+        }
+        for workspace in Workspace.objects.order_by("nombre")
+    ]
+    return render(
+        request,
+        "workspaces/plataforma.html",
+        {"workspaces": workspaces},
+    )
+
+
+@plataforma_requerida
+def crear_workspace(request):
+    if request.method == "POST":
+        form = CrearWorkspaceForm(request.POST)
+        if form.is_valid():
+            data = form.cleaned_data
+            user = Usuario.objects.filter(correo=data["propietario_correo"]).first()
+            try:
+                with transaction.atomic():
+                    workspace = Workspace.objects.create(
+                        slug=data["slug"],
+                        nombre=data["nombre"],
+                        plan=data["plan"],
+                        color_primario=data["color_primario"],
+                        logo_url=data["logo_url"],
+                    )
+                    Membresia.objects.para(workspace).create(
+                        correo=data["propietario_correo"],
+                        usuario=user,
+                        rol=Membresia.Rol.PROPIETARIO,
+                        ver_leads=True,
+                        gestionar_leads=True,
+                        editar_cuestionarios=True,
+                        publicar_cuestionarios=True,
+                    )
+            except IntegrityError:
+                form.add_error("slug", "Ya existe una empresa con ese slug.")
+            else:
+                return redirect("consola_plataforma")
+    elif request.method == "GET":
+        form = CrearWorkspaceForm(initial={"color_primario": "#E2554F"})
+    else:
+        return HttpResponseNotAllowed(["GET", "POST"])
+    return render(
+        request,
+        "workspaces/crear_workspace.html",
+        {"form": form},
+        status=400 if request.method == "POST" and not form.is_valid() else 200,
+    )
+
+
+@plataforma_requerida
+def editar_workspace(request, workspace_uid):
+    workspace = get_object_or_404(Workspace, uid=workspace_uid)
+    if request.method == "POST":
+        action = request.POST.get("accion")
+        if action in {"suspender", "reactivar"}:
+            workspace.estado = (
+                Workspace.Estado.SUSPENDIDA
+                if action == "suspender"
+                else Workspace.Estado.ACTIVA
+            )
+            workspace.save(update_fields=["estado"])
+            return redirect("consola_plataforma")
+        form = EditarWorkspaceForm(request.POST)
+        if form.is_valid():
+            for field in ("nombre", "plan", "color_primario", "logo_url"):
+                setattr(workspace, field, form.cleaned_data[field])
+            workspace.save(
+                update_fields=["nombre", "plan", "color_primario", "logo_url"]
+            )
+            return redirect("consola_plataforma")
+    elif request.method == "GET":
+        form = EditarWorkspaceForm(
+            initial={
+                field: getattr(workspace, field)
+                for field in ("nombre", "plan", "color_primario", "logo_url")
+            }
+        )
+    else:
+        return HttpResponseNotAllowed(["GET", "POST"])
+    return render(
+        request,
+        "workspaces/editar_workspace.html",
+        {"workspace": workspace, "form": form},
+        status=400 if request.method == "POST" and not form.is_valid() else 200,
+    )
+
+
+@plataforma_requerida
+def asignar_propietario(request, workspace_uid):
+    workspace = get_object_or_404(Workspace, uid=workspace_uid)
+    owner_membership = Membresia.objects.para(workspace).filter(
+        rol=Membresia.Rol.PROPIETARIO
+    ).first()
+    if owner_membership:
+        raise Http404
+    form = AltaMembresiaForm(
+        request.POST if request.method == "POST" else None,
+        roles=[(Membresia.Rol.PROPIETARIO, "Propietario")],
+    )
+    if request.method == "POST":
+        if form.is_valid():
+            correo = form.cleaned_data["correo"]
+            try:
+                with transaction.atomic():
+                    locked_workspace = Workspace.objects.select_for_update().get(
+                        pk=workspace.pk
+                    )
+                    if Membresia.objects.para(locked_workspace).filter(
+                        rol=Membresia.Rol.PROPIETARIO
+                    ).exists():
+                        raise Http404
+                    membership = Membresia.objects.para(locked_workspace).filter(
+                        correo=correo
+                    ).first()
+                    values = {
+                        "usuario": Usuario.objects.filter(correo=correo).first(),
+                        "rol": Membresia.Rol.PROPIETARIO,
+                        "estado": Membresia.Estado.ACTIVO,
+                        "ver_leads": True,
+                        "gestionar_leads": True,
+                        "editar_cuestionarios": True,
+                        "publicar_cuestionarios": True,
+                    }
+                    if membership:
+                        for key, value in values.items():
+                            setattr(membership, key, value)
+                        membership.save()
+                    else:
+                        Membresia.objects.para(locked_workspace).create(
+                            correo=correo, **values
+                        )
+            except IntegrityError:
+                if not Membresia.objects.para(workspace).filter(
+                    rol=Membresia.Rol.PROPIETARIO
+                ).exists():
+                    raise
+                raise Http404
+            else:
+                return redirect("consola_plataforma")
+    elif request.method != "GET":
+        return HttpResponseNotAllowed(["GET", "POST"])
+    return render(
+        request,
+        "workspaces/asignar_propietario.html",
+        {"workspace": workspace, "form": form},
+        status=400 if request.method == "POST" and not form.is_valid() else 200,
+    )

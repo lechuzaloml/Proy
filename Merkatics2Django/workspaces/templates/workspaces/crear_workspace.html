@@ -1,0 +1,14 @@
+{% extends "users/base.html" %}
+{% block title %}Crear empresa · merkatics-ClearIa{% endblock %}
+{% block content %}
+<section class="card narrow">
+  <a href="{% url 'consola_plataforma' %}">← Volver a empresas</a>
+  <h1>Crear empresa</h1>
+  <p>La empresa y su primera membresía de propietario se guardan juntas.</p>
+  <form method="post">
+    {% csrf_token %}
+    {{ form.as_p }}
+    <button class="button" type="submit">Crear empresa y propietario</button>
+  </form>
+</section>
+{% endblock %}
