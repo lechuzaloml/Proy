@@ -1,20 +1,30 @@
-{% extends "users/base.html" %}
+{% extends "users/base_private.html" %}
 {% block title %}Editar {{ workspace.nombre }} · merkatics-ClearIa{% endblock %}
+{% block page_title %}Editar empresa{% endblock %}
+{% block page_help %}Actualiza los datos visibles del espacio y administra su estado.{% endblock %}
 {% block content %}
-<section class="card narrow">
-  <a href="{% url 'consola_plataforma' %}">← Volver a empresas</a>
-  <h1>{{ workspace.nombre }}</h1>
+<section class="private-card admin-card private-form-card">
+  <h2>{{ workspace.nombre }}</h2>
   <p>Estado: {{ workspace.get_estado_display }}</p>
   <form method="post">
     {% csrf_token %}
     {{ form.as_p }}
-    <button class="button" type="submit">Guardar cambios</button>
+    <button class="private-button" type="submit">Guardar cambios</button>
   </form>
   <div class="actions">
-    {% if workspace.estado == "activa" %}
-      <form method="post">{% csrf_token %}<button class="button danger" name="accion" value="suspender">Suspender empresa</button></form>
+    {% if workspace.slug == "clearia" %}
+      <p>El workspace interno del diagnóstico público debe permanecer activo.</p>
+      {% if workspace.estado == "suspendida" %}
+        <form method="post">{% csrf_token %}<button class="private-button-secondary" name="accion" value="reactivar">Reactivar empresa</button></form>
+      {% endif %}
+    {% elif workspace.estado == "activa" %}
+      <details class="private-confirmation">
+        <summary>Suspender empresa</summary>
+        <p>La empresa dejará de aceptar respuestas públicas hasta reactivarla.</p>
+        <form method="post">{% csrf_token %}<button class="private-button-danger" name="accion" value="suspender">Confirmar suspensión</button></form>
+      </details>
     {% else %}
-      <form method="post">{% csrf_token %}<button class="button secondary" name="accion" value="reactivar">Reactivar empresa</button></form>
+      <form method="post">{% csrf_token %}<button class="private-button-secondary" name="accion" value="reactivar">Reactivar empresa</button></form>
     {% endif %}
   </div>
 </section>

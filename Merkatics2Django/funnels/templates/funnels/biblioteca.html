@@ -1,0 +1,69 @@
+{% extends "funnels/base_public.html" %}
+{% block title %}Biblioteca de templates | Clear-IA{% endblock %}
+{% block page_content %}
+<main class="template-library public-main">
+  <header class="library-header">
+    <p class="eyebrow">Clear-IA</p>
+    <h1>Biblioteca de templates</h1>
+    <p>Elige una plantilla como punto de partida para crear tu propio cuestionario y adaptar sus preguntas, puntuación y resultados.</p>
+  </header>
+  {% if workspaces_copiables %}
+    <nav class="public-actions library-workspace-links" aria-label="Cuestionarios de mis empresas">
+      {% for workspace in workspaces_copiables %}
+        <a class="secondary-button" href="{% url 'mis_cuestionarios' workspace.uid %}">
+          Ver mis cuestionarios{% if workspaces_copiables|length > 1 %} — {{ workspace.nombre }}{% endif %}
+        </a>
+      {% endfor %}
+    </nav>
+  {% endif %}
+  <p class="demo-notice">Demostración: no se guardan datos.</p>
+  <section aria-labelledby="templates-heading">
+    <h2 id="templates-heading">Templates demostrativos</h2>
+    <div class="template-grid">
+      {% for plantilla in plantillas %}
+        <article class="template-card">
+          <div class="template-card-heading"><h3>{{ plantilla.nombre }}</h3><span class="template-format">{{ plantilla.formato }}</span></div>
+          <dl class="template-details">
+            <div><dt>Caso de uso</dt><dd>{{ plantilla.caso_uso }}</dd></div>
+            <div><dt>Nicho</dt><dd>{{ plantilla.nicho }}</dd></div>
+          </dl>
+          <p>{{ plantilla.descripcion }}</p>
+          <div class="template-card-actions">
+            <a class="secondary-button template-preview-button" href="{% url 'biblioteca_detalle' plantilla.slug %}">Ver detalles</a>
+            <a class="secondary-button template-preview-button" href="{% url 'demostrar_plantilla' plantilla.slug %}">Probar</a>
+          </div>
+          {% if workspaces_copiables %}
+            <form method="post" action="{% url 'copiar_plantilla' plantilla.slug %}">
+              {% csrf_token %}
+              <label>Empresa
+                <select name="workspace_uid" required>
+                  {% for workspace in workspaces_copiables %}
+                    <option value="{{ workspace.uid }}">{{ workspace.nombre }}</option>
+                  {% endfor %}
+                </select>
+              </label>
+              <button class="submit-button template-copy-button" type="submit">Copiar a mi empresa</button>
+            </form>
+          {% endif %}
+        </article>
+      {% empty %}
+        <p>Aún no hay templates disponibles.</p>
+      {% endfor %}
+    </div>
+  </section>
+  {% if casos_referencia %}
+    <section aria-labelledby="references-heading" class="reference-cases">
+      <h2 id="references-heading">Casos de referencia</h2>
+      <p>Ejemplos existentes del proyecto; no forman parte de los templates ficticios.</p>
+      <div class="reference-list">
+        {% for caso in casos_referencia %}
+          <article class="reference-card">
+            <div><h3>{{ caso.nombre }}</h3><p>{{ caso.descripcion }}</p></div>
+            <a class="secondary-button" href="{% url 'biblioteca_detalle' caso.slug %}">Abrir caso</a>
+          </article>
+        {% endfor %}
+      </div>
+    </section>
+  {% endif %}
+</main>
+{% endblock %}

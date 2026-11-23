@@ -85,6 +85,10 @@ p { color: var(--gray-dark); }
 .notice { border-radius: .35rem; padding: .75rem; }
 .notice.error { background: #fff0ef; color: #8f2824; }
 label { display: block; margin: .85rem 0 .3rem; font-weight: 600; }
+.field-help { display: block; margin-top: .3rem; color: var(--gray-dark); }
+.field-errors { color: #8f2824; }
+.field-errors p { margin: .3rem 0 0; font-weight: 600; }
+.form-field-invalid input, .form-field-invalid select { border-color: #8f2824; }
 input, select {
   width: 100%;
   max-width: 100%;

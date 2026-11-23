@@ -1,0 +1,66 @@
+{% extends "users/base_private.html" %}
+{% load static %}
+{% block title %}Cuestionarios · {{ workspace.nombre }}{% endblock %}
+{% block page_title %}Cuestionarios{% endblock %}
+{% block page_help %}Administra borradores y publicaciones. Los cuestionarios publicados reciben respuestas de público y se consultan en Contactos.{% endblock %}
+{% block content %}
+  {% if errors %}<div class="private-message private-message-error" role="alert"><strong>No se pudo completar la acción:</strong><ul>{% for error in errors %}<li>{{ error }}</li>{% endfor %}</ul></div>{% endif %}
+  <section class="private-card admin-card">
+    {% if rows %}
+      <div class="private-table-wrap admin-table-scroll">
+        <table class="admin-table">
+          <thead><tr><th>Cuestionario</th><th>Estado</th><th>Enlace público</th><th>Acciones</th></tr></thead>
+          <tbody>
+          {% for row in rows %}
+            <tr>
+              <td><strong>{{ row.questionnaire.nombre }}</strong></td>
+              <td>
+                {% if row.questionnaire.estado == "publicado" %}
+                  <span class="private-badge private-badge-active">Publicado</span>
+                {% else %}
+                  <span class="private-badge">Borrador</span>
+                {% endif %}
+              </td>
+              <td>
+                {% if row.public_url %}
+                  <a href="{{ row.public_url }}">Abrir enlace</a>
+                  <button class="private-button-secondary" type="button" data-copy-link="{{ row.public_url }}">Copiar enlace</button>
+                {% else %}Disponible al publicar{% endif %}
+              </td>
+              <td>
+                <div class="private-actions">
+                  {% if puede_publicar %}
+                    {% if row.questionnaire.estado == "borrador" %}
+                      <form method="post" action="{% url 'publicar_cuestionario' workspace.uid row.questionnaire.uid %}">{% csrf_token %}<button class="private-button" type="submit">Publicar</button></form>
+                    {% else %}
+                      <form method="post" action="{% url 'despublicar_cuestionario' workspace.uid row.questionnaire.uid %}">{% csrf_token %}<button class="private-button-secondary" type="submit">Despublicar</button></form>
+                    {% endif %}
+                  {% endif %}
+                  {% if row.puede_eliminar %}
+                    <details class="private-confirmation">
+                      <summary>Eliminar</summary>
+                      <p>Se eliminará este borrador y sus versiones. Esta acción no se puede deshacer.</p>
+                      <form method="post" action="{% url 'eliminar_cuestionario' workspace.uid row.questionnaire.uid %}">
+                        {% csrf_token %}
+                        <button class="private-button-danger" type="submit">Confirmar eliminación</button>
+                      </form>
+                    </details>
+                  {% elif puede_editar_cuestionarios and row.questionnaire.estado == "publicado" %}
+                    <small>Despublica antes de eliminar.</small>
+                  {% elif puede_editar_cuestionarios and row.tiene_diagnosticos %}
+                    <small>No se puede eliminar: conserva diagnósticos asociados.</small>
+                  {% endif %}
+                </div>
+              </td>
+            </tr>
+          {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    {% else %}
+      <p class="private-empty">Aún no hay cuestionarios. Ve a la Biblioteca para copiar una plantilla a este espacio.</p>
+      {% if puede_editar_cuestionarios %}<a class="private-button" href="{% url 'biblioteca' %}">Abrir Biblioteca</a>{% endif %}
+    {% endif %}
+  </section>
+{% endblock %}
+{% block extra_scripts %}<script src="{% static 'funnels/public-links.js' %}" defer></script>{% endblock %}

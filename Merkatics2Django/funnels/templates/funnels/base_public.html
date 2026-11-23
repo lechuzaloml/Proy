@@ -1,0 +1,35 @@
+{% load static %}
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>{% block title %}Clear-IA{% endblock %}</title>
+    <link rel="stylesheet" href="{% static 'funnels/index.css' %}">
+    <link rel="stylesheet" href="{% static 'funnels/site.css' %}">
+    <link rel="stylesheet" href="{% static 'funnels/footer.css' %}">
+    {% block extra_head %}{% endblock %}
+  </head>
+  <body id="top">
+    <header class="landing-brand public-header">
+      <a class="public-brand" href="/" aria-label="merkatics-ClearIa, Inicio">
+        <span>merkatics-ClearIa</span>
+      </a>
+      <nav class="public-header-nav" aria-label="Navegación principal">
+        <a href="/">Inicio</a>
+        <a href="/biblioteca/">Biblioteca</a>
+        <a href="/diagnostico/">Probar gratis</a>
+        <a href="/acceso/">Acceder</a>
+      </nav>
+      {% if request.usuario %}
+        <form class="public-header-session" method="post" action="{% url 'cerrar_sesion' %}">
+          {% csrf_token %}
+          <button class="public-header-logout" type="submit">Cerrar sesión</button>
+        </form>
+      {% endif %}
+    </header>
+    {% block page_content %}{% endblock %}
+    {% include "funnels/_footer.html" %}
+    {% block extra_scripts %}{% endblock %}
+  </body>
+</html>

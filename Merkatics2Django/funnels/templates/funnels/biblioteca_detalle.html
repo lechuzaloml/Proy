@@ -1,0 +1,22 @@
+{% extends "funnels/base_public.html" %}
+{% block title %}{{ plantilla.nombre }} | Biblioteca Clear-IA{% endblock %}
+{% block page_content %}
+<main class="public-main library-detail">
+  <header class="library-header">
+    <p class="eyebrow">{% if es_referencia %}Caso de referencia{% else %}Biblioteca de templates{% endif %}</p>
+    <h1>{{ plantilla.nombre }}</h1>
+    <p>{{ plantilla.descripcion }}</p>
+  </header>
+  <article class="template-detail">
+    <dl class="template-details">
+      <div><dt>Formato</dt><dd>{{ plantilla.formato }}</dd></div>
+      <div><dt>Caso de uso</dt><dd>{{ plantilla.caso_uso }}</dd></div>
+      <div><dt>Nicho</dt><dd>{{ plantilla.nicho }}</dd></div>
+    </dl>
+    <p class="demo-notice">Demostración: no se guardan datos.</p>
+    <div class="public-actions">
+      <a class="submit-button" href="{% url 'demostrar_plantilla' plantilla.slug %}">{% if es_referencia %}Abrir caso{% else %}Probar{% endif %}</a>
+    </div>
+  </article>
+</main>
+{% endblock %}

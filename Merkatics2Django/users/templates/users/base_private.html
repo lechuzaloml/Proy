@@ -1,0 +1,108 @@
+{% load static %}
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{% block title %}Panel · merkatics-ClearIa{% endblock %}</title>
+  <link rel="stylesheet" href="{% static 'css/app.css' %}">
+  <link rel="stylesheet" href="{% static 'css/private.css' %}">
+  <link rel="stylesheet" href="{% static 'funnels/footer.css' %}">
+</head>
+<body id="top">
+  <header class="private-topbar">
+    <a class="private-brand" href="{% url 'selector_workspace' %}">merkatics-ClearIa</a>
+    <a class="private-home-link" href="{% url 'inicio' %}">Inicio</a>
+    <div class="private-space-switcher">
+      <span class="private-meta-label">Espacio activo</span>
+      {% if membresia %}
+        <details>
+          <summary>{{ membresia.workspace.nombre }}</summary>
+          <ul>
+            {% for item in espacios_usuario %}
+              <li><a href="{% url 'resumen_workspace' item.workspace.uid %}">{{ item.workspace.nombre }}</a></li>
+            {% endfor %}
+          </ul>
+        </details>
+      {% elif es_admin_plataforma %}
+        <a href="{% url 'consola_plataforma' %}">Consola de plataforma</a>
+      {% else %}
+        <a href="{% url 'selector_workspace' %}">Selecciona una empresa</a>
+      {% endif %}
+    </div>
+    <div class="private-account">
+      <span class="private-avatar-wrap">
+        <span class="private-avatar private-avatar-fallback" aria-hidden="true"{% if request.usuario.foto_url %} hidden{% endif %}>{{ request.usuario.nombre|default:request.usuario.correo|slice:":1"|upper }}</span>
+        {% if request.usuario.foto_url %}<img class="private-avatar" src="{{ request.usuario.foto_url }}" alt="" data-avatar-image>{% endif %}
+      </span>
+      <span class="private-identity">
+        <strong>{{ request.usuario.nombre|default:request.usuario.correo }}</strong>
+        <span>{{ request.usuario.correo }}</span>
+      </span>
+      <span class="private-role">
+        {% if es_admin_plataforma %}
+          Administrador de plataforma
+        {% elif membresia.rol == "propietario" %}
+          Propietario
+        {% elif membresia.rol == "admin" %}
+          Administrador
+        {% elif membresia %}
+          Usuario
+        {% else %}
+          Cuenta
+        {% endif %}
+      </span>
+      <form method="post" action="{% url 'cerrar_sesion' %}">
+        {% csrf_token %}
+        <button class="private-logout" type="submit">Salir</button>
+      </form>
+    </div>
+  </header>
+
+  <div class="private-layout">
+    <aside class="private-sidebar" aria-label="Menú del área privada">
+      <details class="private-mobile-menu">
+        <summary>Menú de navegación</summary>
+        <nav class="private-nav">
+          {% include "users/_private_nav.html" %}
+        </nav>
+      </details>
+      <nav class="private-nav private-desktop-nav" aria-label="Navegación del espacio">
+        {% include "users/_private_nav.html" %}
+      </nav>
+    </aside>
+
+    <main class="private-main admin-page">
+      <nav class="private-breadcrumbs" aria-label="Migas de pan">
+        <a href="{% url 'selector_workspace' %}">Espacios</a>
+        {% if membresia %}<span aria-hidden="true">/</span><span>{{ membresia.workspace.nombre }}</span>{% elif es_admin_plataforma %}<span aria-hidden="true">/</span><a href="{% url 'consola_plataforma' %}">Plataforma</a>{% endif %}
+        {% if nav_active == "resumen" %}<span aria-hidden="true">/</span><span>Resumen</span>{% endif %}
+        {% if nav_active == "contactos" %}<span aria-hidden="true">/</span><span>Contactos</span>{% endif %}
+        {% if nav_active == "cuestionarios" %}<span aria-hidden="true">/</span><span>Cuestionarios</span>{% endif %}
+        {% if nav_active == "miembros" %}<span aria-hidden="true">/</span><span>Miembros</span>{% endif %}
+        {% if nav_active == "plataforma" %}<span aria-hidden="true">/</span><span>Empresas</span>{% endif %}
+        {% if nav_active == "crear_empresa" %}<span aria-hidden="true">/</span><span>Crear empresa</span>{% endif %}
+        {% block breadcrumbs %}{% endblock %}
+      </nav>
+      <header class="private-page-heading admin-header">
+        <div>
+          <p class="eyebrow">{% if membresia %}{{ membresia.workspace.nombre }}{% elif es_admin_plataforma %}Administración de plataforma{% else %}Área privada{% endif %}</p>
+          <h1>{% block page_title %}Panel{% endblock %}</h1>
+          <p>{% block page_help %}{% endblock %}</p>
+        </div>
+      </header>
+      {% if messages %}
+        <div class="private-messages" aria-live="polite">
+          {% for message in messages %}
+            <p class="private-message private-message-{{ message.tags|default:'info' }}">{{ message }}</p>
+          {% endfor %}
+        </div>
+      {% endif %}
+      {% block content %}{% endblock %}
+    </main>
+  </div>
+  {% include "funnels/_footer.html" %}
+  {% block extra_scripts %}{% endblock %}
+  <script src="{% static 'js/private.js' %}" defer></script>
+</body>
+</html>

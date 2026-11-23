@@ -1,11 +1,17 @@
 from functools import wraps
+from datetime import timedelta
 from urllib.parse import quote
 
+from django.contrib import messages
 from django.db import IntegrityError, transaction
 from django.http import Http404, HttpResponseNotAllowed
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
+from django.utils import timezone
 
+from contacts.models import Contacto, Diagnostico
+from contacts.presentation import etiqueta_origen
+from funnels.models import Cuestionario
 from users.models import AdminPlataforma, Usuario
 from workspaces.forms import (
     AltaMembresiaForm,
@@ -20,6 +26,7 @@ from workspaces.permisos import (
     puede_editar_miembro,
     puede_quitar_miembro,
 )
+from workspaces.permisos import tiene_permiso
 
 
 PERMISOS_FORM = (
@@ -78,13 +85,122 @@ def selector_workspace(request):
             "es_plataforma": AdminPlataforma.objects.filter(
                 usuario=request.usuario
             ).exists(),
+            "nav_active": "espacios",
         },
     )
 
 
 @usuario_requerido
+def resumen_workspace(request, workspace_uid):
+    workspace, membership = _workspace_y_membresia(request, workspace_uid)
+    can_view_contacts = tiene_permiso(membership, "ver_leads")
+    can_edit_questionnaires = tiene_permiso(
+        membership, "editar_cuestionarios"
+    )
+    can_publish_questionnaires = tiene_permiso(
+        membership, "publicar_cuestionarios"
+    )
+    can_manage_members = membership.rol in {
+        Membresia.Rol.PROPIETARIO,
+        Membresia.Rol.ADMIN,
+    }
+    can_view_questionnaires = (
+        can_edit_questionnaires or can_publish_questionnaires
+    )
+    can_view_summary = (
+        can_view_contacts
+        or can_view_questionnaires
+        or can_manage_members
+    )
+
+    context = {
+        "workspace": workspace,
+        "membresia": membership,
+        "nav_active": "resumen",
+        "puede_ver_resumen": can_view_summary,
+        "puede_ver_leads": can_view_contacts,
+        "puede_ver_cuestionarios": can_view_questionnaires,
+        "puede_editar_cuestionarios": can_edit_questionnaires,
+        "puede_administrar_miembros": can_manage_members,
+        "sin_permisos": not can_view_summary,
+    }
+    if can_view_summary:
+        published = list(
+            Cuestionario.objects.para(workspace)
+            .filter(estado=Cuestionario.Estado.PUBLICADO)
+            .order_by("nombre")
+        ) if can_view_questionnaires else []
+        context.update(
+            {
+                "publicados": [
+                    {
+                        "cuestionario": questionnaire,
+                        "public_url": request.build_absolute_uri(
+                            reverse(
+                                "cuestionario_publico",
+                                args=[workspace.slug, questionnaire.uid],
+                            )
+                        ),
+                    }
+                    for questionnaire in published
+                ],
+                "cuestionarios_publicados": len(published),
+                "miembros_activos": (
+                    Membresia.objects.para(workspace)
+                    .filter(estado=Membresia.Estado.ACTIVO)
+                    .count()
+                    if can_manage_members
+                    else None
+                ),
+            }
+        )
+        if can_view_contacts:
+            since = timezone.now() - timedelta(days=7)
+            contacts = Contacto.objects.para(workspace)
+            recent_contacts = list(
+                contacts.filter(creado__gte=since).order_by("-creado")[:5]
+            )
+            diagnoses = {
+                diagnosis.contacto_id: diagnosis
+                for diagnosis in Diagnostico.objects.para(workspace)
+                .filter(contacto__in=recent_contacts)
+                .select_related("cuestionario")
+            }
+            context.update(
+                {
+                    "contactos_nuevos": contacts.filter(
+                        estado=Contacto.Estado.NUEVO, creado__gte=since
+                    ).count(),
+                    "total_contactos": contacts.count(),
+                    "contactos_recientes": [
+                        {
+                            "contact": contact,
+                            "diagnosis": diagnoses.get(contact.pk),
+                            "origen_label": etiqueta_origen(contact.origen),
+                        }
+                        for contact in recent_contacts
+                    ],
+                }
+            )
+        else:
+            context.update(
+                {
+                    "contactos_nuevos": None,
+                    "total_contactos": None,
+                    "contactos_recientes": [],
+                }
+            )
+    return render(request, "workspaces/resumen.html", context)
+
+
+@usuario_requerido
 def miembros(request, workspace_uid):
     workspace, actor = _workspace_y_membresia(request, workspace_uid)
+    if actor.rol not in {
+        Membresia.Rol.PROPIETARIO,
+        Membresia.Rol.ADMIN,
+    }:
+        raise Http404
     allowed_roles = []
     if actor.rol == Membresia.Rol.PROPIETARIO:
         allowed_roles.append((Membresia.Rol.ADMIN, "Admin"))
@@ -110,6 +226,7 @@ def miembros(request, workspace_uid):
                     raise
                 form.add_error("correo", "Ya existe una membresía para este correo.")
             else:
+                messages.success(request, "Miembro agregado al espacio.")
                 return redirect("miembros", workspace_uid=workspace.uid)
     elif request.method == "GET":
         form = AltaMembresiaForm(roles=allowed_roles)
@@ -129,7 +246,19 @@ def miembros(request, workspace_uid):
         "workspaces/miembros.html",
         {
             "workspace": workspace,
+            "membresia": actor,
             "actor": actor,
+            "nav_active": "miembros",
+            "puede_ver_resumen": True,
+            "puede_ver_leads": tiene_permiso(actor, "ver_leads"),
+            "puede_ver_cuestionarios": (
+                tiene_permiso(actor, "editar_cuestionarios")
+                or tiene_permiso(actor, "publicar_cuestionarios")
+            ),
+            "puede_editar_cuestionarios": tiene_permiso(
+                actor, "editar_cuestionarios"
+            ),
+            "puede_administrar_miembros": True,
             "membresias": membership_rows,
             "form": form,
             "puede_agregar": puede_agregar_miembro(
@@ -165,11 +294,18 @@ def miembro_detalle(request, workspace_uid, uid):
                 else Membresia.Estado.INACTIVO
             )
             objetivo.save(update_fields=["estado", "actualizado"])
+            messages.success(
+                request,
+                "Membresía reactivada."
+                if action == "activar"
+                else "Membresía desactivada.",
+            )
             return redirect("miembros", workspace_uid=workspace.uid)
         if action == "quitar":
             if not puede_quitar_miembro(actor, objetivo):
                 raise Http404
             objetivo.delete()
+            messages.success(request, "Membresía quitada del espacio.")
             return redirect("miembros", workspace_uid=workspace.uid)
         if action == "guardar":
             form = EdicionMembresiaForm(request.POST, roles=roles)
@@ -181,6 +317,7 @@ def miembro_detalle(request, workspace_uid, uid):
                 for permission in PERMISOS_FORM:
                     setattr(objetivo, permission, form.cleaned_data[permission])
                 objetivo.save(update_fields=["rol", *PERMISOS_FORM, "actualizado"])
+                messages.success(request, "Permisos y rol actualizados.")
                 return redirect("miembros", workspace_uid=workspace.uid)
         else:
             raise Http404
@@ -198,7 +335,23 @@ def miembro_detalle(request, workspace_uid, uid):
     return render(
         request,
         "workspaces/miembro_detalle.html",
-        {"workspace": workspace, "objetivo": objetivo, "form": form},
+        {
+            "workspace": workspace,
+            "membresia": actor,
+            "objetivo": objetivo,
+            "form": form,
+            "nav_active": "miembros",
+            "puede_ver_resumen": True,
+            "puede_ver_leads": tiene_permiso(actor, "ver_leads"),
+            "puede_ver_cuestionarios": (
+                tiene_permiso(actor, "editar_cuestionarios")
+                or tiene_permiso(actor, "publicar_cuestionarios")
+            ),
+            "puede_editar_cuestionarios": tiene_permiso(
+                actor, "editar_cuestionarios"
+            ),
+            "puede_administrar_miembros": True,
+        },
         status=400 if request.method == "POST" and not form.is_valid() else 200,
     )
 
@@ -207,19 +360,44 @@ def miembro_detalle(request, workspace_uid, uid):
 def consola_plataforma(request):
     if request.method != "GET":
         return HttpResponseNotAllowed(["GET"])
-    workspaces = [
-        {
-            "workspace": workspace,
-            "tiene_propietario": Membresia.objects.para(workspace)
+    workspaces = []
+    for workspace in Workspace.objects.order_by("nombre"):
+        owner = (
+            Membresia.objects.para(workspace)
             .filter(rol=Membresia.Rol.PROPIETARIO)
-            .exists(),
-        }
-        for workspace in Workspace.objects.order_by("nombre")
-    ]
+            .select_related("usuario")
+            .first()
+        )
+        workspaces.append(
+            {
+                "workspace": workspace,
+                "owner_email": owner.correo if owner else "",
+                "published_count": Cuestionario.objects.para(workspace)
+                .filter(estado=Cuestionario.Estado.PUBLICADO)
+                .count(),
+                "contact_count": Contacto.objects.para(workspace).count(),
+            }
+        )
+    clearia = Workspace.objects.filter(slug="clearia").first()
+    clearia_membership = (
+        Membresia.objects.para(clearia)
+        .filter(usuario=request.usuario, estado=Membresia.Estado.ACTIVO)
+        .first()
+        if clearia
+        else None
+    )
     return render(
         request,
         "workspaces/plataforma.html",
-        {"workspaces": workspaces},
+        {
+            "workspaces": workspaces,
+            "clearia_contactos_url": (
+                reverse("contactos", args=[clearia.uid])
+                if clearia_membership
+                else ""
+            ),
+            "nav_active": "plataforma",
+        },
     )
 
 
@@ -251,6 +429,7 @@ def crear_workspace(request):
             except IntegrityError:
                 form.add_error("slug", "Ya existe una empresa con ese slug.")
             else:
+                messages.success(request, "Empresa creada correctamente.")
                 return redirect("consola_plataforma")
     elif request.method == "GET":
         form = CrearWorkspaceForm(initial={"color_primario": "#E2554F"})
@@ -259,7 +438,7 @@ def crear_workspace(request):
     return render(
         request,
         "workspaces/crear_workspace.html",
-        {"form": form},
+        {"form": form, "nav_active": "crear_empresa"},
         status=400 if request.method == "POST" and not form.is_valid() else 200,
     )
 
@@ -270,12 +449,20 @@ def editar_workspace(request, workspace_uid):
     if request.method == "POST":
         action = request.POST.get("accion")
         if action in {"suspender", "reactivar"}:
+            if action == "suspender" and workspace.slug == "clearia":
+                raise Http404
             workspace.estado = (
                 Workspace.Estado.SUSPENDIDA
                 if action == "suspender"
                 else Workspace.Estado.ACTIVA
             )
             workspace.save(update_fields=["estado"])
+            messages.success(
+                request,
+                "Empresa reactivada."
+                if action == "reactivar"
+                else "Empresa suspendida.",
+            )
             return redirect("consola_plataforma")
         form = EditarWorkspaceForm(request.POST)
         if form.is_valid():
@@ -284,6 +471,7 @@ def editar_workspace(request, workspace_uid):
             workspace.save(
                 update_fields=["nombre", "plan", "color_primario", "logo_url"]
             )
+            messages.success(request, "Datos de la empresa actualizados.")
             return redirect("consola_plataforma")
     elif request.method == "GET":
         form = EditarWorkspaceForm(
@@ -297,7 +485,11 @@ def editar_workspace(request, workspace_uid):
     return render(
         request,
         "workspaces/editar_workspace.html",
-        {"workspace": workspace, "form": form},
+        {
+            "workspace": workspace,
+            "form": form,
+            "nav_active": "plataforma",
+        },
         status=400 if request.method == "POST" and not form.is_valid() else 200,
     )
 
@@ -353,12 +545,17 @@ def asignar_propietario(request, workspace_uid):
                     raise
                 raise Http404
             else:
+                messages.success(request, "Propietario asignado correctamente.")
                 return redirect("consola_plataforma")
     elif request.method != "GET":
         return HttpResponseNotAllowed(["GET", "POST"])
     return render(
         request,
         "workspaces/asignar_propietario.html",
-        {"workspace": workspace, "form": form},
+        {
+            "workspace": workspace,
+            "form": form,
+            "nav_active": "plataforma",
+        },
         status=400 if request.method == "POST" and not form.is_valid() else 200,
     )

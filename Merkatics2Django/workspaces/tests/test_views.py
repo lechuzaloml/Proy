@@ -1,6 +1,9 @@
 from django.test import TestCase
 from django.urls import reverse
+from django.utils import timezone
 
+from contacts.models import Contacto
+from funnels.models import Cuestionario
 from users.models import AdminPlataforma, Usuario
 from workspaces.models import Membresia, Workspace
 
@@ -15,7 +18,7 @@ class WorkspaceScopeViewTests(TestCase):
         Membresia.objects.para(cls.workspace_a).create(
             correo=cls.user_a.correo,
             usuario=cls.user_a,
-            rol=Membresia.Rol.USUARIO,
+            rol=Membresia.Rol.PROPIETARIO,
         )
         Membresia.objects.para(cls.workspace_a).create(
             correo="hidden-a@example.com",
@@ -47,10 +50,50 @@ class WorkspaceScopeViewTests(TestCase):
             reverse("miembros", args=[self.workspace_a.uid])
         )
         self.assertEqual(response.status_code, 200)
+        self.assertContains(
+            response,
+            "Diagnósticos y recursos para impulsar el crecimiento de tu negocio.",
+        )
         self.assertContains(response, "hidden-a@example.com")
         self.assertNotContains(response, "hidden-b@example.com")
         self.assertNotContains(response, "b@example.com")
-        self.assertNotContains(response, "Agregar miembro")
+        self.assertContains(response, "Agregar miembro")
+        owner = Membresia.objects.para(self.workspace_a).get(usuario=self.user_a)
+        self.assertContains(response, "Propietario protegido")
+        self.assertNotContains(
+            response,
+            reverse("miembro_detalle", args=[self.workspace_a.uid, owner.uid]),
+        )
+
+    def test_regular_user_cannot_open_members_page(self):
+        user = Usuario.objects.create(correo="viewer@example.com")
+        Membresia.objects.para(self.workspace_a).create(
+            correo=user.correo,
+            usuario=user,
+            rol=Membresia.Rol.USUARIO,
+        )
+        session = self.client.session
+        session["usuario_uid"] = str(user.uid)
+        session.save()
+
+        response = self.client.get(reverse("miembros", args=[self.workspace_a.uid]))
+
+        self.assertEqual(response.status_code, 404)
+
+        Contacto.objects.para(self.workspace_a).create(
+            nombre="Contacto confidencial",
+            correo="contact@example.com",
+            telefono="5551234567",
+            consentimiento_version="test-v1",
+            consentimiento_fecha=timezone.now(),
+            origen="test",
+        )
+        summary = self.client.get(
+            reverse("resumen_workspace", args=[self.workspace_a.uid])
+        )
+        self.assertEqual(summary.status_code, 200)
+        self.assertContains(summary, "No tienes permisos para ver los paneles")
+        self.assertNotContains(summary, "Contacto confidencial")
 
     def test_suspended_workspace_members_keep_panel_access(self):
         self.workspace_a.estado = Workspace.Estado.SUSPENDIDA
@@ -125,6 +168,9 @@ class PlatformViewsTests(TestCase):
         AdminPlataforma.objects.create(usuario=platform_user)
         self.login(platform_user)
 
+        logo_url = (
+            "https://lh3.googleusercontent.com/a/" + "x" * 300 + "=s96-c"
+        )
         response = self.client.post(
             reverse("crear_workspace"),
             {
@@ -133,12 +179,13 @@ class PlatformViewsTests(TestCase):
                 "propietario_correo": "first-owner@example.com",
                 "plan": "pro",
                 "color_primario": "#123ABC",
-                "logo_url": "https://example.com/logo.png",
+                "logo_url": logo_url,
             },
         )
 
         self.assertEqual(response.status_code, 302)
         workspace = Workspace.objects.get(slug="new-company")
+        self.assertEqual(workspace.logo_url, logo_url)
         owner = Membresia.objects.para(workspace).get()
         self.assertEqual(owner.correo, "first-owner@example.com")
         self.assertEqual(owner.rol, Membresia.Rol.PROPIETARIO)
@@ -148,6 +195,100 @@ class PlatformViewsTests(TestCase):
         console = self.client.get(reverse("consola_plataforma"))
         self.assertEqual(console.status_code, 200)
         self.assertContains(console, "New Company")
+
+    def test_platform_console_exposes_aggregate_counts_not_contact_records(self):
+        platform_user = Usuario.objects.create(correo="platform@example.com")
+        AdminPlataforma.objects.create(usuario=platform_user)
+        workspace = Workspace.objects.create(slug="counted", nombre="Contada")
+        Membresia.objects.para(workspace).create(
+            correo="owner@example.com",
+            rol=Membresia.Rol.PROPIETARIO,
+        )
+        Cuestionario.objects.para(workspace).create(
+            nombre="Publicado",
+            estado=Cuestionario.Estado.PUBLICADO,
+            configuracion={},
+        )
+        Contacto.objects.para(workspace).create(
+            nombre="Nombre privado no debe aparecer",
+            correo="private@example.com",
+            telefono="5551234567",
+            consentimiento_version="test-v1",
+            consentimiento_fecha=timezone.now(),
+            origen="test",
+        )
+        self.login(platform_user)
+
+        response = self.client.get(reverse("consola_plataforma"))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "Cuestionarios publicados")
+        self.assertContains(response, "Contactos")
+        self.assertNotContains(response, "Nombre privado no debe aparecer")
+        company_row = next(
+            row
+            for row in response.context["workspaces"]
+            if row["workspace"] == workspace
+        )
+        self.assertEqual(company_row["published_count"], 1)
+        self.assertEqual(company_row["contact_count"], 1)
+        self.assertNotIn("contacts", company_row)
+
+    def test_platform_admin_clearia_membership_does_not_grant_other_workspace_data(self):
+        from workspaces.services import asegurar_espacio_clearia
+
+        platform_user = Usuario.objects.create(correo="platform@example.com")
+        admin = AdminPlataforma.objects.create(usuario=platform_user)
+        clearia = asegurar_espacio_clearia([admin])
+        other_workspace = Workspace.objects.create(
+            slug="other-company",
+            nombre="Otra empresa",
+        )
+        Contacto.objects.para(other_workspace).create(
+            nombre="Contacto ajeno",
+            correo="foreign@example.com",
+            telefono="5551234567",
+            consentimiento_version="test-v1",
+            consentimiento_fecha=timezone.now(),
+            origen="test",
+        )
+        self.login(platform_user)
+
+        response = self.client.get(reverse("contactos", args=[other_workspace.uid]))
+
+        self.assertEqual(response.status_code, 404)
+        self.assertEqual(Contacto.objects.para(clearia).count(), 0)
+
+    def test_invalid_slug_error_is_identified_with_its_field(self):
+        platform_user = Usuario.objects.create(correo="platform@example.com")
+        AdminPlataforma.objects.create(usuario=platform_user)
+        self.login(platform_user)
+
+        response = self.client.post(
+            reverse("crear_workspace"),
+            {
+                "slug": "invalid_slug",
+                "nombre": "New Company",
+                "propietario_correo": "owner@example.com",
+                "plan": "inicial",
+                "color_primario": "#E2554F",
+                "logo_url": "",
+            },
+        )
+
+        self.assertEqual(response.status_code, 400)
+        self.assertContains(response, 'data-field="slug"', status_code=400)
+        self.assertContains(
+            response,
+            "Slug (identificador de la empresa): Usa de 3 a 40 caracteres",
+            status_code=400,
+        )
+        self.assertContains(
+            response,
+            "No se pudo crear la empresa. Revisa estos campos:",
+            status_code=400,
+        )
+        self.assertFalse(Workspace.objects.exists())
 
     def test_platform_can_assign_owner_when_workspace_has_none(self):
         platform_user = Usuario.objects.create(correo="platform@example.com")
@@ -196,6 +337,31 @@ class PlatformViewsTests(TestCase):
         self.assertEqual(workspace.nombre, "After")
         self.assertEqual(workspace.plan, Workspace.Plan.AVANZADO)
         self.assertEqual(workspace.color_primario, "#123ABC")
+        self.assertEqual(workspace.estado, Workspace.Estado.ACTIVA)
+
+    def test_platform_cannot_suspend_internal_diagnostic_workspace(self):
+        platform_user = Usuario.objects.create(correo="platform@example.com")
+        AdminPlataforma.objects.create(usuario=platform_user)
+        workspace = Workspace.objects.create(
+            slug="clearia",
+            nombre="Clear-IA",
+            plan=Workspace.Plan.INTERNO,
+        )
+        self.login(platform_user)
+
+        page = self.client.get(reverse("editar_workspace", args=[workspace.uid]))
+        response = self.client.post(
+            reverse("editar_workspace", args=[workspace.uid]),
+            {"accion": "suspender"},
+        )
+
+        self.assertContains(
+            page,
+            "El workspace interno del diagnóstico público debe permanecer activo.",
+        )
+        self.assertNotContains(page, "Suspender empresa")
+        self.assertEqual(response.status_code, 404)
+        workspace.refresh_from_db()
         self.assertEqual(workspace.estado, Workspace.Estado.ACTIVA)
 
 

@@ -65,6 +65,17 @@ class LoginViewTests(TestCase):
         "exp": 4_000_000_000,
     }
 
+    def test_login_page_uses_the_shared_site_footer(self):
+        response = self.client.get("/acceso/")
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(
+            response,
+            "Diagnósticos y recursos para impulsar el crecimiento de tu negocio.",
+        )
+        self.assertContains(response, "Aviso de privacidad")
+        self.assertContains(response, "Volver arriba")
+
     @patch("users.views.verify_google_credential")
     def test_login_rotates_session_and_stores_only_user_uid(self, verify):
         verify.return_value = self.claims
@@ -188,7 +199,47 @@ class PlatformAdminCommandTests(TestCase):
         from django.core.management import call_command
 
         call_command("crear_admin_plataforma", " ROOT@Example.com ")
+        call_command("crear_admin_plataforma", "root@example.com")
 
         self.assertTrue(
             AdminPlataforma.objects.filter(usuario__correo="root@example.com").exists()
+        )
+        workspace = Workspace.objects.get(slug="clearia")
+        membership = Membresia.objects.para(workspace).get(
+            correo="root@example.com"
+        )
+        self.assertEqual(membership.rol, Membresia.Rol.PROPIETARIO)
+        self.assertEqual(membership.estado, Membresia.Estado.ACTIVO)
+        self.assertTrue(membership.ver_leads)
+        self.assertTrue(membership.gestionar_leads)
+        self.assertTrue(membership.editar_cuestionarios)
+        self.assertTrue(membership.publicar_cuestionarios)
+        self.assertEqual(
+            Membresia.objects.para(workspace).filter(correo="root@example.com").count(),
+            1,
+        )
+
+    def test_ensure_clearia_command_is_idempotent_and_does_not_seed_templates(self):
+        from django.core.management import call_command
+
+        user = Usuario.objects.create(correo="current-admin@example.com")
+        AdminPlataforma.objects.create(usuario=user)
+        workspace = Workspace.objects.create(
+            slug="clearia",
+            nombre="Wrong name",
+            plan=Workspace.Plan.INICIAL,
+            estado=Workspace.Estado.SUSPENDIDA,
+        )
+
+        call_command("asegurar_espacio_clearia", user.correo)
+        call_command("asegurar_espacio_clearia", user.correo)
+
+        workspace.refresh_from_db()
+        self.assertEqual(workspace.nombre, "Clear-IA")
+        self.assertEqual(workspace.plan, Workspace.Plan.INTERNO)
+        self.assertEqual(workspace.estado, Workspace.Estado.ACTIVA)
+        self.assertEqual(Membresia.objects.para(workspace).count(), 1)
+        self.assertEqual(
+            Membresia.objects.para(workspace).get().rol,
+            Membresia.Rol.PROPIETARIO,
         )

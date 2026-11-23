@@ -1,0 +1,25 @@
+{% load static %}
+<section class="contact-form-view flow-card" data-flow-step {% if not initial %}hidden{% endif %}>
+  <div class="contact-form">
+    <div class="contact-form-heading">
+      <span aria-hidden="true" class="contact-form-icon"><svg fill="none" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><circle cx="12" cy="8" r="3.25"/><path d="M5.5 20v-1.4a6.5 6.5 0 0 1 13 0V20z"/></svg></span>
+      <div><p class="eyebrow">{% if initial %}Un primer paso{% else %}Un último paso{% endif %}</p><h2>Datos de contacto</h2><p class="contact-form-intro">Completa tus datos para continuar con el cuestionario.</p></div>
+    </div>
+    <label>Nombre<input name="nombre" autocomplete="name" maxlength="120" required value="{{ form.nombre.value|default:'' }}"></label>
+    <label>Correo electrónico<input name="correo" type="email" autocomplete="email" maxlength="200" required value="{{ form.correo.value|default:'' }}"></label>
+    <label>Teléfono / WhatsApp<input name="telefono" type="tel" autocomplete="tel" maxlength="30" minlength="5" required value="{{ form.telefono.value|default:'' }}"></label>
+    {% if not demonstration %}
+      <div class="privacy-consent">
+        <details><summary>Leer aviso de privacidad</summary><p>Texto provisional, pendiente de revisión por Merkatics. Para el diagnóstico pedimos nombre, correo electrónico, teléfono o WhatsApp y las respuestas al cuestionario. Usamos estos datos para elaborar y personalizar el resultado y, cuando corresponda, dar seguimiento a tu solicitud. Las respuestas abiertas se procesan con un servicio de inteligencia artificial para personalizar el resultado. Tu nombre, correo y teléfono NO se envían a ese servicio. Para ejercer tus derechos de acceso, rectificación, cancelación u oposición, contacta a: [pendiente].</p></details>
+        <label><input type="checkbox" name="consentimiento" value="on" required {% if form.consentimiento.value %}checked{% endif %}><span>He leído el aviso y consiento el uso de mis datos para los fines descritos.</span></label>
+      </div>
+    {% else %}
+      <p class="demo-notice">Demostración: no se guardan datos.</p>
+    {% endif %}
+    {% if initial %}
+      <button class="submit-button" data-flow-next type="button">Continuar</button>
+    {% else %}
+      <div class="flow-navigation"><button class="secondary-button" data-flow-previous type="button">Anterior</button><button class="submit-button" type="submit">Continuar</button></div>
+    {% endif %}
+  </div>
+</section>

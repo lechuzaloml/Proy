@@ -1,14 +1,41 @@
-{% extends "users/base.html" %}
+{% extends "users/base_private.html" %}
 {% block title %}Crear empresa · merkatics-ClearIa{% endblock %}
+{% block page_title %}Crear empresa{% endblock %}
+{% block page_help %}Registra el espacio y asigna su primer propietario. Ambos se guardan en una sola transacción.{% endblock %}
 {% block content %}
-<section class="card narrow">
-  <a href="{% url 'consola_plataforma' %}">← Volver a empresas</a>
-  <h1>Crear empresa</h1>
-  <p>La empresa y su primera membresía de propietario se guardan juntas.</p>
+<section class="private-card admin-card private-form-card">
+  {% if form.errors %}
+    <div class="notice error" role="alert" aria-labelledby="form-errors-title">
+      <strong id="form-errors-title">No se pudo crear la empresa. Revisa estos campos:</strong>
+      <ul>
+        {% for field in form %}
+          {% for error in field.errors %}
+            <li><a href="#field-{{ field.name }}">{{ field.label }}</a>: {{ error }}</li>
+          {% endfor %}
+        {% endfor %}
+        {% for error in form.non_field_errors %}
+          <li>{{ error }}</li>
+        {% endfor %}
+      </ul>
+    </div>
+  {% endif %}
   <form method="post">
     {% csrf_token %}
-    {{ form.as_p }}
-    <button class="button" type="submit">Crear empresa y propietario</button>
+    {% for field in form %}
+      <div id="field-{{ field.name }}" class="form-field{% if field.errors %} form-field-invalid{% endif %}" data-field="{{ field.name }}">
+        <label for="{{ field.id_for_label }}">{{ field.label }}</label>
+        {{ field }}
+        {% if field.help_text %}
+          <small class="field-help" id="{{ field.auto_id }}_help">{{ field.help_text }}</small>
+        {% endif %}
+        <div class="field-errors" id="{{ field.auto_id }}_errors" role="alert"{% if not field.errors %} hidden{% endif %}>
+          {% for error in field.errors %}
+            <p>{{ field.label }}: {{ error }}</p>
+          {% endfor %}
+        </div>
+      </div>
+    {% endfor %}
+    <button class="private-button" type="submit">Crear empresa y propietario</button>
   </form>
 </section>
 {% endblock %}

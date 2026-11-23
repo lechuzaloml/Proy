@@ -65,7 +65,9 @@ class Workspace(models.Model):
         ],
     )
     logo_url = models.URLField(
-        blank=True, validators=[URLValidator(schemes=["https"])]
+        max_length=2048,
+        blank=True,
+        validators=[URLValidator(schemes=["https"])],
     )
     creado = models.DateTimeField(auto_now_add=True)
 

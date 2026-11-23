@@ -6,8 +6,9 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>{% block title %}merkatics-ClearIa{% endblock %}</title>
   <link rel="stylesheet" href="{% static 'css/app.css' %}">
+  <link rel="stylesheet" href="{% static 'funnels/footer.css' %}">
 </head>
-<body>
+<body id="top">
   <header class="site-header">
     <a class="brand" href="{% url 'selector_workspace' %}">merkatics-ClearIa</a>
     {% if request.usuario %}
@@ -23,6 +24,6 @@
   <main class="page">
     {% block content %}{% endblock %}
   </main>
-  <footer class="site-footer">ClearIa · Acceso seguro para equipos</footer>
+  {% include "funnels/_footer.html" %}
 </body>
 </html>

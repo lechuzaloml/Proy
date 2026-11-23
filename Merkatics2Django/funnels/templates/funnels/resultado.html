@@ -1,0 +1,38 @@
+{% extends "funnels/base_public.html" %}
+{% block title %}Resultado | {{ titulo }}{% endblock %}
+{% block page_content %}
+<main class="questionnaire result-screen public-main">
+  <p class="eyebrow">Resultado</p>
+  <article class="question-card">
+    <p>{{ resultado.contenido }}</p>
+    {% if resultado.cta %}
+      <div class="result-cta"><h2>{{ resultado.cta.texto }}</h2><p>Acción informativa: {{ resultado.cta.accion }}</p></div>
+    {% endif %}
+  </article>
+  {% if perfil|length >= 2 %}
+    <section aria-labelledby="result-profile-title" class="result-profile">
+      <header class="result-profile-header">
+        <p class="eyebrow">{% if usa_scoring %}Perfil por categoría{% else %}Resumen de respuestas{% endif %}</p>
+        <h2 id="result-profile-title">{% if usa_scoring %}Así se distribuye tu resultado por categoría{% else %}Preguntas respondidas por sección{% endif %}</h2>
+        <p>{% if usa_scoring %}Cada porcentaje muestra los puntos obtenidos frente al máximo posible en esa categoría. Las preguntas abiertas no se puntúan.{% else %}El porcentaje muestra cuántas preguntas de cada sección respondiste. Este resumen no representa fortalezas, debilidades ni una evaluación.{% endif %}</p>
+      </header>
+      <div class="result-profile-content">
+        <svg aria-label="{% if usa_scoring %}Gráfica radial del puntaje por categoría{% else %}Gráfica radial de preguntas respondidas por sección{% endif %}" class="result-profile-chart" role="img" viewBox="0 0 320 320">
+          {% for ring in chart_rings %}<circle class="result-profile-grid" cx="160" cy="160" r="{{ ring }}"/>{% endfor %}
+          {% for dimension in perfil %}<line class="result-profile-axis" x1="160" y1="160" x2="{{ dimension.axis_x }}" y2="{{ dimension.axis_y }}"/>{% endfor %}
+          {% if polygon_points %}<polygon class="result-profile-area" points="{{ polygon_points }}"/>{% endif %}
+          {% for dimension in perfil %}<circle class="result-profile-point" cx="{{ dimension.point_x }}" cy="{{ dimension.point_y }}" r="6"><title>{{ dimension.nombre }}: {{ dimension.porcentaje }}%</title></circle>{% endfor %}
+        </svg>
+        <ol class="result-profile-dimensions">
+          {% for dimension in perfil %}
+            <li><span aria-hidden="true" class="result-profile-index">{{ forloop.counter }}</span><div class="result-profile-detail"><h3>{{ dimension.nombre }}</h3><p>{{ dimension.respondidas }} de {{ dimension.total_preguntas }} {% if usa_scoring %}preguntas puntuadas respondidas{% else %}preguntas respondidas{% endif %}</p><progress aria-label="{{ dimension.nombre }}: {{ dimension.porcentaje }}%" max="100" value="{{ dimension.porcentaje }}"></progress></div><strong>{{ dimension.porcentaje }}%</strong></li>
+          {% endfor %}
+        </ol>
+      </div>
+      <p class="result-profile-note">Este perfil es un resumen orientativo.</p>
+    </section>
+  {% endif %}
+  {% if demonstration %}<p class="demo-notice">Demostración: no se guardan datos.</p>{% endif %}
+  <a class="secondary-button" href="/">Volver al inicio</a>
+</main>
+{% endblock %}

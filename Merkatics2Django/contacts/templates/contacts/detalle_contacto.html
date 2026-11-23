@@ -1,0 +1,52 @@
+{% extends "users/base_private.html" %}
+{% block title %}{{ contact.nombre }} · Contactos{% endblock %}
+{% block page_title %}{{ contact.nombre }}{% endblock %}
+{% block page_help %}Revisa las respuestas y el diagnóstico de esta persona y registra el seguimiento del equipo.{% endblock %}
+{% block content %}
+  <p>{{ contact.correo }}{% if contact.telefono %} · {{ contact.telefono }}{% endif %}</p>
+  {% if errors %}<div class="private-message private-message-error" role="alert"><ul>{% for error in errors %}<li>{{ error }}</li>{% endfor %}</ul></div>{% endif %}
+
+  <section class="private-card admin-card">
+    <h2>Dónde se guardó</h2>
+    <dl class="private-storage-details">
+      <dt>Empresa</dt><dd>{{ workspace.nombre }}</dd>
+      <dt>Cuestionario</dt><dd>{% if diagnosis %}{{ diagnosis.cuestionario.nombre }}{% else %}No disponible{% endif %}</dd>
+      <dt>Versión</dt><dd>{% if diagnosis %}{{ diagnosis.version }}{% else %}No disponible{% endif %}</dd>
+      <dt>Origen</dt><dd>{{ origen_label }}</dd>
+      <dt>Fecha de envío</dt><dd>{{ contact.creado|date:"d/m/Y H:i" }}</dd>
+    </dl>
+  </section>
+
+  <section class="private-card admin-card">
+    <h2>Diagnóstico</h2>
+    {% if diagnosis %}
+      <p>Resultado: {{ diagnosis.resultado.contenido }}</p>
+      <p>Madurez del proceso: {{ diagnosis.porcentaje }}%</p>
+      {% if diagnosis.segmento %}<p>Segmento: {{ diagnosis.segmento }}</p>{% endif %}
+      <h3>Respuestas</h3>
+      <ol>{% for response in response_rows %}<li><strong>{{ response.pregunta }}</strong><p>{{ response.valor_legible }}</p>{% if response.seccion %}<small>{{ response.seccion }}</small>{% endif %}</li>{% empty %}<li>No hay respuestas registradas.</li>{% endfor %}</ol>
+    {% else %}
+      <p>Este contacto aún no tiene un diagnóstico asociado.</p>
+    {% endif %}
+  </section>
+
+  <section class="private-card admin-card">
+    <h2>Seguimiento</h2>
+    <p>Estado: <span class="private-badge">{{ contact.get_estado_display }}</span></p>
+    <p>Asignado a: {% if contact.asignado_a %}{{ contact.asignado_a.nombre|default:contact.asignado_a.correo }}{% else %}Sin asignar{% endif %}</p>
+    {% if puede_gestionar %}
+      <form method="post" class="private-form-card">{% csrf_token %}<input type="hidden" name="accion" value="estado"><label>Cambiar estado<select name="estado">{% for value,label in states %}<option value="{{ value }}" {% if contact.estado == value %}selected{% endif %}>{{ label }}</option>{% endfor %}</select></label><button class="private-button-secondary" type="submit">Guardar estado</button></form>
+      <form method="post" class="private-form-card">{% csrf_token %}<input type="hidden" name="accion" value="asignacion"><label>Asignar a<select name="membresia_uid"><option value="">Sin asignar</option>{% for member in members %}<option value="{{ member.uid }}" {% if contact.asignado_a_id == member.usuario_id %}selected{% endif %}>{{ member.usuario.nombre|default:member.correo }}</option>{% endfor %}</select></label><button class="private-button-secondary" type="submit">Guardar asignación</button></form>
+      <form method="post" class="private-form-card">{% csrf_token %}<input type="hidden" name="accion" value="seguimiento"><label>Tipo<select name="tipo">{% for value,label in followup_types %}<option value="{{ value }}">{{ label }}</option>{% endfor %}</select></label><label>Notas<textarea name="notas" maxlength="2000" required></textarea></label><label>Resultado<input name="resultado" maxlength="200"></label><label>Próxima acción<input name="proxima_accion" maxlength="200"></label><button class="private-button" type="submit">Agregar seguimiento</button></form>
+      {% if puede_eliminar %}
+        <details class="private-confirmation">
+          <summary>Eliminar contacto</summary>
+          <p>Se eliminarán también su diagnóstico y sus seguimientos. Esta acción no se puede deshacer.</p>
+          <form method="post">{% csrf_token %}<input type="hidden" name="accion" value="eliminar"><button class="private-button-danger" type="submit">Confirmar eliminación</button></form>
+        </details>
+      {% endif %}
+    {% endif %}
+    <h3>Actividad</h3>
+    <ol>{% for followup in followups %}<li><strong>{{ followup.get_tipo_display }} · {{ followup.creado|date:"d/m/Y H:i" }}</strong><p>{{ followup.notas }}</p>{% if followup.resultado %}<p>Resultado: {{ followup.resultado }}</p>{% endif %}{% if followup.proxima_accion %}<p>Próxima acción: {{ followup.proxima_accion }}</p>{% endif %}</li>{% empty %}<li>Sin seguimientos.</li>{% endfor %}</ol>
+  </section>
+{% endblock %}

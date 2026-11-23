@@ -31,18 +31,62 @@ class EdicionMembresiaForm(forms.Form):
 
 
 class CrearWorkspaceForm(forms.Form):
-    slug = forms.CharField(max_length=40, validators=[validate_workspace_slug])
-    nombre = forms.CharField(max_length=150)
-    propietario_correo = forms.CharField(max_length=191)
-    plan = forms.ChoiceField(choices=Workspace.Plan.choices)
+    slug = forms.CharField(
+        label="Slug (identificador de la empresa)",
+        max_length=40,
+        help_text=(
+            "Identificador corto y único; no es el nombre visible. Usa de 3 a "
+            "40 caracteres: letras, números y guiones internos. Se guarda en "
+            "minúsculas. Ejemplo: acme-mexico."
+        ),
+    )
+    nombre = forms.CharField(
+        label="Nombre de la empresa",
+        max_length=150,
+        help_text="Nombre que verán las personas en el selector de empresas.",
+    )
+    propietario_correo = forms.CharField(
+        label="Correo del propietario",
+        max_length=191,
+        help_text=(
+            "Cuenta a la que se asignará el rol de propietario. Si aún no tiene "
+            "cuenta, se vinculará cuando inicie sesión con Google usando este correo."
+        ),
+    )
+    plan = forms.ChoiceField(
+        label="Plan",
+        choices=Workspace.Plan.choices,
+        help_text="Categoría de plan que quedará asignada a la empresa.",
+    )
     color_primario = forms.RegexField(
+        label="Color principal",
         regex=r"^#[0-9A-Fa-f]{6}$",
         error_messages={"invalid": "Usa un color hexadecimal con formato #RRGGBB."},
+        help_text="Color de marca en formato hexadecimal; por ejemplo, #E2554F.",
     )
-    logo_url = forms.URLField(required=False, validators=[URLValidator(schemes=["https"])])
+    logo_url = forms.URLField(
+        label="Logo (URL, opcional)",
+        max_length=2048,
+        required=False,
+        validators=[URLValidator(schemes=["https"])],
+        help_text=(
+            "Enlace HTTPS a la imagen del logo (hasta 2048 caracteres). "
+            "Puedes dejarlo vacío."
+        ),
+    )
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        for name, field in self.fields.items():
+            auto_id = self[name].auto_id
+            field.widget.attrs["aria-describedby"] = (
+                f"{auto_id}_help {auto_id}_errors"
+            )
 
     def clean_slug(self):
-        return self.cleaned_data["slug"].strip().lower()
+        slug = self.cleaned_data["slug"].strip().lower()
+        validate_workspace_slug(slug)
+        return slug
 
     def clean_propietario_correo(self):
         correo = self.cleaned_data["propietario_correo"].strip().lower()
@@ -57,5 +101,9 @@ class EditarWorkspaceForm(forms.Form):
         regex=r"^#[0-9A-Fa-f]{6}$",
         error_messages={"invalid": "Usa un color hexadecimal con formato #RRGGBB."},
     )
-    logo_url = forms.URLField(required=False, validators=[URLValidator(schemes=["https"])])
+    logo_url = forms.URLField(
+        max_length=2048,
+        required=False,
+        validators=[URLValidator(schemes=["https"])],
+    )
 

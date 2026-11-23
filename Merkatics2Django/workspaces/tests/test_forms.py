@@ -15,7 +15,7 @@ class WorkspaceFormValidationTests(SimpleTestCase):
         }
 
     def test_reserved_and_malformed_slugs_are_rejected(self):
-        for slug in ("admin", "aa", "Invalid-Company", "bad_slug", "company-"):
+        for slug in ("admin", "aa", "bad_slug", "company-"):
             with self.subTest(slug=slug):
                 form = CrearWorkspaceForm({**self.valid_data(), "slug": slug})
                 self.assertFalse(form.is_valid())
@@ -28,6 +28,23 @@ class WorkspaceFormValidationTests(SimpleTestCase):
             }
         )
         self.assertTrue(form.is_valid(), form.errors)
+
+    def test_long_google_logo_url_is_accepted(self):
+        logo_url = "https://lh3.googleusercontent.com/a/" + "x" * 300 + "=s96-c"
+        form = CrearWorkspaceForm(
+            {**self.valid_data(), "logo_url": logo_url}
+        )
+
+        self.assertTrue(form.is_valid(), form.errors)
+        self.assertEqual(form.cleaned_data["logo_url"], logo_url)
+
+    def test_slug_is_lowercased_before_validation(self):
+        form = CrearWorkspaceForm(
+            {**self.valid_data(), "slug": "ClearIa-mexico"}
+        )
+
+        self.assertTrue(form.is_valid(), form.errors)
+        self.assertEqual(form.cleaned_data["slug"], "clearia-mexico")
 
     def test_http_logo_and_invalid_color_are_rejected(self):
         form = CrearWorkspaceForm(
