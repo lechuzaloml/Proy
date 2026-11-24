@@ -1,0 +1,117 @@
+{% extends "funnels/base_public.html" %}
+{% load static %}
+{% block title %}Tu recomendación · Clear-IA{% endblock %}
+{% block page_content %}
+<main class="recommendation-page">
+  <section aria-labelledby="recommendation-title" class="recommendation-copy">
+    <p class="eyebrow">Template recomendado</p>
+    <h1 id="recommendation-title">{{ plantilla.nombre }}</h1>
+    <p class="recommended-template-description">{{ plantilla.descripcion }}</p>
+    <a class="secondary-button" href="{% url 'demostrar_plantilla' plantilla.slug %}">Ver este template (demo)</a>
+
+    <div class="recommendation-reason">
+      <img alt="Asistente de Clear-IA" class="recommendation-assistant-mark" src="{% static 'funnels/clear-ia-assistant.png' %}">
+      <div class="recommendation-reason-copy">
+        <h2>Por qué encaja</h2>
+        <p>{{ contenido }}</p>
+      </div>
+    </div>
+
+    <a class="submit-button recommendation-plans-button" href="{% url 'planes' %}?plan={{ plan_recomendado.id }}">Ver planes disponibles</a>
+  </section>
+
+  <section aria-labelledby="impact-title" class="impact-page impact-embedded">
+    <header class="impact-heading">
+      <p class="eyebrow">Impacto comercial estimado</p>
+      <h2 id="impact-title">Explora cuánto potencial podrías estar dejando sin seguimiento</h2>
+      <p>Ajusta los datos para estimar el valor de las oportunidades que no reciben continuidad. El cálculo es ilustrativo, no una garantía de ventas.</p>
+    </header>
+    <section aria-label="Calculadora de impacto comercial" class="impact-dashboard" data-impact-calculator>
+      <div class="impact-controls">
+        <label class="impact-control" for="prospectos-mensuales">
+          <span class="impact-control-heading"><span>Prospectos al mes</span><output data-output="prospectosMensuales">160</output></span>
+          <input id="prospectos-mensuales" data-input="prospectosMensuales" max="1000" min="10" step="10" type="range" value="160">
+          <span class="impact-range-boundaries"><span>10</span><span>1,000</span></span>
+        </label>
+        <label class="impact-control" for="ticket-promedio">
+          <span class="impact-control-heading"><span>Ticket promedio</span><output data-output="ticketPromedio">$5,000</output></span>
+          <input id="ticket-promedio" data-input="ticketPromedio" max="100000" min="500" step="500" type="range" value="5000">
+          <span class="impact-range-boundaries"><span>$500</span><span>$100,000</span></span>
+        </label>
+        <label class="impact-control" for="conversion-actual">
+          <span class="impact-control-heading"><span>De cada 100 prospectos, ¿cuántos compran?</span><output data-output="conversionPorcentaje">5</output></span>
+          <input id="conversion-actual" data-input="conversionPorcentaje" max="100" min="0" step="1" type="range" value="5">
+          <span class="impact-range-boundaries"><span>0</span><span>100</span></span>
+        </label>
+        <label class="impact-control" for="prospectos-sin-seguimiento">
+          <span class="impact-control-heading"><span>Prospectos que se quedan sin seguimiento</span><output data-output="prospectosSinSeguimiento">40 de 160</output></span>
+          <input id="prospectos-sin-seguimiento" data-input="prospectosSinSeguimiento" max="160" min="0" step="1" type="range" value="40">
+          <span class="impact-range-boundaries"><span>0</span><span data-followup-maximum>160</span></span>
+        </label>
+        <div aria-label="Resumen estimado" class="impact-summary">
+          <article class="impact-stat"><span>Ventas actuales estimadas</span><strong data-summary="ventas">8.0</strong><small>por mes, según tu conversión</small></article>
+          <article class="impact-stat impact-stat-highlight"><span>Oportunidad mensual estimada</span><strong data-summary="mensual">$10,000</strong><small>si los prospectos sin seguimiento convirtieran a la tasa actual</small></article>
+          <article class="impact-stat"><span>Proyección ilustrativa anual</span><strong data-summary="anual">$120,000</strong><small>al mantener estos datos durante 12 meses</small></article>
+        </div>
+      </div>
+
+      <div class="impact-visuals">
+        <figure class="impact-prospect-figure">
+          <figcaption><span>Cada punto representa aproximadamente el 1% de tus prospectos</span><span class="impact-legend"><span aria-hidden="true" class="impact-legend-dot"></span><span data-proportion-label>Sin seguimiento (25%)</span></span></figcaption>
+          <div aria-label="25% de los prospectos no tienen seguimiento" class="impact-prospect-grid" data-prospect-grid role="img"></div>
+        </figure>
+        <figure class="impact-chart-figure">
+          <figcaption><span>Proyección acumulada ilustrativa a 12 meses</span><span>Escala visual comprimida</span></figcaption>
+          <div aria-label="La proyección acumulada ilustrativa es $120,000 al mes 12, en escala visual comprimida." class="impact-chart" data-impact-chart role="img"></div>
+          <p class="impact-chart-scale-note">Escala visual comprimida para que el gráfico siga reflejando aumentos en escenarios de distinto tamaño. Los importes exactos aparecen en el resumen y al pasar sobre cada barra.</p>
+        </figure>
+        <p class="impact-disclaimer">Estimación basada en los valores que ingresaste: prospectos sin seguimiento × conversión actual × ticket promedio. No representa ventas perdidas comprobadas ni garantiza resultados futuros.</p>
+      </div>
+    </section>
+  </section>
+
+  <section aria-labelledby="ruta-comercial-title" class="ruta-comercial">
+    <div class="ruta-comercial-copy">
+      <p class="ruta-comercial-kicker">Acompañamiento comercial</p>
+      <h2 id="ruta-comercial-title">Convierte tu diagnóstico en un siguiente paso claro</h2>
+      <p class="ruta-comercial-description">Una propuesta de trabajo para revisar tus oportunidades comerciales, ordenar prioridades y definir por dónde avanzar.</p>
+      <p class="ruta-comercial-note">Servicio independiente de la suscripción Clear-IA Premium. El alcance y las condiciones se acuerdan antes de iniciar.</p>
+      <aside aria-label="Comunidad de WhatsApp" class="whatsapp-community">
+        <span aria-hidden="true" class="whatsapp-community-icon">◌</span>
+        <div class="whatsapp-community-copy">
+          <h3>Únete a la comunidad Clear-IA</h3>
+          <p>Ideas, recursos y conversaciones para impulsar tu crecimiento.</p>
+          <small>El acceso al grupo estará disponible próximamente.</small>
+        </div>
+        <button class="whatsapp-community-button" type="button">Unirme<span aria-hidden="true" class="whatsapp-community-arrow"><svg fill="none" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M4 12h15m-6-6 6 6-6 6" /></svg></span></button>
+      </aside>
+    </div>
+    <aside aria-label="Etapas del acompañamiento" class="ruta-comercial-map">
+      <div class="ruta-comercial-map-heading"><span>Ruta Clear-IA</span><span aria-hidden="true">01 — 03</span></div>
+      <ol class="ruta-comercial-steps">
+        <li class="ruta-comercial-step"><span aria-hidden="true" class="ruta-comercial-step-number">01</span><div><h3>Entender</h3><p>Revisamos los hallazgos de tu diagnóstico.</p></div></li>
+        <li class="ruta-comercial-step"><span aria-hidden="true" class="ruta-comercial-step-number">02</span><div><h3>Priorizar</h3><p>Elegimos las oportunidades más relevantes para tu negocio.</p></div></li>
+        <li class="ruta-comercial-step"><span aria-hidden="true" class="ruta-comercial-step-number">03</span><div><h3>Trazar</h3><p>Definimos un siguiente paso claro y realista.</p></div></li>
+      </ol>
+      <p class="ruta-comercial-map-footer">Un punto de partida. Las acciones dependen del contexto de cada negocio.</p>
+    </aside>
+  </section>
+
+  <section aria-labelledby="premium-offer-title" class="landing-section landing-premium">
+    <header class="landing-section-heading">
+      <p class="landing-kicker">Clear-IA Premium</p>
+      <h2 id="premium-offer-title">¿Qué ofrecemos como Premium?</h2>
+      <p>Recursos para ofrecer cuestionarios de diagnóstico, comprender las respuestas y conocer mejor a tus prospectos.</p>
+      <p class="premium-service-note">Premium es la suscripción a Clear-IA. El acompañamiento comercial presentado arriba es una propuesta independiente y no forma parte de la suscripción. Las funciones marcadas como próximamente aún no están disponibles.</p>
+    </header>
+    <div class="landing-premium-grid">
+      <article class="landing-premium-item"><p class="landing-premium-status">Disponible</p><h3>Biblioteca de diagnósticos</h3><p>Acceso a ocho templates demostrativos para distintos objetivos de negocio.</p></article>
+      <article class="landing-premium-item"><p class="landing-premium-status">Disponible</p><h3>Resultados por segmento</h3><p>Cuestionarios con puntaje y un resultado personalizado según las respuestas.</p></article>
+      <article class="landing-premium-item"><p class="landing-premium-status">Disponible</p><h3>Captura de prospectos</h3><p>Recopilación de datos de contacto como parte del flujo del cuestionario.</p></article>
+    </div>
+    <div class="landing-coming-soon"><p class="landing-premium-label">Próximamente</p><ul><li>Almacenamiento y panel de leads</li><li>Conexión con CRM y WhatsApp de Merkatics</li><li>Personalización de cuestionarios</li></ul></div>
+    <a class="submit-button landing-premium-plans-button" href="{% url 'planes' %}?plan={{ plan_recomendado.id }}">Comprar un plan</a>
+  </section>
+</main>
+{% endblock %}
+{% block extra_scripts %}<script src="{% static 'funnels/calculadora-impacto.js' %}" defer></script>{% endblock %}

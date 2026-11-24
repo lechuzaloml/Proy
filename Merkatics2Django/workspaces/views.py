@@ -1,5 +1,6 @@
-from functools import wraps
+import math
 from datetime import timedelta
+from functools import wraps
 from urllib.parse import quote
 
 from django.contrib import messages
@@ -8,10 +9,12 @@ from django.http import Http404, HttpResponseNotAllowed
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
 from django.utils import timezone
+from django.views.decorators.cache import never_cache
 
 from contacts.models import Contacto, Diagnostico
 from contacts.presentation import etiqueta_origen
 from funnels.models import Cuestionario
+from subscriptions.models import SuscripcionWorkspace
 from users.models import AdminPlataforma, Usuario
 from workspaces.forms import (
     AltaMembresiaForm,
@@ -70,6 +73,7 @@ def _workspace_y_membresia(request, workspace_uid):
 
 
 @usuario_requerido
+@never_cache
 def selector_workspace(request):
     membresias = (
         Membresia.objects.sin_alcance()
@@ -91,6 +95,7 @@ def selector_workspace(request):
 
 
 @usuario_requerido
+@never_cache
 def resumen_workspace(request, workspace_uid):
     workspace, membership = _workspace_y_membresia(request, workspace_uid)
     can_view_contacts = tiene_permiso(membership, "ver_leads")
@@ -123,7 +128,26 @@ def resumen_workspace(request, workspace_uid):
         "puede_editar_cuestionarios": can_edit_questionnaires,
         "puede_administrar_miembros": can_manage_members,
         "sin_permisos": not can_view_summary,
+        "puede_administrar_suscripcion": (
+            can_manage_members and workspace.plan != Workspace.Plan.INTERNO
+        ),
+        "puede_gestionar_suscripcion": (
+            membership.rol == Membresia.Rol.PROPIETARIO
+            and workspace.plan != Workspace.Plan.INTERNO
+        ),
     }
+    if context["puede_administrar_suscripcion"]:
+        subscription = (
+            SuscripcionWorkspace.objects.para(workspace)
+            .filter(workspace=workspace)
+            .first()
+        )
+        context["suscripcion"] = subscription
+        if subscription and subscription.estado == SuscripcionWorkspace.Estado.PRUEBA:
+            remaining = subscription.prueba_hasta - timezone.now()
+            context["dias_prueba_restantes"] = max(
+                0, math.ceil(remaining.total_seconds() / 86_400)
+            )
     if can_view_summary:
         published = list(
             Cuestionario.objects.para(workspace)

@@ -11,6 +11,28 @@ from workspaces.models import Membresia, Workspace
 
 
 class LoadTemplatesCommandTests(TestCase):
+    def test_public_header_separates_sign_in_from_company_access(self):
+        response = self.client.get(reverse("inicio"))
+
+        self.assertContains(
+            response,
+            f'href="{reverse("selector_workspace")}">Acceder</a>',
+        )
+        self.assertContains(
+            response,
+            f'<form class="public-header-session" method="get" '
+            f'action="{reverse("acceso")}">',
+        )
+        self.assertContains(
+            response,
+            f'<input type="hidden" name="next" value="{reverse("inicio")}">',
+        )
+        self.assertContains(
+            response,
+            '<button class="public-header-action" type="submit">'
+            "Iniciar sesión</button>",
+        )
+
     def test_authenticated_public_header_includes_logout_action(self):
         user = Usuario.objects.create(correo="public-header@example.com")
         session = self.client.session
@@ -21,6 +43,15 @@ class LoadTemplatesCommandTests(TestCase):
 
         self.assertContains(response, "Cerrar sesión")
         self.assertContains(response, 'action="/salir/"')
+        self.assertContains(
+            response,
+            '<button class="public-header-action" type="submit">Cerrar sesión',
+        )
+        self.assertContains(
+            response,
+            f'href="{reverse("selector_workspace")}">Acceder</a>',
+        )
+        self.assertNotContains(response, "Iniciar sesión")
 
     def test_command_is_idempotent_and_publishes_internal_diagnostic(self):
         platform_user = Usuario.objects.create(correo="seed-admin@example.com")
@@ -119,9 +150,14 @@ class LoadTemplatesCommandTests(TestCase):
         self.assertNotContains(initial, "Qué vas a hacer")
         self.assertNotContains(initial, "7 preguntas")
         self.assertContains(initial, "Datos de contacto")
+        self.assertContains(initial, '<label class="text-answer flow-answer">')
         self.assertLess(
             initial.content.find(b"Datos de contacto"),
             initial.content.find("¿Qué tipo de negocio".encode("utf-8")),
+        )
+        self.assertContains(
+            initial,
+            'id="question-2" type="range" min="1" max="5" step="1" value="1"',
         )
         self.assertEqual(Contacto.objects.sin_alcance().count(), 0)
 
@@ -183,6 +219,53 @@ class CopyTemplateTests(TestCase):
         )
         self.assertFalse(version.publicada)
         self.assertEqual(self.template.configuracion, self.configuration)
+
+    def test_questionnaires_are_refreshed_after_reopening_the_company(self):
+        self.template.nombre = "Primer cuestionario"
+        self.template.save(update_fields=["nombre"])
+        templates = [
+            self.template,
+            Plantilla.objects.create(
+                slug="copy-second-source",
+                nombre="Segundo cuestionario",
+                formato="Cuestionario",
+                caso_uso="Prueba",
+                nicho="General",
+                descripcion="Segunda plantilla para copiar.",
+                configuracion=self.configuration,
+            ),
+        ]
+
+        for index, template in enumerate(templates):
+            copied = self.client.post(
+                reverse("copiar_plantilla", args=[template.slug]),
+                {"workspace_uid": str(self.workspace.uid)},
+            )
+            self.assertRedirects(
+                copied,
+                reverse("mis_cuestionarios", args=[self.workspace.uid]),
+            )
+            if index == 0:
+                self.client.get(reverse("inicio"))
+                self.client.get(reverse("selector_workspace"))
+                self.client.get(
+                    reverse("resumen_workspace", args=[self.workspace.uid])
+                )
+                first_listing = self.client.get(
+                    reverse("mis_cuestionarios", args=[self.workspace.uid])
+                )
+                self.assertContains(first_listing, "Primer cuestionario")
+                self.assertIn("no-store", first_listing["Cache-Control"])
+
+        self.client.get(reverse("inicio"))
+        self.client.get(reverse("selector_workspace"))
+        self.client.get(reverse("resumen_workspace", args=[self.workspace.uid]))
+        listing = self.client.get(
+            reverse("mis_cuestionarios", args=[self.workspace.uid])
+        )
+        self.assertContains(listing, "Primer cuestionario")
+        self.assertContains(listing, "Segundo cuestionario")
+        self.assertIn("no-store", listing["Cache-Control"])
 
     def test_membership_without_edit_permission_cannot_copy(self):
         self.membership.editar_cuestionarios = False

@@ -314,6 +314,24 @@ def validar_cuestionario(data):
             valid = False
         elif not _validar_resultado_por_segmento(result, errors):
             valid = False
+        rules = data.get("reglas_scoring")
+        results = result.get("resultados")
+        if isinstance(rules, list) and isinstance(results, list):
+            result_segments = {
+                candidate.get("segmento")
+                for candidate in results
+                if _es_registro(candidate) and _es_texto(candidate.get("segmento"))
+            }
+            for index, rule in enumerate(rules):
+                if (
+                    _es_registro(rule)
+                    and _es_texto(rule.get("segmento"))
+                    and rule["segmento"] not in result_segments
+                ):
+                    errors.append(
+                        f"reglas_scoring[{index}].segmento no tiene un resultado correspondiente."
+                    )
+                    valid = False
     elif result.get("tipo") != "fijo":
         errors.append('Un cuestionario sin scoring requiere resultado.tipo="fijo".')
         valid = False

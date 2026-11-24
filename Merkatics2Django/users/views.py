@@ -169,4 +169,4 @@ def cerrar_sesion(request):
     if request.method != "POST":
         return HttpResponseNotAllowed(["POST"])
     request.session.flush()
-    return redirect("/acceso/")
+    return redirect("inicio")

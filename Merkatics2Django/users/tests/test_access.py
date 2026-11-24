@@ -3,6 +3,7 @@ from unittest.mock import patch
 
 from django.conf import settings
 from django.test import Client, TestCase, override_settings
+from django.urls import reverse
 from django.utils import timezone
 
 from users.google_identity import GoogleCredentialError, verify_google_credential
@@ -26,6 +27,7 @@ class GoogleIdentityTests(TestCase):
         self.assertEqual(claims["email"], "person@example.com")
         verify.assert_called_once()
         self.assertEqual(verify.call_args.kwargs["audience"], settings.GOOGLE_CLIENT_ID)
+        self.assertEqual(verify.call_args.kwargs["clock_skew_in_seconds"], 300)
 
     @patch("users.google_identity.id_token.verify_oauth2_token")
     def test_wrong_audience_is_rejected(self, verify):
@@ -50,8 +52,9 @@ class GoogleIdentityTests(TestCase):
     @patch("users.google_identity.id_token.verify_oauth2_token")
     def test_expired_credential_is_rejected_by_google_auth(self, verify):
         verify.side_effect = ValueError("expired")
-        with self.assertRaises(GoogleCredentialError):
+        with self.assertRaises(GoogleCredentialError) as error:
             verify_google_credential("expired-credential")
+        self.assertIn("fecha y hora", str(error.exception))
 
 
 @override_settings(GOOGLE_CLIENT_ID="clear-ia-test-client")
@@ -73,6 +76,10 @@ class LoginViewTests(TestCase):
             response,
             "Diagnósticos y recursos para impulsar el crecimiento de tu negocio.",
         )
+        self.assertContains(response, 'class="landing-brand public-header"')
+        self.assertContains(response, 'href="/workspaces/">Acceder</a>')
+        self.assertContains(response, "Iniciar sesión")
+        self.assertContains(response, 'href="/planes/">Planes</a>')
         self.assertContains(response, "Aviso de privacidad")
         self.assertContains(response, "Volver arriba")
 
@@ -99,6 +106,22 @@ class LoginViewTests(TestCase):
             self.client.session.get_expiry_age(), settings.SESSION_COOKIE_AGE
         )
         self.assertIsNotNone(user.ultimo_acceso)
+
+    @patch("users.views.verify_google_credential")
+    def test_login_from_header_returns_to_home(self, verify):
+        verify.return_value = self.claims
+
+        response = self.client.post(
+            reverse("acceso"),
+            {"credential": "valid", "next": reverse("inicio")},
+            follow=True,
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.redirect_chain, [(reverse("inicio"), 302)])
+        self.assertContains(response, "Cerrar sesión")
+        self.assertNotContains(response, "Iniciar sesión")
+        self.assertIn("no-store", response["Cache-Control"])
 
     @patch("users.views.verify_google_credential")
     def test_external_redirect_is_rejected(self, verify):
@@ -178,7 +201,11 @@ class LoginViewTests(TestCase):
         post_response = self.client.post("/salir/")
 
         self.assertEqual(get_response.status_code, 405)
-        self.assertEqual(post_response.status_code, 302)
+        self.assertRedirects(
+            post_response,
+            reverse("inicio"),
+            fetch_redirect_response=False,
+        )
         self.assertNotIn("usuario_uid", self.client.session)
 
     def test_csrf_is_required_for_login_and_logout(self):

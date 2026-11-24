@@ -3,6 +3,25 @@ import json
 from django import forms
 
 
+class EditorCuestionarioForm(forms.Form):
+    nombre = forms.CharField(max_length=120, strip=True)
+    configuracion = forms.CharField(widget=forms.HiddenInput)
+
+    def clean_configuracion(self):
+        value = self.cleaned_data["configuracion"]
+        try:
+            configuration = json.loads(value)
+        except (TypeError, ValueError) as error:
+            raise forms.ValidationError(
+                "La configuración del cuestionario no tiene un formato JSON válido."
+            ) from error
+        if not isinstance(configuration, dict):
+            raise forms.ValidationError(
+                "La configuración del cuestionario debe ser un objeto."
+            )
+        return configuration
+
+
 class PublicSubmissionForm(forms.Form):
     attempt_id = forms.UUIDField(widget=forms.HiddenInput)
     nombre = forms.CharField(max_length=120, strip=True)

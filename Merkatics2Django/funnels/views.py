@@ -10,12 +10,13 @@ from django.http import Http404, HttpResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
 from django.utils import timezone
+from django.views.decorators.cache import never_cache
 from django.views.decorators.http import require_POST
 
 from contacts.models import Contacto, Diagnostico
 from contacts.services import permitir_envio
 from core.workspace_access import obtener_workspace_y_membresia, usuario_requerido
-from funnels.forms import PublicSubmissionForm
+from funnels.forms import EditorCuestionarioForm, PublicSubmissionForm
 from funnels.models import Cuestionario, Plantilla, VersionCuestionario
 from funnels.motor import (
     ErrorRespuestas,
@@ -24,6 +25,17 @@ from funnels.motor import (
     validar_cuestionario,
     validar_respuestas,
 )
+from funnels.services import (
+    ErrorPublicacion,
+    despublicar_cuestionario as despublicar_cuestionario_servicio,
+    publicar_cuestionario as publicar_cuestionario_servicio,
+)
+from subscriptions.planes import (
+    ETIQUETA_PRECIO_PRUEBA,
+    VALORES_PROVISIONALES,
+    limite_cuestionarios_publicados,
+)
+from subscriptions.recomendaciones import RECOMENDACIONES, planes_recomendados
 from workspaces.models import Membresia, Workspace
 from workspaces.permisos import tiene_permiso
 
@@ -32,6 +44,7 @@ VERSION_AVISO_PRIVACIDAD = "provisional-v1"
 MAX_RESPUESTA_ABIERTA = 10000
 
 
+@never_cache
 def inicio(request):
     return render(request, "funnels/landing.html")
 
@@ -171,6 +184,38 @@ def diagnostico_inicial(request):
     )
 
 
+def _render_recomendacion_diagnostico(request, result, segment):
+    recommendation = RECOMENDACIONES.get(segment)
+    if recommendation is None:
+        raise Http404
+    template = Plantilla.objects.filter(
+        slug=recommendation["template_slug"],
+        tipo=Plantilla.Tipo.BIBLIOTECA,
+    ).first()
+    if template is None:
+        raise Http404
+    plan = next(
+        (
+            candidate
+            for candidate in planes_recomendados()
+            if candidate["id"] == recommendation["plan_id"]
+        ),
+        None,
+    )
+    if plan is None:
+        raise Http404
+    return render(
+        request,
+        "funnels/recomendacion.html",
+        {
+            "plantilla": template,
+            "contenido": result.get("contenido", ""),
+            "plan_recomendado": plan,
+            "footer_compact": False,
+        },
+    )
+
+
 def cuestionario_publico(request, slug, uid):
     workspace = get_object_or_404(
         Workspace, slug=slug, estado=Workspace.Estado.ACTIVA
@@ -205,6 +250,7 @@ def _published_version(questionnaire, workspace):
 
 
 @usuario_requerido
+@never_cache
 def mis_cuestionarios(request, workspace_uid):
     workspace, membership = obtener_workspace_y_membresia(
         request, workspace_uid
@@ -213,7 +259,12 @@ def mis_cuestionarios(request, workspace_uid):
     can_publish = tiene_permiso(membership, "publicar_cuestionarios")
     if not can_edit and not can_publish:
         raise Http404
-    rows = _questionnaire_list_rows(request, workspace, can_edit)
+    rows = _questionnaire_list_rows(request, workspace, membership, can_edit)
+    published_count = Cuestionario.objects.para(workspace).filter(
+        estado=Cuestionario.Estado.PUBLICADO
+    ).count()
+    limit = limite_cuestionarios_publicados(workspace.plan)
+    limit_reached = limit is not None and published_count >= limit
     return render(
         request,
         "funnels/mis_cuestionarios.html",
@@ -227,10 +278,156 @@ def mis_cuestionarios(request, workspace_uid):
             "puede_ver_leads": tiene_permiso(membership, "ver_leads"),
             "puede_ver_cuestionarios": True,
             "puede_editar_cuestionarios": can_edit,
+            "cuestionarios_publicados": published_count,
+            "limite_publicados": limit if limit is not None else "sin límite",
+            "limite_alcanzado": limit_reached,
+            "puede_publicar_ahora": (
+                can_publish
+                and not limit_reached
+                and workspace.estado == Workspace.Estado.ACTIVA
+            ),
+            "empresa_suspendida": workspace.estado == Workspace.Estado.SUSPENDIDA,
+            "limites_provisionales": VALORES_PROVISIONALES,
+            "precio_prueba": ETIQUETA_PRECIO_PRUEBA,
             "puede_administrar_miembros": membership.rol
             in {Membresia.Rol.PROPIETARIO, Membresia.Rol.ADMIN},
             "footer_compact": False,
         },
+    )
+
+
+@usuario_requerido
+def editar_cuestionario(request, workspace_uid, uid):
+    workspace, membership = obtener_workspace_y_membresia(
+        request, workspace_uid
+    )
+    if not tiene_permiso(membership, "editar_cuestionarios"):
+        raise Http404
+    questionnaire = get_object_or_404(
+        Cuestionario.objects.para(workspace),
+        uid=uid,
+    )
+    can_edit_any = membership.rol in {
+        Membresia.Rol.PROPIETARIO,
+        Membresia.Rol.ADMIN,
+    }
+    if not can_edit_any and questionnaire.creado_por_id != request.usuario.pk:
+        raise Http404
+
+    if questionnaire.estado == Cuestionario.Estado.PUBLICADO:
+        if request.method != "GET":
+            raise Http404
+        return render(
+            request,
+            "funnels/editor_cuestionario.html",
+            {
+                "workspace": workspace,
+                "membresia": membership,
+                "nav_active": "cuestionarios",
+                "puede_ver_resumen": True,
+                "cuestionario": questionnaire,
+                "publicado": True,
+                "puede_despublicar": tiene_permiso(
+                    membership, "publicar_cuestionarios"
+                ),
+                "creado_por": (
+                    questionnaire.creado_por.nombre
+                    or questionnaire.creado_por.correo
+                    if questionnaire.creado_por_id
+                    else ""
+                ),
+            },
+        )
+    if questionnaire.estado != Cuestionario.Estado.BORRADOR:
+        raise Http404
+
+    configuration = copy.deepcopy(questionnaire.configuracion)
+    editor_errors = []
+    if request.method == "POST":
+        form = EditorCuestionarioForm(request.POST)
+        if form.is_valid():
+            edited_configuration = form.cleaned_data["configuracion"]
+            original_id = (
+                configuration.get("id")
+                if isinstance(configuration, dict)
+                else str(questionnaire.uid)
+            )
+            edited_configuration["id"] = original_id or str(questionnaire.uid)
+            edited_configuration["cliente"] = form.cleaned_data["nombre"]
+            edited_configuration["estado"] = Cuestionario.Estado.BORRADOR
+            editor_errors = validar_cuestionario(edited_configuration)
+            if editor_errors:
+                configuration = edited_configuration
+            elif request.POST.get("intent") == "preview":
+                preview_form = PublicSubmissionForm(
+                    initial={
+                        "attempt_id": uuid.uuid4(),
+                        "respuestas": "{}",
+                    },
+                    require_consent=False,
+                )
+                context = _build_flow_context(
+                    edited_configuration,
+                    form.cleaned_data["nombre"],
+                    workspace.nombre,
+                    edited_configuration.get("posicion_contacto", "final"),
+                    True,
+                    preview_form,
+                    {},
+                )
+                context["initial_diagnostic"] = False
+                return render(
+                    request,
+                    "funnels/cuestionario_publico.html",
+                    context,
+                )
+            else:
+                questionnaire.nombre = form.cleaned_data["nombre"]
+                questionnaire.configuracion = edited_configuration
+                questionnaire.save(
+                    update_fields=["nombre", "configuracion", "actualizado"]
+                )
+                messages.success(request, "Cuestionario guardado correctamente.")
+                return redirect(
+                    "mis_cuestionarios",
+                    workspace_uid=workspace.uid,
+                )
+        else:
+            for field_errors in form.errors.values():
+                editor_errors.extend(str(error) for error in field_errors)
+            posted_configuration = form.cleaned_data.get("configuracion")
+            if isinstance(posted_configuration, dict):
+                configuration = posted_configuration
+    else:
+        form = EditorCuestionarioForm(
+            initial={
+                "nombre": questionnaire.nombre,
+                "configuracion": json.dumps(
+                    configuration,
+                    ensure_ascii=False,
+                ),
+            }
+        )
+
+    return render(
+        request,
+        "funnels/editor_cuestionario.html",
+        {
+            "workspace": workspace,
+            "membresia": membership,
+            "nav_active": "cuestionarios",
+            "puede_ver_resumen": True,
+            "cuestionario": questionnaire,
+            "configuration_json": json.dumps(
+                configuration,
+                ensure_ascii=False,
+            ),
+            "editor_errors": editor_errors,
+            "form": form,
+            "publicado": False,
+            "footer_compact": False,
+        },
+        status=400 if editor_errors or form.errors else 200,
     )
 
 
@@ -247,41 +444,11 @@ def publicar_cuestionario(request, workspace_uid, uid):
         uid=uid,
         estado=Cuestionario.Estado.BORRADOR,
     )
-    errors = validar_cuestionario(questionnaire.configuracion)
-    if errors:
+    try:
+        publicar_cuestionario_servicio(workspace, uid)
+    except ErrorPublicacion as error:
         return _render_questionnaire_list_with_errors(
-            request, workspace, membership, errors
-        )
-    with transaction.atomic():
-        latest_version = (
-            VersionCuestionario.objects.para(workspace)
-            .filter(cuestionario=questionnaire)
-            .order_by("-numero")
-            .first()
-        )
-        new_version_number = (
-            latest_version.numero + 1
-            if latest_version is not None
-            else questionnaire.version_actual
-        )
-        configuration = copy.deepcopy(questionnaire.configuracion)
-        configuration["estado"] = Cuestionario.Estado.PUBLICADO
-        VersionCuestionario.objects.para(workspace).create(
-            cuestionario=questionnaire,
-            numero=new_version_number,
-            configuracion=configuration,
-            publicada=True,
-        )
-        questionnaire.version_actual = new_version_number
-        questionnaire.configuracion = configuration
-        questionnaire.estado = Cuestionario.Estado.PUBLICADO
-        questionnaire.save(
-            update_fields=[
-                "version_actual",
-                "configuracion",
-                "estado",
-                "actualizado",
-            ]
+            request, workspace, membership, [str(error)]
         )
     messages.success(request, "Cuestionario publicado.")
     return redirect("mis_cuestionarios", workspace_uid=workspace.uid)
@@ -295,16 +462,17 @@ def despublicar_cuestionario(request, workspace_uid, uid):
     )
     if not tiene_permiso(membership, "publicar_cuestionarios"):
         raise Http404
-    questionnaire = get_object_or_404(
+    get_object_or_404(
         Cuestionario.objects.para(workspace),
         uid=uid,
         estado=Cuestionario.Estado.PUBLICADO,
     )
-    configuration = copy.deepcopy(questionnaire.configuracion)
-    configuration["estado"] = Cuestionario.Estado.BORRADOR
-    questionnaire.estado = Cuestionario.Estado.BORRADOR
-    questionnaire.configuracion = configuration
-    questionnaire.save(update_fields=["estado", "configuracion", "actualizado"])
+    try:
+        despublicar_cuestionario_servicio(workspace, uid)
+    except ErrorPublicacion as error:
+        return _render_questionnaire_list_with_errors(
+            request, workspace, membership, [str(error)]
+        )
     messages.success(request, "Cuestionario despublicado.")
     return redirect("mis_cuestionarios", workspace_uid=workspace.uid)
 
@@ -353,7 +521,7 @@ def eliminar_cuestionario(request, workspace_uid, uid):
     return redirect("mis_cuestionarios", workspace_uid=workspace.uid)
 
 
-def _questionnaire_list_rows(request, workspace, can_edit):
+def _questionnaire_list_rows(request, workspace, membership, can_edit):
     questionnaires = list(Cuestionario.objects.para(workspace))
     questionnaire_ids = [questionnaire.pk for questionnaire in questionnaires]
     diagnosis_ids = set(
@@ -364,6 +532,11 @@ def _questionnaire_list_rows(request, workspace, can_edit):
     )
     rows = []
     for questionnaire in questionnaires:
+        can_edit_questionnaire = can_edit and (
+            membership.rol
+            in {Membresia.Rol.PROPIETARIO, Membresia.Rol.ADMIN}
+            or questionnaire.creado_por_id == request.usuario.pk
+        )
         has_diagnoses = questionnaire.pk in diagnosis_ids
         public_url = ""
         if questionnaire.estado == Cuestionario.Estado.PUBLICADO:
@@ -378,6 +551,7 @@ def _questionnaire_list_rows(request, workspace, can_edit):
                 "questionnaire": questionnaire,
                 "public_url": public_url,
                 "tiene_diagnosticos": has_diagnoses,
+                "puede_editar": can_edit_questionnaire,
                 "puede_eliminar": (
                     can_edit
                     and questionnaire.estado == Cuestionario.Estado.BORRADOR
@@ -391,7 +565,14 @@ def _questionnaire_list_rows(request, workspace, can_edit):
 def _render_questionnaire_list_with_errors(request, workspace, membership, errors):
     can_edit = tiene_permiso(membership, "editar_cuestionarios")
     can_publish = tiene_permiso(membership, "publicar_cuestionarios")
-    rows = _questionnaire_list_rows(request, workspace, can_edit)
+    rows = _questionnaire_list_rows(
+        request, workspace, membership, can_edit
+    )
+    published_count = Cuestionario.objects.para(workspace).filter(
+        estado=Cuestionario.Estado.PUBLICADO
+    ).count()
+    limit = limite_cuestionarios_publicados(workspace.plan)
+    limit_reached = limit is not None and published_count >= limit
     return render(
         request,
         "funnels/mis_cuestionarios.html",
@@ -405,6 +586,17 @@ def _render_questionnaire_list_with_errors(request, workspace, membership, error
             "puede_ver_leads": tiene_permiso(membership, "ver_leads"),
             "puede_ver_cuestionarios": True,
             "puede_editar_cuestionarios": can_edit,
+            "cuestionarios_publicados": published_count,
+            "limite_publicados": limit if limit is not None else "sin límite",
+            "limite_alcanzado": limit_reached,
+            "puede_publicar_ahora": (
+                can_publish
+                and not limit_reached
+                and workspace.estado == Workspace.Estado.ACTIVA
+            ),
+            "empresa_suspendida": workspace.estado == Workspace.Estado.SUSPENDIDA,
+            "limites_provisionales": VALORES_PROVISIONALES,
+            "precio_prueba": ETIQUETA_PRECIO_PRUEBA,
             "puede_administrar_miembros": membership.rol
             in {Membresia.Rol.PROPIETARIO, Membresia.Rol.ADMIN},
             "footer_compact": False,
@@ -512,6 +704,10 @@ def _questionnaire_flow(
             .first()
         )
         if diagnosis is not None:
+            if source == "diagnostico-inicial":
+                return _render_recomendacion_diagnostico(
+                    request, diagnosis.resultado, diagnosis.segmento
+                )
             return _render_result(
                 request,
                 title,
@@ -571,6 +767,10 @@ def _questionnaire_flow(
         )
         if diagnosis is None:
             raise
+        if source == "diagnostico-inicial":
+            return _render_recomendacion_diagnostico(
+                request, diagnosis.resultado, diagnosis.segmento
+            )
         return _render_result(
             request,
             title,
@@ -579,6 +779,8 @@ def _questionnaire_flow(
             calcular_perfil_secciones(configuration, diagnosis.respuestas),
             demonstration=False,
         )
+    if source == "diagnostico-inicial":
+        return _render_recomendacion_diagnostico(request, result, calculation["segmento"])
     return _render_result(
         request,
         title,

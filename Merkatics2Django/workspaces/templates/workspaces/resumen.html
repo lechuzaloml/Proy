@@ -10,6 +10,25 @@
       <p>Pide a un administrador de {{ workspace.nombre }} que te asigne los permisos que necesitas.</p>
     </section>
   {% else %}
+    {% if puede_administrar_suscripcion and suscripcion %}
+      <section aria-label="Estado de la suscripción" class="admin-subscription-banner{% if suscripcion.estado == 'pago_pendiente' %} admin-subscription-banner-warning{% endif %}">
+        <div>
+          <p class="admin-subscription-mode">Modo de prueba</p>
+          {% if suscripcion.estado == "prueba" %}<p>Prueba gratuita: te quedan {{ dias_prueba_restantes }} días</p>{% endif %}
+          {% if suscripcion.estado == "pago_pendiente" %}
+            <p class="admin-subscription-warning">Hay un pago pendiente. {% if puede_gestionar_suscripcion %}Actualiza el método de pago en el portal.{% else %}El propietario debe actualizar el método de pago.{% endif %}</p>
+          {% endif %}
+          <p>Estado de la suscripción: {{ suscripcion.get_estado_display }}</p>
+          <p>Plan: {{ workspace.get_plan_display }}</p>
+        </div>
+        {% if puede_gestionar_suscripcion %}
+          <form method="post" action="{% url 'portal_suscripcion' workspace.uid %}">
+            {% csrf_token %}
+            <button class="secondary-button" type="submit">Administrar suscripción</button>
+          </form>
+        {% endif %}
+      </section>
+    {% endif %}
     <section class="private-card-grid" aria-label="Indicadores del espacio">
       {% if puede_ver_leads %}
         <article class="private-stat"><span>Contactos nuevos · últimos 7 días</span><strong>{{ contactos_nuevos }}</strong></article>

@@ -4,11 +4,24 @@ from contacts import views as contact_views
 from funnels import views as funnel_views
 from users import views as user_views
 from workspaces import views as workspace_views
+from subscriptions import views as subscription_views
 
 
 urlpatterns = [
     path("", funnel_views.inicio, name="inicio"),
     path("diagnostico/", funnel_views.diagnostico_inicial, name="diagnostico_inicial"),
+    path("planes/", subscription_views.planes, name="planes"),
+    path("suscripcion/", subscription_views.suscripcion, name="suscripcion"),
+    path(
+        "suscripcion/estado-preparacion/",
+        subscription_views.estado_preparacion,
+        name="estado_preparacion_suscripcion",
+    ),
+    path(
+        "suscripcion/webhook/",
+        subscription_views.webhook_stripe,
+        name="webhook_stripe",
+    ),
     path("biblioteca/", funnel_views.biblioteca, name="biblioteca"),
     path(
         "biblioteca/<slug:slug>/",
@@ -36,6 +49,11 @@ urlpatterns = [
         name="mis_cuestionarios",
     ),
     path(
+        "w/<uuid:workspace_uid>/cuestionarios/<uuid:uid>/editar/",
+        funnel_views.editar_cuestionario,
+        name="editar_cuestionario",
+    ),
+    path(
         "w/<uuid:workspace_uid>/cuestionarios/<uuid:uid>/publicar/",
         funnel_views.publicar_cuestionario,
         name="publicar_cuestionario",
@@ -54,6 +72,11 @@ urlpatterns = [
         "w/<uuid:workspace_uid>/contactos/",
         contact_views.contactos,
         name="contactos",
+    ),
+    path(
+        "w/<uuid:workspace_uid>/suscripcion/portal/",
+        subscription_views.portal_suscripcion,
+        name="portal_suscripcion",
     ),
     path(
         "w/<uuid:workspace_uid>/contact/<uuid:uid>/",

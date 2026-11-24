@@ -107,6 +107,7 @@ class PublicQuestionnaireFlowTests(TestCase):
         self.assertEqual(Contacto.objects.para(self.workspace).count(), 0)
         self.assertEqual(Diagnostico.objects.para(self.workspace).count(), 0)
 
+
     def test_open_response_without_template_limit_has_safe_server_cap(self):
         configuration = questionnaire_config()
         configuration["id"] = "open-response-limit"
@@ -167,6 +168,71 @@ class PublicQuestionnaireFlowTests(TestCase):
             valid_contact_post(uuid.uuid4()),
         )
         self.assertEqual(response.status_code, 403)
+
+
+class InitialDiagnosticRecommendationTests(TestCase):
+    @classmethod
+    def setUpTestData(cls):
+        cls.workspace = Workspace.objects.create(
+            slug="clearia",
+            nombre="Clear-IA",
+            plan=Workspace.Plan.INTERNO,
+        )
+        configuration = questionnaire_config(position="inicio")
+        configuration["reglas_scoring"][0]["segmento"] = "proceso_por_construir"
+        configuration["resultado"]["resultados"][0].update(
+            {
+                "segmento": "proceso_por_construir",
+                "contenido": "Explicación base del diagnóstico.",
+            }
+        )
+        cls.questionnaire = Cuestionario.objects.para(cls.workspace).create(
+            nombre="Diagnóstico inicial",
+            estado=Cuestionario.Estado.PUBLICADO,
+            configuracion=configuration,
+            version_actual=1,
+        )
+        VersionCuestionario.objects.para(cls.workspace).create(
+            cuestionario=cls.questionnaire,
+            numero=1,
+            configuracion=configuration,
+            publicada=True,
+        )
+        Plantilla.objects.create(
+            slug="demo-onboarding-para-agencia",
+            nombre="Onboarding para agencia",
+            descripcion="Plantilla recomendada.",
+            configuracion=configuration,
+            tipo=Plantilla.Tipo.BIBLIOTECA,
+        )
+
+    def test_diagnostic_result_shows_recommendation_without_score_or_segment(self):
+        attempt = uuid.uuid4()
+        response = self.client.post(
+            reverse("diagnostico_inicial"),
+            valid_contact_post(attempt),
+        )
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "Template recomendado")
+        self.assertContains(response, "Onboarding para agencia")
+        self.assertContains(response, "Por qué encaja")
+        self.assertContains(response, "Explicación base del diagnóstico.")
+        self.assertContains(response, "Impacto comercial estimado")
+        self.assertContains(response, "Prospectos al mes")
+        self.assertContains(response, "calculadora-impacto.js")
+        self.assertNotContains(response, "proceso_por_construir")
+        self.assertNotContains(response, "puntaje_total")
+        self.assertNotContains(response, "Puntaje:")
+
+    def test_repeated_diagnostic_attempt_keeps_recommendation_screen(self):
+        attempt = uuid.uuid4()
+        payload = valid_contact_post(attempt)
+        self.client.post(reverse("diagnostico_inicial"), payload)
+        response = self.client.post(reverse("diagnostico_inicial"), payload)
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "Template recomendado")
+        self.assertContains(response, "Onboarding para agencia")
+        self.assertNotContains(response, "proceso_por_construir")
 
 
 class DemoQuestionnaireTests(TestCase):

@@ -54,7 +54,10 @@
   justify-self: end;
 }
 
-.public-header-logout {
+.public-header-action {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   min-height: 2.5rem;
   padding: 0.5rem 0.85rem;
   border: 1px solid var(--color-divider);
@@ -68,7 +71,7 @@
   cursor: pointer;
 }
 
-.public-header-logout:focus-visible {
+.public-header-action:focus-visible {
   outline: 3px solid var(--color-coral);
   outline-offset: 3px;
 }

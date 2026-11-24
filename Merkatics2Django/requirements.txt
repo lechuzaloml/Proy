@@ -1,3 +1,4 @@
+# El editor, la validacion y los limites de publicacion usan Django y la biblioteca estandar.
 Django==5.2.19
 PyMySQL==1.2.4
 cryptography==50.0.2
@@ -9,3 +10,4 @@ pycparser==3.12
 sqlparse==0.6.1
 tzdata==2026.6
 google-auth[requests]>=2.0,<3.0
+stripe>=11,<14

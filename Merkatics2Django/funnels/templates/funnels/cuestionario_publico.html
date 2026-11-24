@@ -104,7 +104,7 @@
               {% else %}
                 <div class="scale-control">
                   <label class="sr-only" for="question-{{ row.index }}">{{ row.question.texto }}</label>
-                  <input id="question-{{ row.index }}" type="range" min="{{ row.minimum }}" max="{{ row.maximum }}" step="any" value="{{ row.answer_value }}" data-answer-input data-question-index="{{ row.index }}" data-answer-type="escala" data-touched="{{ row.touched|yesno:'true,false' }}">
+                  <input id="question-{{ row.index }}" type="range" min="{{ row.minimum }}" max="{{ row.maximum }}" step="1" value="{{ row.answer_value }}" data-answer-input data-question-index="{{ row.index }}" data-answer-type="escala" data-touched="{{ row.touched|yesno:'true,false' }}">
                   <output aria-live="polite" data-scale-output>{{ row.answer_value }}</output>
                 </div>
                 {% if row.has_minimum_label or row.has_maximum_label %}
@@ -116,9 +116,9 @@
               {% endif %}
             {% else %}
               <p class="sensitive-data-notice">No escribas datos sensibles.</p>
-              <label class="flow-answer">
+              <label class="text-answer flow-answer">
                 <span class="sr-only">Tu respuesta</span>
-                <textarea class="text-answer" maxlength="{{ row.max_open_length }}" data-answer-input data-question-index="{{ row.index }}" data-answer-type="abierta">{{ row.answer_value }}</textarea>
+                <textarea maxlength="{{ row.max_open_length }}" data-answer-input data-question-index="{{ row.index }}" data-answer-type="abierta">{{ row.answer_value }}</textarea>
               </label>
             {% endif %}
           </article>

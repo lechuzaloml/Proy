@@ -149,6 +149,15 @@ class QuestionnaireValidationTests(SimpleTestCase):
         cases.append((data, "reglas_scoring[0].puntaje_min debe ser numérico"))
 
         data = copy.deepcopy(self.case)
+        data["reglas_scoring"][0]["segmento"] = "sin-resultado"
+        cases.append(
+            (
+                data,
+                "reglas_scoring[0].segmento no tiene un resultado correspondiente",
+            )
+        )
+
+        data = copy.deepcopy(self.case)
         data["resultado"]["resultados"][0]["cta"] = {"texto": "Ver recursos"}
         cases.append(
             (

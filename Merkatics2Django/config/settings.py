@@ -4,6 +4,7 @@ from pathlib import Path
 import pymysql
 from dotenv import load_dotenv
 from django.core.exceptions import ImproperlyConfigured
+from subscriptions.configuracion import validar_clave_sandbox
 
 pymysql.install_as_MySQLdb()
 
@@ -26,9 +27,20 @@ CSRF_TRUSTED_ORIGINS = [
     if origin.strip()
 ]
 
-STRIPE_SECRET_KEY = os.getenv("STRIPE_SECRET_KEY", "").strip()
+STRIPE_SECRET_KEY = validar_clave_sandbox(
+    os.getenv("STRIPE_SECRET_KEY", "").strip()
+)
 STRIPE_PRICE_ID = os.getenv("STRIPE_PRICE_ID", "").strip()
+STRIPE_PRICE_IDS = {
+    plan: os.getenv(f"STRIPE_PRICE_ID_{plan.upper()}", "").strip()
+    or STRIPE_PRICE_ID
+    for plan in ("inicial", "pro", "avanzado")
+}
 STRIPE_WEBHOOK_SECRET = os.getenv("STRIPE_WEBHOOK_SECRET", "").strip()
+if not STRIPE_PRICE_ID or not STRIPE_WEBHOOK_SECRET:
+    raise ImproperlyConfigured(
+        "Configura STRIPE_PRICE_ID y STRIPE_WEBHOOK_SECRET para Stripe Sandbox."
+    )
 GOOGLE_CLIENT_ID = os.getenv("GOOGLE_CLIENT_ID", "").strip()
 GEMINI_API_KEY = os.getenv("GEMINI_API_KEY", "").strip()
 

@@ -5,6 +5,9 @@ from google.oauth2 import id_token
 from django.conf import settings
 
 
+GOOGLE_TOKEN_CLOCK_SKEW_SECONDS = 300
+
+
 class GoogleCredentialError(ValueError):
     pass
 
@@ -19,9 +22,13 @@ def verify_google_credential(credential):
             credential,
             Request(),
             audience=settings.GOOGLE_CLIENT_ID,
+            clock_skew_in_seconds=GOOGLE_TOKEN_CLOCK_SKEW_SECONDS,
         )
     except (GoogleAuthError, ValueError) as exc:
-        raise GoogleCredentialError("La credencial de Google no es válida.") from exc
+        raise GoogleCredentialError(
+            "La credencial de Google no se pudo validar. Si la fecha y hora "
+            "del equipo no están actualizadas, sincronízalas e inténtalo de nuevo."
+        ) from exc
 
     if claims.get("aud") != settings.GOOGLE_CLIENT_ID:
         raise GoogleCredentialError("La audiencia de Google no es válida.")

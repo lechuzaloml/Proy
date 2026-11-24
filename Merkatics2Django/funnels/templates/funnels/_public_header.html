@@ -1,0 +1,22 @@
+<header class="landing-brand public-header">
+  <a class="public-brand" href="/" aria-label="merkatics-ClearIa, Inicio">
+    <span>merkatics-ClearIa</span>
+  </a>
+  <nav class="public-header-nav" aria-label="Navegación principal">
+    <a href="/">Inicio</a>
+    <a href="/biblioteca/">Biblioteca</a>
+    <a href="/diagnostico/">Probar gratis</a>
+    <a href="{% url 'selector_workspace' %}">Acceder</a>
+  </nav>
+  {% if request.usuario %}
+    <form class="public-header-session" method="post" action="{% url 'cerrar_sesion' %}">
+      {% csrf_token %}
+      <button class="public-header-action" type="submit">Cerrar sesión</button>
+    </form>
+  {% else %}
+    <form class="public-header-session" method="get" action="{% url 'acceso' %}">
+      <input type="hidden" name="next" value="{% url 'inicio' %}">
+      <button class="public-header-action" type="submit">Iniciar sesión</button>
+    </form>
+  {% endif %}
+</header>
