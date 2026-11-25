@@ -12,7 +12,7 @@
     <button class="private-button" type="submit">Guardar cambios</button>
   </form>
   <div class="actions">
-    {% if workspace.slug == "clearia" %}
+    {% if workspace_protected %}
       <p>El workspace interno del diagnóstico público debe permanecer activo.</p>
       {% if workspace.estado == "suspendida" %}
         <form method="post">{% csrf_token %}<button class="private-button-secondary" name="accion" value="reactivar">Reactivar empresa</button></form>

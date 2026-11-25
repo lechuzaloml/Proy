@@ -1,0 +1,66 @@
+{% load static %}
+<!doctype html>
+<html lang="es" class="registro-evento-page">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Registro confirmado · {{ workspace.nombre }}</title>
+  <link rel="stylesheet" href="{% static 'funnels/index.css' %}">
+  <link rel="stylesheet" href="{% static 'funnels/site.css' %}">
+</head>
+<body class="registro-evento-page">
+  <main class="registro-evento">
+    <header class="registro-evento__topbar registro-evento__confirmation-topbar">
+      <div class="registro-evento__brand">{{ workspace.nombre }}</div>
+      <a class="registro-evento__link-back" href="/">Volver al inicio</a>
+    </header>
+    <section class="registro-evento__confirmacion">
+      <div class="registro-evento__confirmacion-band">
+        <div class="registro-evento__confirmacion-card">
+          <div class="registro-evento__confirmacion-foto-wrap">
+            {% if popup.imagen_url %}
+              <img alt="{{ popup.titulo|default:'Imagen del evento' }}" class="registro-evento__confirmacion-foto" data-event-confirmation-image{% if popup.anfitrion_foto_url %} data-fallback-src="{{ popup.anfitrion_foto_url }}"{% endif %} src="{{ popup.imagen_url }}">
+            {% elif popup.anfitrion_foto_url %}
+              <img alt="{{ popup.anfitrion_nombre|default:'Anfitrión del evento' }}" class="registro-evento__confirmacion-foto" data-event-confirmation-image src="{{ popup.anfitrion_foto_url }}">
+            {% endif %}
+            <div aria-label="Imagen del evento no disponible" class="registro-evento__confirmacion-foto-fallback" role="img"{% if popup.imagen_url or popup.anfitrion_foto_url %} aria-hidden="true"{% endif %}>
+              <svg aria-hidden="true" fill="none" viewBox="0 0 64 64">
+                <rect height="42" rx="8" stroke="currentColor" stroke-width="3" width="46" x="9" y="11"></rect>
+                <path d="M18 23h28M18 32h15M18 41h12" stroke="currentColor" stroke-linecap="round" stroke-width="3"></path>
+                <circle cx="45" cy="42" fill="#ffffff" r="10"></circle>
+                <path d="m41 42 3 3 6-7" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="3"></path>
+              </svg>
+            </div>
+          </div>
+          <div class="registro-evento__confirmacion-copy">
+            <div aria-hidden="true" class="registro-evento__confirmacion-check">✓</div>
+            <h1>{{ nombre_contacto }}, tu lugar está <span>confirmado</span></h1>
+            <p class="registro-evento__confirmacion-fecha">{{ popup.fecha_evento|date:"l j \\d\\e F, Y" }}</p>
+            <p class="registro-evento__confirmacion-horario">{{ horario_confirmado }}</p>
+            {% if perfil_evento %}
+              <a class="registro-evento__button registro-evento__button--confirmacion" href="#registro-evento-resultado">Ver mi perfil por sección</a>
+            {% endif %}
+          </div>
+        </div>
+      </div>
+      {% if perfil_evento %}
+        <section aria-labelledby="event-profile-title" class="registro-evento__resultado" id="registro-evento-resultado">
+          <div class="registro-evento__resultado-grid">
+            <div class="registro-evento__resultado-card">
+              <h2 id="event-profile-title">Tu perfil por sección</h2>
+              <ol class="result-profile-dimensions">
+                {% for dimension in perfil_evento %}
+                  <li><div class="result-profile-detail"><h3>{{ dimension.nombre }}</h3><progress aria-label="{{ dimension.nombre }}: {{ dimension.porcentaje }}%" max="100" value="{{ dimension.porcentaje }}"></progress></div><strong>{{ dimension.porcentaje }}%</strong></li>
+                {% endfor %}
+              </ol>
+            </div>
+          </div>
+        </section>
+      {% endif %}
+      <a class="registro-evento__button registro-evento__button--confirmacion" href="{{ return_url }}">Volver al evento</a>
+    </section>
+    <footer class="registro-evento__footer registro-evento__footer--confirmation"><span class="registro-evento__footer-brand">{{ workspace.nombre }}</span></footer>
+  </main>
+  <script defer src="{% static 'funnels/event_confirmation.js' %}"></script>
+</body>
+</html>

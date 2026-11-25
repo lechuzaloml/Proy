@@ -67,12 +67,12 @@
       {% for row in question_rows %}
         <section class="questionnaire-view flow-card" data-flow-step data-question-index="{{ row.index }}" hidden>
           <div class="flow-progress">
-            <p class="question-progress" data-progress-text>Pregunta {{ row.index|add:1 }} de {{ question_rows|length }}</p>
+            <p aria-live="polite" class="question-progress" data-progress-text>Pregunta {{ row.index|add:1 }} de {{ question_rows|length }}</p>
             <progress class="question-progress-bar" max="{{ question_rows|length }}" value="{{ row.index|add:1 }}" aria-label="Progreso del cuestionario"></progress>
           </div>
-          {% if row.seccion %}<section class="question-section"><h2>{{ row.seccion }}</h2>{% endif %}
           <article class="question-card">
-            <h3 id="question-title-{{ row.index }}">{{ row.question.texto }}</h3>
+            {% if row.seccion %}<p class="question-card-section">{{ row.seccion }}</p>{% endif %}
+            <h3 id="question-title-{{ row.index }}" tabindex="-1">{{ row.question.texto }}</h3>
             {% if row.question.tipo == "opcion_multiple" %}
               <fieldset aria-labelledby="question-title-{{ row.index }}" class="option-list {% if configuracion.estilo_visual %}option-list-{{ configuracion.estilo_visual }}{% endif %}{% if row.options|length == 2 %} option-list-binary{% endif %}">
                 {% for option in row.options %}
@@ -122,15 +122,14 @@
               </label>
             {% endif %}
           </article>
-          {% if row.seccion %}</section>{% endif %}
           <div class="flow-navigation">
-            <button class="secondary-button" data-flow-previous type="button">Anterior</button>
+            <button class="secondary-button" data-flow-previous type="button" {% if forloop.first %}disabled{% endif %}>Anterior</button>
             {% if forloop.last and contact_position == "final" %}
-              <button class="submit-button" data-flow-next type="button">Siguiente</button>
+              <button class="submit-button" data-flow-next type="button">Finalizar</button>
             {% elif forloop.last %}
-              <button class="submit-button" type="submit">Ver resultado</button>
+              <button class="submit-button" type="submit">Finalizar</button>
             {% else %}
-              <button class="submit-button" data-flow-next type="button">Siguiente</button>
+              <button class="submit-button" data-flow-next type="button">Continuar</button>
             {% endif %}
           </div>
         </section>

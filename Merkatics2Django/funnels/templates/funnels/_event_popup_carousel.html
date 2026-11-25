@@ -1,0 +1,47 @@
+{% load static %}
+<div class="promo-modal-backdrop" data-popup-carousel role="dialog" aria-modal="true" aria-labelledby="promo-title" tabindex="-1" hidden>
+  <div class="promo-modal" data-popup-slide="0" data-popup-key="general">
+    <button aria-label="Cerrar promoción" class="promo-modal-close" data-popup-close type="button">×</button>
+    <div class="promo-modal-content">
+      <div class="promo-modal-copy">
+        <p class="promo-modal-kicker">Clear-IA</p>
+        <h2 id="promo-title">Masterclass en vivo con<br>Carlos Torres</h2>
+        <p class="promo-modal-description">No te pierdas el webinar en vivo del 4 de noviembre. Únete a esta masterclass gratuita de 90 minutos y aprende cómo generar mejores leads, generar confianza y convertir más atención en clientes.</p>
+        <div class="promo-modal-actions">
+          {% if event_popups %}<a class="submit-button promo-modal-primary" data-popup-return-key="general" href="{% url 'registro_evento_general' %}">Reserva tu plaza</a>{% endif %}
+          <button class="promo-modal-secondary" data-popup-close type="button">No gracias</button>
+        </div>
+      </div>
+      <div aria-label="Imagen del ponente" class="promo-modal-visual">
+        <img alt="Carlos Torres" class="promo-modal-visual-inner promo-modal-visual-image" src="{% static 'funnels/pasted-image.png' %}">
+      </div>
+    </div>
+  </div>
+  {% for popup in event_popups %}
+    <div class="promo-modal" data-popup-slide="{{ forloop.counter }}" data-popup-key="workspace:{{ popup.workspace.slug }}" hidden>
+      <button aria-label="Cerrar promoción" class="promo-modal-close" data-popup-close type="button">×</button>
+      <div class="promo-modal-content">
+        <div class="promo-modal-copy">
+          <p class="promo-modal-kicker">{{ popup.insignia|default:popup.workspace.nombre }}</p>
+          <h2>{{ popup.titulo }}</h2>
+          <p class="promo-modal-description">{{ popup.resumen }}</p>
+          <div class="promo-modal-actions">
+            <a class="submit-button promo-modal-primary" data-popup-return-key="workspace:{{ popup.workspace.slug }}" href="{% url 'registro_evento' popup.workspace.slug %}">Reserva tu plaza</a>
+            <button class="promo-modal-secondary" data-popup-close type="button">No gracias</button>
+          </div>
+        </div>
+        {% if popup.imagen_url or popup.anfitrion_foto_url %}
+          <div aria-label="Imagen del evento" class="promo-modal-visual">
+            <img alt="{{ popup.anfitrion_nombre|default:popup.titulo }}" class="promo-modal-visual-inner promo-modal-visual-image" src="{{ popup.imagen_url|default:popup.anfitrion_foto_url }}">
+          </div>
+        {% endif %}
+      </div>
+    </div>
+  {% endfor %}
+  <div class="promo-carousel-controls">
+    <button aria-label="Popup anterior" data-popup-previous type="button">←</button>
+    <span aria-live="polite" data-popup-count></span>
+    <button aria-label="Siguiente popup" data-popup-next type="button">→</button>
+    <div aria-label="Seleccionar popup" class="promo-carousel-indicators" data-popup-indicators></div>
+  </div>
+</div>

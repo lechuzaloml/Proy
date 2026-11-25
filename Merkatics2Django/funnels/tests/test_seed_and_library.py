@@ -27,10 +27,12 @@ class LoadTemplatesCommandTests(TestCase):
             response,
             f'<input type="hidden" name="next" value="{reverse("inicio")}">',
         )
-        self.assertContains(
-            response,
-            '<button class="public-header-action" type="submit">'
-            "Iniciar sesión</button>",
+        self.assertRegex(
+            response.content.decode(response.charset),
+            r'<button\b(?=[^>]*\bclass="[^"]*\bpublic-header-action\b[^"]*")'
+            r'(?=[^>]*\btype="submit")'
+            r'(?=[^>]*\bdata-popup-reset(?:\s|=|>))[^>]*>'
+            r'\s*Iniciar sesión\s*</button>',
         )
 
     def test_authenticated_public_header_includes_logout_action(self):

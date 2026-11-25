@@ -46,6 +46,11 @@
       <h2>Accesos rápidos</h2>
       <div class="private-actions">
         {% if puede_editar_cuestionarios %}<a class="private-button" href="{% url 'biblioteca' %}">Copiar una plantilla</a>{% endif %}
+        {% if puede_administrar_miembros %}
+          <a class="private-button-secondary" href="{% url 'mi_evento' workspace.uid %}">
+            Mi evento{% if popup_evento %} · {{ popup_evento.get_estado_display }}{% else %} · Configurar evento{% endif %}
+          </a>
+        {% endif %}
         {% if puede_administrar_miembros %}<a class="private-button-secondary" href="{% url 'miembros' workspace.uid %}#invite-member">Invitar a un miembro</a>{% endif %}
         {% if puede_ver_leads %}<a class="private-button-secondary" href="{% url 'contactos' workspace.uid %}">Ver contactos</a>{% endif %}
       </div>

@@ -77,6 +77,8 @@ class QuestionnaireEditorTests(TestCase):
         self.assertContains(response, 'id="editor-preview"')
         self.assertContains(response, "editor.js")
         self.assertContains(response, "funnels/index.css")
+        self.assertContains(response, 'class="questionnaire-editor-page"')
+        self.assertContains(response, "Volver a Mis cuestionarios")
 
         configuration = copy.deepcopy(self.configuration)
         configuration["preguntas"][0]["texto"] = "¿Cómo llegan tus prospectos?"

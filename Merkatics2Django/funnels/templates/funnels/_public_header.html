@@ -16,7 +16,7 @@
   {% else %}
     <form class="public-header-session" method="get" action="{% url 'acceso' %}">
       <input type="hidden" name="next" value="{% url 'inicio' %}">
-      <button class="public-header-action" type="submit">Iniciar sesión</button>
+      <button class="public-header-action" data-popup-reset type="submit">Iniciar sesión</button>
     </form>
   {% endif %}
 </header>

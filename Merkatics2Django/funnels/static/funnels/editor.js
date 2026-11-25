@@ -231,19 +231,16 @@
       questions.length ? `Pregunta ${previewIndex + 1} de ${questions.length}` : "Sin preguntas",
     ));
 
-    const flow = element("div", "editor-preview-flow");
+    const flow = element("div", "editor-preview-flow questionnaire-view");
     const contact = () => {
       const panel = element("section", "editor-preview-contact");
       panel.setAttribute("aria-label", "Vista previa de los datos de contacto");
-      panel.append(
-        element("p", "editor-preview-kicker", "Datos de contacto"),
-        element("span", "editor-preview-required", "Todos los campos son obligatorios"),
-      );
+      panel.append(element("p", "editor-preview-kicker", "Datos de contacto"));
       const contactFields = element("div", "editor-preview-contact-fields");
       for (const label of ["Nombre", "Correo electrónico", "Teléfono / WhatsApp"]) {
         const field = element("span");
-        field.append(document.createTextNode(`${label} `));
-        field.append(element("strong", "", "*"));
+        field.append(document.createTextNode(label));
+        field.append(element("strong", "", "Obligatorio"));
         contactFields.append(field);
       }
       panel.append(contactFields);
@@ -263,7 +260,9 @@
     } else {
       const card = element("article", "editor-preview-question question-card");
       if (question.seccion) card.append(element("p", "question-card-section", question.seccion));
-      card.append(element("h3", "", question.texto || "Escribe el texto de tu pregunta"));
+      const questionTitle = element("h3", "", question.texto || "Escribe el texto de tu pregunta");
+      questionTitle.tabIndex = -1;
+      card.append(questionTitle);
       if (question.tipo === "opcion_multiple") {
         const list = element("ul", "editor-preview-options option-list option-list-filas");
         if (question.opciones?.length === 2) list.classList.add("option-list-binary");
@@ -311,7 +310,7 @@
     preview.append(flow);
 
     if (question) {
-      const navigation = element("nav", "editor-preview-navigation");
+      const navigation = element("nav", "flow-navigation editor-preview-navigation");
       navigation.setAttribute("aria-label", "Navegación de la vista previa");
       button(navigation, "Anterior", () => {
         previewIndex = Math.max(0, previewIndex - 1);
@@ -322,7 +321,7 @@
         "",
         `${String(previewIndex + 1).padStart(2, "0")} / ${String(questions.length).padStart(2, "0")}`,
       ));
-      button(navigation, "Siguiente", () => {
+      button(navigation, previewIndex >= questions.length - 1 ? "Finalizar" : "Continuar", () => {
         previewIndex = Math.min(questions.length - 1, previewIndex + 1);
         updatePreview();
       }, previewIndex >= questions.length - 1);

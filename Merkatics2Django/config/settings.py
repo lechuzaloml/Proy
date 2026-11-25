@@ -43,6 +43,7 @@ if not STRIPE_PRICE_ID or not STRIPE_WEBHOOK_SECRET:
     )
 GOOGLE_CLIENT_ID = os.getenv("GOOGLE_CLIENT_ID", "").strip()
 GEMINI_API_KEY = os.getenv("GEMINI_API_KEY", "").strip()
+CRON_SECRET = os.getenv("CRON_SECRET", "").strip()
 
 INSTALLED_APPS = [
     "django.contrib.staticfiles",
@@ -86,15 +87,31 @@ TEMPLATES = [
 ]
 WSGI_APPLICATION = "config.wsgi.application"
 
+mysql_options = {
+    "charset": "utf8mb4",
+    "init_command": "SET sql_mode='STRICT_TRANS_TABLES'",
+}
+mysql_ssl_ca = os.getenv("MYSQL_SSL_CA", "").strip()
+mysql_ssl = os.getenv("MYSQL_SSL", "").strip().lower() in {
+    "1",
+    "true",
+    "yes",
+    "on",
+}
+if mysql_ssl_ca:
+    mysql_options["ssl"] = {"ca": mysql_ssl_ca}
+elif mysql_ssl:
+    mysql_options["ssl"] = {}
+
 DATABASES = {
     "default": {
         "ENGINE": "django.db.backends.mysql",
-        "NAME": os.getenv("MYSQL_NAME", "merkatics"),
-        "USER": os.getenv("MYSQL_USER", "clear_ia"),
+        "NAME": os.getenv("MYSQL_NAME", "").strip(),
+        "USER": os.getenv("MYSQL_USER", "").strip(),
         "PASSWORD": os.getenv("MYSQL_PASSWORD", ""),
-        "HOST": os.getenv("MYSQL_HOST", "127.0.0.1"),
-        "PORT": os.getenv("MYSQL_PORT", "3306"),
-        "OPTIONS": {"charset": "utf8mb4", "init_command": "SET sql_mode='STRICT_TRANS_TABLES'",},
+        "HOST": os.getenv("MYSQL_HOST", "").strip(),
+        "PORT": os.getenv("MYSQL_PORT", "").strip(),
+        "OPTIONS": mysql_options,
         "CONN_MAX_AGE": 0,
     }
 }

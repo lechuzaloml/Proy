@@ -46,6 +46,10 @@ class PublicQuestionnaireFlowTests(TestCase):
         self.assertContains(response, "Antes de empezar")
         self.assertContains(response, "¿Cómo captas prospectos?")
         self.assertContains(response, "¿Das seguimiento?")
+        self.assertContains(response, "question-card-section")
+        self.assertContains(response, "Continuar")
+        self.assertContains(response, "Finalizar")
+        self.assertContains(response, 'data-flow-previous type="button" disabled')
         self.assertContains(response, "questionnaire.js")
         self.assertNotContains(response, "name=\"puntaje\"")
 

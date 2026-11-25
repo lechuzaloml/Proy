@@ -6,6 +6,7 @@ from django.core.validators import RegexValidator, URLValidator
 from django.db import models
 
 from core.models import WorkspaceScopedModel
+from workspaces.constants import PROTECTED_WORKSPACE_SLUGS
 from users.models import Usuario
 
 
@@ -17,9 +18,9 @@ RESERVED_SLUGS = {
     "assets",
     "static",
     "login",
-    "clearia",
     "plataforma",
 }
+RESERVED_SLUGS.update(PROTECTED_WORKSPACE_SLUGS)
 SLUG_PATTERN = re.compile(r"^[a-z0-9][a-z0-9-]{1,38}[a-z0-9]$")
 
 
@@ -116,3 +117,17 @@ class Membresia(WorkspaceScopedModel):
 
     def __str__(self):
         return f"{self.correo} ({self.workspace})"
+
+
+class WorkspaceEliminacion(models.Model):
+    slug = models.SlugField(max_length=40)
+    stripe_subscription_id = models.CharField(
+        max_length=191,
+        null=True,
+        blank=True,
+        unique=True,
+    )
+    creada = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return f"{self.slug} · {self.stripe_subscription_id or 'sin Stripe'}"

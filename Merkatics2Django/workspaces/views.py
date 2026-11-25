@@ -10,10 +10,11 @@ from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
 from django.utils import timezone
 from django.views.decorators.cache import never_cache
+from django.views.decorators.http import require_POST
 
-from contacts.models import Contacto, Diagnostico
+from contacts.models import Contacto, Diagnostico, Seguimiento
 from contacts.presentation import etiqueta_origen
-from funnels.models import Cuestionario
+from funnels.models import Cuestionario, Popup, VersionCuestionario
 from subscriptions.models import SuscripcionWorkspace
 from users.models import AdminPlataforma, Usuario
 from workspaces.forms import (
@@ -22,7 +23,9 @@ from workspaces.forms import (
     EditarWorkspaceForm,
     EdicionMembresiaForm,
 )
+from workspaces.constants import CLEARIA_WORKSPACE_SLUG, PROTECTED_WORKSPACE_SLUGS
 from workspaces.models import Membresia, Workspace
+from workspaces.services import WorkspaceDeletionError, eliminar_workspace
 from workspaces.permisos import (
     puede_agregar_miembro,
     puede_cambiar_estado_miembro,
@@ -136,6 +139,8 @@ def resumen_workspace(request, workspace_uid):
             and workspace.plan != Workspace.Plan.INTERNO
         ),
     }
+    if can_manage_members:
+        context["popup_evento"] = Popup.objects.para(workspace).first()
     if context["puede_administrar_suscripcion"]:
         subscription = (
             SuscripcionWorkspace.objects.para(workspace)
@@ -380,29 +385,77 @@ def miembro_detalle(request, workspace_uid, uid):
     )
 
 
-@plataforma_requerida
-def consola_plataforma(request):
-    if request.method != "GET":
-        return HttpResponseNotAllowed(["GET"])
+def _contexto_consola_plataforma(
+    request,
+    *,
+    rechazo_popup_uid=None,
+    rechazo_form=None,
+):
     workspaces = []
     for workspace in Workspace.objects.order_by("nombre"):
         owner = (
             Membresia.objects.para(workspace)
-            .filter(rol=Membresia.Rol.PROPIETARIO)
+            .filter(
+                rol=Membresia.Rol.PROPIETARIO,
+                estado=Membresia.Estado.ACTIVO,
+                usuario__activo=True,
+            )
             .select_related("usuario")
             .first()
+        )
+        contacts = Contacto.objects.para(workspace)
+        questionnaires = Cuestionario.objects.para(workspace)
+        deletion_allowed = (
+            workspace.slug not in PROTECTED_WORKSPACE_SLUGS
+            and (
+                workspace.estado == Workspace.Estado.SUSPENDIDA
+                or owner is None
+            )
         )
         workspaces.append(
             {
                 "workspace": workspace,
                 "owner_email": owner.correo if owner else "",
-                "published_count": Cuestionario.objects.para(workspace)
+                "owner_active": owner is not None,
+                "published_count": questionnaires
                 .filter(estado=Cuestionario.Estado.PUBLICADO)
                 .count(),
-                "contact_count": Contacto.objects.para(workspace).count(),
+                "contact_count": contacts.count(),
+                "inactive": workspace.estado == Workspace.Estado.SUSPENDIDA,
+                "protected": workspace.slug in PROTECTED_WORKSPACE_SLUGS,
+                "suspension_allowed": (
+                    workspace.slug not in PROTECTED_WORKSPACE_SLUGS
+                ),
+                "deletion_allowed": deletion_allowed,
+                "deletion_counts": {
+                    "contactos": contacts.count(),
+                    "diagnosticos": Diagnostico.objects.para(workspace).count(),
+                    "seguimientos": Seguimiento.objects.para(workspace).count(),
+                    "cuestionarios": questionnaires.count(),
+                    "versiones": VersionCuestionario.objects.para(workspace).count(),
+                    "miembros": Membresia.objects.para(workspace).count(),
+                    "suscripciones": SuscripcionWorkspace.objects.para(workspace).count(),
+                    "popups": Popup.objects.para(workspace).count(),
+                },
             }
         )
-    clearia = Workspace.objects.filter(slug="clearia").first()
+    platform_events = (
+        Popup.objects.sin_alcance()
+        .filter(
+            estado__in=[Popup.Estado.PENDIENTE, Popup.Estado.PUBLICADO]
+        )
+        .select_related("workspace", "cuestionario")
+        .order_by("fecha_evento", "actualizado")
+    )
+    now = timezone.now()
+    platform_event_rows = [
+        {
+            "popup": popup,
+            "vencido": popup.vence_en is None or popup.vence_en <= now,
+        }
+        for popup in platform_events
+    ]
+    clearia = Workspace.objects.filter(slug=CLEARIA_WORKSPACE_SLUG).first()
     clearia_membership = (
         Membresia.objects.para(clearia)
         .filter(usuario=request.usuario, estado=Membresia.Estado.ACTIVO)
@@ -410,18 +463,35 @@ def consola_plataforma(request):
         if clearia
         else None
     )
+    return {
+        "workspaces": workspaces,
+        "eventos_revision": [
+            row for row in platform_event_rows
+            if row["popup"].estado == Popup.Estado.PENDIENTE
+        ],
+        "eventos_publicados": [
+            row for row in platform_event_rows
+            if row["popup"].estado == Popup.Estado.PUBLICADO
+        ],
+        "clearia_contactos_url": (
+            reverse("contactos", args=[clearia.uid])
+            if clearia_membership
+            else ""
+        ),
+        "nav_active": "plataforma",
+        "rechazo_popup_uid": rechazo_popup_uid,
+        "rechazo_form": rechazo_form,
+    }
+
+
+@plataforma_requerida
+def consola_plataforma(request):
+    if request.method != "GET":
+        return HttpResponseNotAllowed(["GET"])
     return render(
         request,
         "workspaces/plataforma.html",
-        {
-            "workspaces": workspaces,
-            "clearia_contactos_url": (
-                reverse("contactos", args=[clearia.uid])
-                if clearia_membership
-                else ""
-            ),
-            "nav_active": "plataforma",
-        },
+        _contexto_consola_plataforma(request),
     )
 
 
@@ -473,14 +543,26 @@ def editar_workspace(request, workspace_uid):
     if request.method == "POST":
         action = request.POST.get("accion")
         if action in {"suspender", "reactivar"}:
-            if action == "suspender" and workspace.slug == "clearia":
+            if (
+                action == "suspender"
+                and workspace.slug in PROTECTED_WORKSPACE_SLUGS
+            ):
                 raise Http404
-            workspace.estado = (
-                Workspace.Estado.SUSPENDIDA
-                if action == "suspender"
-                else Workspace.Estado.ACTIVA
-            )
-            workspace.save(update_fields=["estado"])
+            with transaction.atomic():
+                workspace.estado = (
+                    Workspace.Estado.SUSPENDIDA
+                    if action == "suspender"
+                    else Workspace.Estado.ACTIVA
+                )
+                workspace.save(update_fields=["estado"])
+                if action == "suspender":
+                    Popup.objects.para(workspace).filter(
+                        estado__in=[
+                            Popup.Estado.PENDIENTE,
+                            Popup.Estado.PUBLICADO,
+                            Popup.Estado.RECHAZADO,
+                        ]
+                    ).update(estado=Popup.Estado.BORRADOR)
             messages.success(
                 request,
                 "Empresa reactivada."
@@ -511,6 +593,9 @@ def editar_workspace(request, workspace_uid):
         "workspaces/editar_workspace.html",
         {
             "workspace": workspace,
+            "workspace_protected": (
+                workspace.slug in PROTECTED_WORKSPACE_SLUGS
+            ),
             "form": form,
             "nav_active": "plataforma",
         },
@@ -519,10 +604,45 @@ def editar_workspace(request, workspace_uid):
 
 
 @plataforma_requerida
+@require_POST
+def eliminar_workspace_view(request, workspace_uid):
+    slug_confirmado = request.POST.get("confirmar_slug", "")
+    liberar_prueba = request.POST.get("liberar_prueba") == "on"
+    try:
+        summary = eliminar_workspace(
+            workspace_uid,
+            slug_confirmado,
+            liberar_prueba=liberar_prueba,
+        )
+    except WorkspaceDeletionError as error:
+        messages.error(request, str(error))
+    else:
+        if summary["ya_eliminada"]:
+            messages.success(request, "La empresa ya había sido eliminada.")
+        else:
+            messages.success(
+                request,
+                "Empresa eliminada. "
+                f"Contactos: {summary['contactos']}; "
+                f"diagnósticos: {summary['diagnosticos']}; "
+                f"seguimientos: {summary['seguimientos']}; "
+                f"cuestionarios: {summary['cuestionarios']}; "
+                f"versiones: {summary['versiones']}; "
+                f"miembros: {summary['miembros']}; "
+                f"suscripciones: {summary['suscripciones']}; "
+                f"eventos: {summary['popups']}; "
+                f"pruebas liberadas: {summary['pruebas_liberadas']}.",
+            )
+    return redirect("consola_plataforma")
+
+
+@plataforma_requerida
 def asignar_propietario(request, workspace_uid):
     workspace = get_object_or_404(Workspace, uid=workspace_uid)
     owner_membership = Membresia.objects.para(workspace).filter(
-        rol=Membresia.Rol.PROPIETARIO
+        rol=Membresia.Rol.PROPIETARIO,
+        estado=Membresia.Estado.ACTIVO,
+        usuario__activo=True,
     ).first()
     if owner_membership:
         raise Http404
@@ -539,7 +659,9 @@ def asignar_propietario(request, workspace_uid):
                         pk=workspace.pk
                     )
                     if Membresia.objects.para(locked_workspace).filter(
-                        rol=Membresia.Rol.PROPIETARIO
+                        rol=Membresia.Rol.PROPIETARIO,
+                        estado=Membresia.Estado.ACTIVO,
+                        usuario__activo=True,
                     ).exists():
                         raise Http404
                     membership = Membresia.objects.para(locked_workspace).filter(

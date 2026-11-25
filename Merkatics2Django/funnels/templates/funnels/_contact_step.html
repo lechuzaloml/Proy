@@ -10,7 +10,7 @@
     <label>Teléfono / WhatsApp<input name="telefono" type="tel" autocomplete="tel" maxlength="30" minlength="5" required value="{{ form.telefono.value|default:'' }}"></label>
     {% if not demonstration %}
       <div class="privacy-consent">
-        <details><summary>Leer aviso de privacidad</summary><p>Texto provisional, pendiente de revisión por Merkatics. Para el diagnóstico pedimos nombre, correo electrónico, teléfono o WhatsApp y las respuestas al cuestionario. Usamos estos datos para elaborar y personalizar el resultado y, cuando corresponda, dar seguimiento a tu solicitud. Las respuestas abiertas se procesan con un servicio de inteligencia artificial para personalizar el resultado. Tu nombre, correo y teléfono NO se envían a ese servicio. Para ejercer tus derechos de acceso, rectificación, cancelación u oposición, contacta a: [pendiente].</p></details>
+        <details><summary>Leer aviso de privacidad</summary><p>{{ texto_aviso_privacidad }}</p></details>
         <label><input type="checkbox" name="consentimiento" value="on" required {% if form.consentimiento.value %}checked{% endif %}><span>He leído el aviso y consiento el uso de mis datos para los fines descritos.</span></label>
       </div>
     {% else %}
@@ -19,7 +19,7 @@
     {% if initial %}
       <button class="submit-button" data-flow-next type="button">Continuar</button>
     {% else %}
-      <div class="flow-navigation"><button class="secondary-button" data-flow-previous type="button">Anterior</button><button class="submit-button" type="submit">Continuar</button></div>
+      <div class="flow-navigation"><button class="secondary-button" data-flow-previous type="button">Anterior</button><button class="submit-button" type="submit">Finalizar</button></div>
     {% endif %}
   </div>
 </section>

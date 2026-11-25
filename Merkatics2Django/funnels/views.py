@@ -16,8 +16,9 @@ from django.views.decorators.http import require_POST
 from contacts.models import Contacto, Diagnostico
 from contacts.services import permitir_envio
 from core.workspace_access import obtener_workspace_y_membresia, usuario_requerido
+from funnels.constants import TEXTO_AVISO_PRIVACIDAD, VERSION_AVISO_PRIVACIDAD
 from funnels.forms import EditorCuestionarioForm, PublicSubmissionForm
-from funnels.models import Cuestionario, Plantilla, VersionCuestionario
+from funnels.models import Cuestionario, Plantilla, Popup, VersionCuestionario
 from funnels.motor import (
     ErrorRespuestas,
     calcular_perfil_secciones,
@@ -36,17 +37,32 @@ from subscriptions.planes import (
     limite_cuestionarios_publicados,
 )
 from subscriptions.recomendaciones import RECOMENDACIONES, planes_recomendados
+from workspaces.constants import CLEARIA_WORKSPACE_SLUG
 from workspaces.models import Membresia, Workspace
 from workspaces.permisos import tiene_permiso
 
 
-VERSION_AVISO_PRIVACIDAD = "provisional-v1"
 MAX_RESPUESTA_ABIERTA = 10000
 
 
 @never_cache
 def inicio(request):
-    return render(request, "funnels/landing.html")
+    popups = list(
+        Popup.objects.sin_alcance()
+        .filter(
+            estado=Popup.Estado.PUBLICADO,
+            vence_en__gt=timezone.now(),
+            workspace__estado=Workspace.Estado.ACTIVA,
+            cuestionario__estado=Cuestionario.Estado.PUBLICADO,
+        )
+        .select_related("workspace")
+        .order_by("fecha_evento", "actualizado")[:9]
+    )
+    return render(
+        request,
+        "funnels/landing.html",
+        {"event_popups": popups, "footer_compact": False},
+    )
 
 
 def biblioteca(request):
@@ -159,7 +175,7 @@ def demostrar_plantilla(request, slug):
 
 def diagnostico_inicial(request):
     workspace = get_object_or_404(
-        Workspace, slug="clearia", estado=Workspace.Estado.ACTIVA
+        Workspace, slug=CLEARIA_WORKSPACE_SLUG, estado=Workspace.Estado.ACTIVA
     )
     questionnaire = (
         Cuestionario.objects.para(workspace)
@@ -890,6 +906,7 @@ def _build_flow_context(
         "demonstration": demonstration,
         "show_intro": welcome.get("habilitada", True),
         "form": form,
+        "texto_aviso_privacidad": TEXTO_AVISO_PRIVACIDAD,
         "posted_answers": posted_answers,
         "footer_compact": True,
     }

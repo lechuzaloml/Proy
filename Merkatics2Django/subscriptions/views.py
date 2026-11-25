@@ -25,7 +25,12 @@ from subscriptions.planes import (
 )
 from subscriptions.recomendaciones import BENEFICIOS, NOTA_PRECIO, planes_recomendados
 from users.models import Usuario
-from workspaces.models import Membresia, Workspace, validate_workspace_slug
+from workspaces.models import (
+    Membresia,
+    Workspace,
+    WorkspaceEliminacion,
+    validate_workspace_slug,
+)
 
 
 logger = logging.getLogger(__name__)
@@ -246,6 +251,12 @@ def _create_workspace_from_checkout(session, stripe_subscription):
     validate_workspace_slug(slug)
     if not name.strip() or len(name) > 80 or len(email) > 191:
         raise ValueError("Los datos de Checkout no son válidos.")
+    if WorkspaceEliminacion.objects.filter(
+        stripe_subscription_id=str(subscription_id)
+    ).exists():
+        raise CheckoutConflict(
+            "La suscripción corresponde a una empresa ya eliminada."
+        )
     trial_end = _value(stripe_subscription, "trial_end")
     if not isinstance(trial_end, (int, float)):
         raise ValueError("Stripe no proporcionó el vencimiento de la prueba.")
@@ -408,7 +419,11 @@ def webhook_stripe(request):
         subscription_id = _value(obj, "subscription")
         if subscription_id:
             try:
-                _stripe_client().Subscription.cancel(str(subscription_id))
+                stripe_subscription = _stripe_client().Subscription.retrieve(
+                    str(subscription_id)
+                )
+                if _value(stripe_subscription, "status") != "canceled":
+                    _stripe_client().Subscription.cancel(str(subscription_id))
             except stripe.StripeError:
                 logger.exception(
                     "No se pudo cancelar la suscripción conflictiva de Stripe; evento %s.",

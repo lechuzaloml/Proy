@@ -10,7 +10,7 @@
   <link rel="stylesheet" href="{% static 'funnels/footer.css' %}">
   {% block extra_head %}{% endblock %}
 </head>
-<body id="top">
+<body id="top" class="{% block body_class %}{% endblock %}">
   <header class="private-topbar">
     <a class="private-brand" href="{% url 'selector_workspace' %}">merkatics-ClearIa</a>
     <a class="private-home-link" href="{% url 'inicio' %}">Inicio</a>

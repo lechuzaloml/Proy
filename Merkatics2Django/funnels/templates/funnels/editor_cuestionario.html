@@ -1,6 +1,7 @@
 {% extends "users/base_private.html" %}
 {% load static %}
 {% block title %}{% if publicado %}Despublica primero{% else %}Personaliza tu cuestionario{% endif %} · {{ workspace.nombre }}{% endblock %}
+{% block body_class %}{% if not publicado %}questionnaire-editor-page{% endif %}{% endblock %}
 {% block page_title %}{% if publicado %}Despublica primero{% else %}Personaliza tu cuestionario{% endif %}{% endblock %}
 {% block page_help %}{{ cuestionario.nombre }}{% endblock %}
 {% block extra_head %}<link rel="stylesheet" href="{% static 'funnels/index.css' %}">{% endblock %}
@@ -21,6 +22,7 @@
     </div>
   {% else %}
     <div class="custom-editor">
+      <a class="secondary-button" href="{% url 'mis_cuestionarios' workspace.uid %}">Volver a Mis cuestionarios</a>
       <header class="custom-editor-header">
         <p class="eyebrow">Copia guardada · los cambios se guardan en Django</p>
         <h1>Personaliza tu cuestionario</h1>
@@ -92,7 +94,6 @@
         <footer aria-busy="false" class="custom-editor-actions">
           <button class="secondary-button" name="intent" type="submit" value="save">Guardar</button>
           <button class="submit-button" name="intent" type="submit" value="preview">Previsualizar cuestionario</button>
-          <a class="secondary-button" href="{% url 'mis_cuestionarios' workspace.uid %}">Volver a Mis cuestionarios</a>
         </footer>
       </form>
       <textarea hidden id="editor-initial-configuration">{{ configuration_json }}</textarea>

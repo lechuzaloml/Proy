@@ -1,6 +1,8 @@
 from django.urls import path
 
 from contacts import views as contact_views
+from core import views as core_views
+from funnels import event_views
 from funnels import views as funnel_views
 from users import views as user_views
 from workspaces import views as workspace_views
@@ -9,9 +11,35 @@ from subscriptions import views as subscription_views
 
 urlpatterns = [
     path("", funnel_views.inicio, name="inicio"),
+    path(
+        "cron/limpiar-temporales/",
+        core_views.limpiar_temporales_cron,
+        name="limpiar_temporales_cron",
+    ),
     path("diagnostico/", funnel_views.diagnostico_inicial, name="diagnostico_inicial"),
     path("planes/", subscription_views.planes, name="planes"),
     path("suscripcion/", subscription_views.suscripcion, name="suscripcion"),
+    path(
+        "registro-evento/",
+        event_views.registro_evento_general,
+        name="registro_evento_general",
+    ),
+    path("e/<slug:slug>/", event_views.registro_evento, name="registro_evento"),
+    path(
+        "e/<slug:slug>/registro/",
+        event_views.registrar_evento,
+        name="registrar_evento",
+    ),
+    path(
+        "e/<slug:slug>/cuestionario/",
+        event_views.cuestionario_evento,
+        name="cuestionario_evento",
+    ),
+    path(
+        "e/<slug:slug>/confirmacion/<uuid:uid>/",
+        event_views.confirmacion_evento,
+        name="confirmacion_evento",
+    ),
     path(
         "suscripcion/estado-preparacion/",
         subscription_views.estado_preparacion,
@@ -47,6 +75,11 @@ urlpatterns = [
         "w/<uuid:workspace_uid>/cuestionarios/",
         funnel_views.mis_cuestionarios,
         name="mis_cuestionarios",
+    ),
+    path(
+        "w/<uuid:workspace_uid>/mi-evento/",
+        event_views.mi_evento,
+        name="mi_evento",
     ),
     path(
         "w/<uuid:workspace_uid>/cuestionarios/<uuid:uid>/editar/",
@@ -103,6 +136,11 @@ urlpatterns = [
     ),
     path("plataforma/", workspace_views.consola_plataforma, name="consola_plataforma"),
     path(
+        "plataforma/eventos/<uuid:popup_uid>/",
+        event_views.moderar_evento,
+        name="moderar_evento",
+    ),
+    path(
         "plataforma/nueva/",
         workspace_views.crear_workspace,
         name="crear_workspace",
@@ -116,5 +154,10 @@ urlpatterns = [
         "plataforma/<uuid:workspace_uid>/propietario/",
         workspace_views.asignar_propietario,
         name="asignar_propietario",
+    ),
+    path(
+        "plataforma/<uuid:workspace_uid>/eliminar/",
+        workspace_views.eliminar_workspace_view,
+        name="eliminar_workspace",
     ),
 ]

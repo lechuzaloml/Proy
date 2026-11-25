@@ -88,12 +88,32 @@ Desde `Merkatics2Django`:
   contactos.
 - `/w/<workspace_uid>/miembros/`: invitación y permisos para propietarios y
   administradores.
+- `/w/<workspace_uid>/mi-evento/`: configuración y vista previa del popup de
+  la empresa; propietarios y administradores pueden guardar borrador o enviar
+  el evento a revisión.
 - `/plataforma/`: consola de empresas para administradores de plataforma.
+- `/e/<slug>/`: página de evento; registra el consentimiento y las respuestas
+  en el workspace del evento.
+- `/cron/limpiar-temporales/`: limpieza GET protegida por `CRON_SECRET`.
 
 Los paneles requieren una membresía activa y sus permisos correspondientes. Los
 objetos de workspace se consultan con alcance explícito; los enlaces públicos
 usan UUID y un workspace suspendido o un cuestionario no publicado responde
 404.
+
+Los eventos tienen un popup por empresa. La empresa activa lo edita y envía a
+revisión; solo la plataforma puede aprobarlo, rechazarlo o despublicarlo. Los
+eventos vigentes con cuestionario aún publicado aparecen en el carrusel de
+inicio. La empresa suspendida deja su popup en borrador y no se republica al
+reactivarla.
+
+La eliminación de empresas está disponible solo para AdminPlataforma, requiere
+POST con CSRF, escribir el slug exacto y que la empresa esté suspendida o no
+tenga propietario activo. Los slugs protegidos se mantienen centralizados.
+Stripe Sandbox cancela la suscripción antes del borrado; el resumen indica los
+registros eliminados. La liberación de la prueba gratuita es opcional y viene
+desmarcada. Las cuentas de usuario no se eliminan y un marcador evita recrear
+la empresa por eventos Stripe atrasados.
 
 Los límites provisionales de cuestionarios publicados se comparten entre todos
 los miembros de cada empresa: Inicial permite 3, Pro 10, Avanzado 25 e Interno
@@ -132,7 +152,7 @@ Las pruebas usan SQLite en memoria y no escriben en la base MySQL de desarrollo:
 ```powershell
 py manage.py test --settings=config.settings_test
 py manage.py check --settings=config.settings_test
-py manage.py makemigrations --check --dry-run --settings=config.settings_test
+py manage.py makemigrations --check --settings=config.settings_test
 ```
 
 La integración Stripe requiere la dependencia Python `stripe` declarada en
@@ -141,6 +161,15 @@ configurada en `.env`:
 
 ```powershell
 py manage.py check
-py manage.py makemigrations --check --dry-run
+py manage.py makemigrations --check
 py manage.py migrate
+py manage.py collectstatic --noinput
+py manage.py generar_diccionario
+py manage.py verificar_entorno
 ```
+
+`docs/base-de-datos.md` se genera desde los modelos; enumera tablas, campos,
+relaciones, claves, índices y un diagrama Mermaid. Consulta
+[`docs/despliegue.md`](docs/despliegue.md) para el checklist portable y la
+configuración de demostración en Vercel. El despliegue no se realiza desde este
+repositorio automáticamente.

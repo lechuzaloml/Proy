@@ -1,0 +1,71 @@
+{% extends "users/base_private.html" %}
+{% load static %}
+{% block title %}Mi evento · {{ workspace.nombre }}{% endblock %}
+{% block page_title %}Mi evento{% endblock %}
+{% block page_help %}Administra el evento de tu empresa y envíalo a revisión de plataforma.{% endblock %}
+{% block extra_head %}<link rel="stylesheet" href="{% static 'funnels/index.css' %}">{% endblock %}
+{% block content %}
+<section class="private-card admin-card">
+  {% if popup %}
+    <p><strong>Estado:</strong> {{ popup.get_estado_display }}</p>
+    {% if popup.estado == "rechazado" %}
+      <section aria-labelledby="event-rejection-title" class="event-rejection-notice">
+        <h2 id="event-rejection-title">Motivo del rechazo</h2>
+        {% if popup.motivo_rechazo %}
+          <p>{{ popup.motivo_rechazo }}</p>
+        {% else %}
+          <p>No hay un motivo guardado para este rechazo.</p>
+        {% endif %}
+      </section>
+    {% endif %}
+    {% if popup.estado == "publicado" %}<p>Al editar un evento publicado, volverá a revisión.</p>{% endif %}
+  {% endif %}
+  {% if workspace.estado != "activa" %}<p class="private-message private-message-error" role="alert">La empresa está inactiva. No se puede editar ni enviar el evento a revisión.</p>{% endif %}
+  {% if form.errors %}
+    <div class="form-error-summary" role="alert">
+      <h2>{% if accion == "revision" %}No se pudo enviar a revisión{% else %}No se pudo guardar el evento{% endif %}</h2>
+      <ul>
+        {% for field in form %}
+          {% for error in field.errors %}<li><strong>{{ field.label }}:</strong> {{ error }}</li>{% endfor %}
+        {% endfor %}
+        {% for error in form.non_field_errors %}<li>{{ error }}</li>{% endfor %}
+      </ul>
+    </div>
+  {% endif %}
+  <form method="post" class="private-form">
+    {% csrf_token %}
+    {% for field in form %}
+      <div class="private-field">
+        <label for="{{ field.id_for_label }}">{{ field.label }}</label>
+        {{ field }}
+        {% if field.help_text %}<p class="private-field-help">{{ field.help_text }}</p>{% endif %}
+        {% if field.errors %}<div class="field-errors" role="alert">{{ field.errors }}</div>{% endif %}
+      </div>
+    {% endfor %}
+    <div class="private-actions">
+      <button class="private-button-secondary" name="accion" value="borrador" type="submit">Guardar borrador</button>
+      <button class="private-button" name="accion" value="revision" type="submit">Enviar a revisión</button>
+      {% if popup and popup.estado != "borrador" %}<button class="private-button-secondary" name="accion" value="volver_borrador" type="submit">Volver a borrador</button>{% endif %}
+    </div>
+  </form>
+</section>
+{% if popup %}
+  <section class="private-card admin-card" aria-labelledby="event-preview-heading">
+    <h2 id="event-preview-heading">Vista previa</h2>
+    <div class="registro-evento">
+      <header class="registro-evento__hero">
+        <div class="registro-evento__content">
+          <div class="registro-evento__copy">
+            {% if popup.insignia %}<span class="registro-evento__badge">{{ popup.insignia }}</span>{% endif %}
+            <h1>{{ popup.titulo|default:"Título del evento" }}</h1>
+            <p class="registro-evento__date">{% if popup.fecha_evento %}{{ popup.fecha_evento|date:"l j F Y, g:i a" }}{% else %}Selecciona una fecha para el evento{% endif %}</p>
+            <div class="registro-evento__schedule">{% for horario in popup.horarios %}<span>{{ horario }}</span>{% endfor %}</div>
+            <div class="registro-evento__host-line"><span class="registro-evento__host-label">Presenta</span><strong>{{ popup.anfitrion_nombre }}</strong></div>
+          </div>
+          <aside class="registro-evento__card"><div class="registro-evento__card-header"><h2>Reserva tu lugar</h2><p>{{ popup.resumen }}</p></div><p>{{ popup.cuestionario.nombre|default:"Elige un cuestionario publicado" }}</p></aside>
+        </div>
+      </header>
+    </div>
+  </section>
+{% endif %}
+{% endblock %}
