@@ -222,8 +222,10 @@ class PlatformViewsTests(TestCase):
         response = self.client.get(reverse("consola_plataforma"))
 
         self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "platform-console-page")
         self.assertContains(response, "Cuestionarios publicados")
         self.assertContains(response, "Contactos")
+        self.assertContains(response, "platform-table-scroll")
         self.assertNotContains(response, "Nombre privado no debe aparecer")
         company_row = next(
             row

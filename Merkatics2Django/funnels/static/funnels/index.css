@@ -7863,6 +7863,9 @@ textarea {
 }
 
 .promo-modal-primary {
+  display: flex;
+  align-items: center;
+  justify-content: center;
   width: 100%;
   min-height: 4.25rem;
   padding-inline: 1.75rem;
@@ -7870,6 +7873,7 @@ textarea {
   font-size: clamp(1.35rem, 2vw, 2rem);
   letter-spacing: -0.04em;
   font-weight: 800;
+  text-align: center;
 }
 
 .promo-modal-secondary {
@@ -8118,6 +8122,10 @@ body.registro-evento-page {
   color: rgba(255, 255, 255, 0.9);
   font-size: clamp(1.2rem, 2vw, 2.1rem);
   font-weight: 500;
+}
+
+.registro-evento__summary {
+  color: var(--registro-blanco);
 }
 
 .registro-evento__schedule {

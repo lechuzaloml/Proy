@@ -20,6 +20,10 @@ class LoadTemplatesCommandTests(TestCase):
         )
         self.assertContains(
             response,
+            f'<a href="{reverse("inicio")}" data-popup-reset>Eventos</a>',
+        )
+        self.assertContains(
+            response,
             f'<form class="public-header-session" method="get" '
             f'action="{reverse("acceso")}">',
         )
@@ -52,6 +56,10 @@ class LoadTemplatesCommandTests(TestCase):
         self.assertContains(
             response,
             f'href="{reverse("selector_workspace")}">Acceder</a>',
+        )
+        self.assertContains(
+            response,
+            f'<a href="{reverse("inicio")}" data-popup-reset>Eventos</a>',
         )
         self.assertNotContains(response, "Iniciar sesión")
 
@@ -101,6 +109,26 @@ class LoadTemplatesCommandTests(TestCase):
 
     def test_seeded_public_pages_and_all_template_demos_render(self):
         call_command("cargar_plantillas")
+
+        marketing_template = Plantilla.objects.get(
+            slug="demo-test-madurez-marketing-digital"
+        )
+        consistent_result = next(
+            result
+            for result in marketing_template.configuracion["resultado"]["resultados"]
+            if result["segmento"] == "practicas_consistentes"
+        )
+        self.assertNotIn("cta", consistent_result)
+
+        cybersecurity_template = Plantilla.objects.get(
+            slug="demo-evaluacion-ciberseguridad"
+        )
+        reporting_result = next(
+            result
+            for result in cybersecurity_template.configuracion["resultado"]["resultados"]
+            if result["segmento"] == "preparacion_basica"
+        )
+        self.assertNotIn("cta", reporting_result)
 
         landing = self.client.get(reverse("inicio"))
         self.assertEqual(landing.status_code, 200)
@@ -194,10 +222,18 @@ class CopyTemplateTests(TestCase):
     def test_member_with_edit_permission_copies_configuration_as_draft(self):
         library = self.client.get(reverse("biblioteca"))
         self.assertContains(library, "Copiar a mi empresa")
-        self.assertContains(library, "Ver mis cuestionarios")
+        self.assertContains(
+            library,
+            f"Ver mis cuestionarios — {self.workspace.nombre}",
+        )
+        self.assertNotContains(library, "Crear desde cero")
         self.assertContains(
             library,
             reverse("mis_cuestionarios", args=[self.workspace.uid]),
+        )
+        self.assertNotContains(
+            library,
+            reverse("crear_cuestionario", args=[self.workspace.uid]),
         )
         response = self.client.post(
             reverse("copiar_plantilla", args=[self.template.slug]),

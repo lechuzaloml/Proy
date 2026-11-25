@@ -7,6 +7,13 @@ LIMITES_CUESTIONARIOS_PUBLICADOS = {
     "interno": None,
 }
 
+LIMITES_BORRADORES_POR_EMPRESA = {
+    "inicial": 20,
+    "pro": 20,
+    "avanzado": 20,
+    "interno": None,
+}
+
 PLANES_SUSCRIPCION = (
     {"id": "inicial", "nombre": "Inicial", "limite": 3, "nombre_completo": "Plan Inicial"},
     {"id": "pro", "nombre": "Pro", "limite": 10, "nombre_completo": "Plan Pro"},
@@ -26,4 +33,11 @@ def limite_cuestionarios_publicados(plan):
     return LIMITES_CUESTIONARIOS_PUBLICADOS.get(
         plan,
         LIMITES_CUESTIONARIOS_PUBLICADOS["inicial"],
+    )
+
+
+def limite_borradores_por_empresa(plan):
+    return LIMITES_BORRADORES_POR_EMPRESA.get(
+        plan,
+        LIMITES_BORRADORES_POR_EMPRESA["inicial"],
     )

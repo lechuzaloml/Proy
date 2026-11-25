@@ -68,6 +68,30 @@ def _validar_resultado_por_segmento(value, errors):
     return valid
 
 
+def _validar_personalizacion_dimension(data, errors):
+    if "personalizacion_dimension" not in data:
+        return True
+    value = data["personalizacion_dimension"]
+    if not isinstance(value, list):
+        errors.append("personalizacion_dimension debe ser un array.")
+        return False
+    valid = True
+    for index, item in enumerate(value):
+        path = f"personalizacion_dimension[{index}]"
+        if not _es_registro(item):
+            errors.append(f"{path} debe ser un objeto.")
+            valid = False
+            continue
+        if not _es_texto(item.get("seccion")):
+            errors.append(f"{path}.seccion debe ser texto no vacío.")
+            valid = False
+        for nivel in ("bajo", "medio", "alto"):
+            if not _es_texto(item.get(nivel)):
+                errors.append(f"{path}.{nivel} debe ser texto no vacío.")
+                valid = False
+    return valid
+
+
 def _validar_pregunta(value, index, usa_scoring, errors):
     path = f"preguntas[{index}]"
     if not _es_registro(value):
@@ -78,6 +102,9 @@ def _validar_pregunta(value, index, usa_scoring, errors):
         if not _es_texto(value.get(key)):
             errors.append(f"{path}.{key} debe ser un texto no vacío.")
             valid = False
+    if "obligatoria" in value and not isinstance(value["obligatoria"], bool):
+        errors.append(f"{path}.obligatoria debe ser booleano.")
+        valid = False
     if "seccion" in value and not _es_texto(value["seccion"]):
         errors.append(f"{path}.seccion debe ser un texto no vacío cuando existe.")
         valid = False
@@ -260,6 +287,39 @@ def validar_cuestionario(data):
             if not _validar_pregunta(question, index, usa_scoring is True, errors):
                 valid = False
 
+    if "familia_base" in data:
+        family = data.get("familia_base")
+        if family not in {"si_no", "opcion_multiple", "escala", "abierta"}:
+            errors.append("cuestionario.familia_base no corresponde a una familia válida.")
+            valid = False
+        elif isinstance(questions, list):
+            for index, question in enumerate(questions):
+                if not _es_registro(question):
+                    continue
+                actual = question.get("tipo")
+                if family == "si_no":
+                    if actual != "opcion_multiple":
+                        errors.append(
+                            f"preguntas[{index}] no pertenece a la familia Sí/No."
+                        )
+                        valid = False
+                    elif isinstance(question.get("opciones"), list):
+                        texts = {
+                            option.get("texto")
+                            for option in question["opciones"]
+                            if _es_registro(option)
+                        }
+                        if texts != {"Sí", "No"}:
+                            errors.append(
+                                f"preguntas[{index}] debe usar exactamente las opciones Sí y No."
+                            )
+                            valid = False
+                elif actual != family:
+                    errors.append(
+                        f"preguntas[{index}] no pertenece a la familia base."
+                    )
+                    valid = False
+
     has_rules = "reglas_scoring" in data
     if usa_scoring is True:
         rules = data.get("reglas_scoring")
@@ -298,8 +358,50 @@ def validar_cuestionario(data):
                 if not _es_texto(rule.get("segmento")):
                     errors.append(f"{path}.segmento debe ser un texto no vacío.")
                     valid = False
+            numeric_rules = [
+                rule for rule in rules
+                if _es_registro(rule)
+                and _es_numero(rule.get("puntaje_min"))
+                and _es_numero(rule.get("puntaje_max"))
+            ]
+            ordered = sorted(numeric_rules, key=lambda rule: rule["puntaje_min"])
+            previous_max = None
+            for index, rule in enumerate(ordered):
+                minimum = rule["puntaje_min"]
+                maximum = rule["puntaje_max"]
+                if previous_max is not None:
+                    expected_minimum = previous_max + 1
+                    if minimum > expected_minimum:
+                        errors.append(
+                            f"reglas_scoring tiene un hueco desde {expected_minimum} hasta {minimum - 1}."
+                        )
+                        valid = False
+                    elif minimum <= previous_max:
+                        errors.append(
+                            f"reglas_scoring[{index}] se traslapa con el rango anterior."
+                        )
+                        valid = False
+                previous_max = maximum
+            if ordered and "familia_base" in data:
+                if ordered[0]["puntaje_min"] != 0:
+                    errors.append("reglas_scoring debe comenzar en 0.")
+                    valid = False
+                maximum_possible = sum(
+                    _puntaje_maximo(question)
+                    for question in questions
+                    if _es_registro(question)
+                    and question.get("participa_scoring") is True
+                ) if isinstance(questions, list) else 0
+                if previous_max is not None and previous_max != maximum_possible:
+                    errors.append(
+                        f"reglas_scoring debe cubrir hasta el puntaje máximo calculado ({maximum_possible})."
+                    )
+                    valid = False
     elif has_rules:
         errors.append("Un cuestionario sin scoring no debe incluir reglas_scoring.")
+        valid = False
+
+    if not _validar_personalizacion_dimension(data, errors):
         valid = False
 
     result = data.get("resultado")
@@ -355,6 +457,9 @@ def validar_respuestas(cuestionario, respuestas):
         raise ErrorRespuestas("Se recibieron respuestas para preguntas desconocidas.")
     for index, question in enumerate(questions):
         raw = respuestas.get(str(index), respuestas.get(index))
+        required = question.get("obligatoria", True)
+        if raw is None and required is False:
+            continue
         if not _es_registro(raw) or raw.get("tipo") != question["tipo"]:
             raise ErrorRespuestas(
                 f"Falta una respuesta válida para la pregunta {index + 1}."
@@ -434,10 +539,23 @@ def _numero_como_clave(value):
 
 def _puntaje_maximo(question):
     if question["tipo"] == "opcion_multiple":
-        return max(0, *(option.get("puntos", 0) for option in question["opciones"]))
+        options = question.get("opciones")
+        if not isinstance(options, list):
+            return 0
+        values = [
+            option.get("puntos", 0)
+            for option in options
+            if _es_registro(option) and _es_numero(option.get("puntos", 0))
+        ]
+        return max(0, *values)
     if question["tipo"] == "escala":
-        minimum = question["escala"]["min"]
-        maximum = question["escala"]["max"]
+        scale = question.get("escala")
+        if not _es_registro(scale):
+            return 0
+        minimum = scale.get("min")
+        maximum = scale.get("max")
+        if not _es_numero(minimum) or not _es_numero(maximum):
+            return 0
         points = question.get("puntos_por_valor", {})
         values = []
         for key, points_value in points.items():
@@ -524,11 +642,53 @@ def calcular_perfil_secciones(cuestionario, respuestas):
     ]
 
 
+def _seleccionar_textos_dimension(cuestionario, respuestas):
+    configuracion = cuestionario.get("personalizacion_dimension")
+    if not isinstance(configuracion, list):
+        return []
+    perfiles = calcular_perfil_secciones(cuestionario, respuestas)
+    seleccionados = []
+    for item in configuracion:
+        if not _es_registro(item):
+            continue
+        profile = next(
+            (
+                candidate
+                for candidate in perfiles
+                if candidate["nombre"] == item.get("seccion")
+            ),
+            None,
+        )
+        if profile is None:
+            continue
+        percentage = profile["porcentaje"]
+        if percentage <= 33:
+            nivel = "bajo"
+        elif percentage <= 66:
+            nivel = "medio"
+        else:
+            nivel = "alto"
+        seleccionados.append(
+            {
+                "nombre": item["seccion"],
+                "porcentaje": percentage,
+                "contenido": item[nivel],
+            }
+        )
+    return seleccionados
+
+
 def calcular_resultado(cuestionario, respuestas):
     questions = cuestionario["preguntas"]
     uses_scoring = cuestionario["usa_scoring"]
     if not uses_scoring:
         result = cuestionario["resultado"]
+        result = {
+            **result,
+            "textos_dimension": _seleccionar_textos_dimension(
+                cuestionario, respuestas
+            ),
+        }
         return {
             "tipo": "fijo",
             "resultado": result,
@@ -575,6 +735,12 @@ def calcular_resultado(cuestionario, respuestas):
         raise ErrorRespuestas(
             "No se encontró un resultado para el segmento obtenido."
         )
+    result = {
+        **result,
+        "textos_dimension": _seleccionar_textos_dimension(
+            cuestionario, respuestas
+        ),
+    }
     return {
         "tipo": "por_segmento",
         "resultado": result,

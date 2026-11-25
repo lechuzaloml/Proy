@@ -1,5 +1,6 @@
 {% extends "users/base_private.html" %}
 {% load static %}
+{% block body_class %}platform-console-page{% endblock %}
 {% block title %}Plataforma · merkatics-ClearIa{% endblock %}
 {% block extra_head %}<link rel="stylesheet" href="{% static 'funnels/index.css' %}">{% endblock %}
 {% block page_title %}Empresas{% endblock %}
@@ -97,7 +98,7 @@
     {% endif %}
   </div>
   {% if workspaces %}
-    <div class="private-table-wrap admin-table-scroll">
+    <div class="private-table-wrap admin-table-scroll platform-table-scroll">
       <table class="admin-table platform-table">
         <thead><tr><th>Empresa</th><th>Identificador</th><th>Plan</th><th>Estado</th><th>Correo del propietario</th><th>Cuestionarios publicados</th><th>Contactos</th><th>Acciones</th></tr></thead>
         <tbody>

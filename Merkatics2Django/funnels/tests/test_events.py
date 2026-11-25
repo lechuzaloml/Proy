@@ -330,6 +330,10 @@ class EventViewsTests(TestCase):
         response = self.client.get(reverse("registro_evento", args=[self.workspace.slug]))
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, "Regístrate para continuar")
+        self.assertContains(
+            response,
+            '<p class="registro-evento__summary">Aprende a organizar el seguimiento de tus prospectos.</p>',
+        )
         self.assertContains(response, "Continuar al cuestionario")
         self.assertContains(response, "Leer aviso de privacidad")
         self.assertContains(response, "Información del evento publicada por la empresa.")
@@ -341,7 +345,7 @@ class EventViewsTests(TestCase):
         self.assertEqual(response.status_code, 404)
         self.assertContains(response, "Evento no disponible", status_code=404)
 
-    def test_landing_keeps_workspace_reservations_separate_and_general_cta_separate(self):
+    def test_landing_shows_only_published_workspace_events_in_carousel(self):
         other_workspace = Workspace.objects.create(
             slug="second-event-company",
             nombre="Segunda empresa de evento",
@@ -378,12 +382,8 @@ class EventViewsTests(TestCase):
 
         landing = self.client.get(reverse("inicio"))
 
-        self.assertContains(
-            landing,
-            f'<a class="submit-button promo-modal-primary" '
-            f'data-popup-return-key="general" '
-            f'href="{reverse("registro_evento_general")}">Reserva tu plaza</a>',
-        )
+        self.assertNotContains(landing, 'data-popup-key="general"')
+        self.assertNotContains(landing, reverse("registro_evento_general"))
         self.assertContains(
             landing,
             f'data-popup-return-key="workspace:{self.workspace.slug}" '
@@ -406,17 +406,13 @@ class EventViewsTests(TestCase):
         self.assertContains(refreshed_landing, "Evento de la segunda empresa")
         self.assertContains(refreshed_landing, self.popup.titulo)
 
-    def test_default_popup_shows_without_company_events_and_hides_its_reservation_cta(self):
+    def test_landing_has_no_popup_when_there_are_no_published_company_events(self):
         self.popup.delete()
 
         landing = self.client.get(reverse("inicio"))
 
-        self.assertContains(landing, "Masterclass en vivo con")
-        self.assertContains(landing, 'data-popup-key="general"')
-        self.assertNotContains(
-            landing,
-            f'href="{reverse("registro_evento_general")}"',
-        )
+        self.assertNotContains(landing, "Masterclass en vivo con")
+        self.assertNotContains(landing, "data-popup-carousel")
         self.assertNotContains(landing, reverse("registro_evento", args=[self.workspace.slug]))
 
     def test_general_event_route_is_a_demo_and_never_creates_a_reservation(self):

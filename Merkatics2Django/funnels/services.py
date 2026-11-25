@@ -41,6 +41,10 @@ def publicar_cuestionario(workspace, uid):
                 "No se puede publicar una configuración inválida: "
                 + " ".join(errors)
             )
+        if not isinstance(cuestionario.configuracion.get("preguntas"), list) or not cuestionario.configuracion["preguntas"]:
+            raise ErrorPublicacion(
+                "No se puede publicar: configura al menos una pregunta."
+            )
         configuration = copy.deepcopy(cuestionario.configuracion)
         configuration["estado"] = Cuestionario.Estado.PUBLICADO
 

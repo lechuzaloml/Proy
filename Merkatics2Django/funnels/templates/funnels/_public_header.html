@@ -7,6 +7,7 @@
     <a href="/biblioteca/">Biblioteca</a>
     <a href="/diagnostico/">Probar gratis</a>
     <a href="{% url 'selector_workspace' %}">Acceder</a>
+    <a href="{% url 'inicio' %}" data-popup-reset>Eventos</a>
   </nav>
   {% if request.usuario %}
     <form class="public-header-session" method="post" action="{% url 'cerrar_sesion' %}">

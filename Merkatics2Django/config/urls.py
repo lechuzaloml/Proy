@@ -77,6 +77,11 @@ urlpatterns = [
         name="mis_cuestionarios",
     ),
     path(
+        "w/<uuid:workspace_uid>/cuestionarios/crear/",
+        funnel_views.crear_cuestionario,
+        name="crear_cuestionario",
+    ),
+    path(
         "w/<uuid:workspace_uid>/mi-evento/",
         event_views.mi_evento,
         name="mi_evento",
@@ -100,6 +105,11 @@ urlpatterns = [
         "w/<uuid:workspace_uid>/cuestionarios/<uuid:uid>/eliminar/",
         funnel_views.eliminar_cuestionario,
         name="eliminar_cuestionario",
+    ),
+    path(
+        "w/<uuid:workspace_uid>/cuestionarios/<uuid:uid>/duplicar/",
+        funnel_views.duplicar_cuestionario,
+        name="duplicar_cuestionario",
     ),
     path(
         "w/<uuid:workspace_uid>/contactos/",

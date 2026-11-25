@@ -6,7 +6,18 @@
 {% block content %}
   {% if errors %}<div class="private-message private-message-error" role="alert"><strong>No se pudo completar la acción:</strong><ul>{% for error in errors %}<li>{{ error }}</li>{% endfor %}</ul></div>{% endif %}
   <section class="private-card admin-card">
+    {% if puede_editar_cuestionarios %}
+      <div class="private-actions">
+        {% if limite_borradores_alcanzado %}
+          <button class="private-button" type="button" disabled>Crear desde cero</button>
+          <small>Alcanzaste el límite provisional de {{ limite_borradores }} borradores.</small>
+        {% else %}
+          <a class="private-button" href="{% url 'crear_cuestionario' workspace.uid %}">Crear desde cero</a>
+        {% endif %}
+      </div>
+    {% endif %}
     <p aria-live="polite">Cuestionarios publicados: {{ cuestionarios_publicados }} de {{ limite_publicados }}</p>
+    <p>Borradores: {{ borradores }} de {{ limite_borradores }}</p>
     {% if limites_provisionales %}
       <p>Límites provisionales. {{ precio_prueba }}</p>
     {% endif %}
@@ -47,10 +58,20 @@
                 <div class="private-actions">
                   {% if puede_publicar %}
                     {% if row.questionnaire.estado == "borrador" %}
+                      <details class="private-confirmation">
+                        <summary>Comprobar y publicar</summary>
+                        <ul>
+                          <li>Al menos una pregunta</li>
+                          <li>Todas las opciones tienen texto</li>
+                          <li>Rangos completos sin huecos ni traslapes</li>
+                          <li>Resultado definido</li>
+                          <li>Momento del contacto configurado</li>
+                        </ul>
                       <form method="post" action="{% url 'publicar_cuestionario' workspace.uid row.questionnaire.uid %}">
                         {% csrf_token %}
                         <button class="private-button" type="submit"{% if not puede_publicar_ahora %} disabled{% endif %}>Publicar</button>
                       </form>
+                      </details>
                     {% else %}
                       <form method="post" action="{% url 'despublicar_cuestionario' workspace.uid row.questionnaire.uid %}">{% csrf_token %}<button class="private-button-secondary" type="submit">Despublicar</button></form>
                     {% endif %}
@@ -58,6 +79,12 @@
                   {% if row.questionnaire.estado == "publicado" %}<small>Despublica primero</small>{% endif %}
                   {% if puede_publicar and row.questionnaire.estado == "borrador" and not puede_publicar_ahora and not limite_alcanzado and not empresa_suspendida %}
                     <small>No se pudo comprobar el cupo para publicar.</small>
+                  {% endif %}
+                  {% if puede_editar_cuestionarios %}
+                    <form method="post" action="{% url 'duplicar_cuestionario' workspace.uid row.questionnaire.uid %}">
+                      {% csrf_token %}
+                      <button class="private-button-secondary" type="submit">Duplicar</button>
+                    </form>
                   {% endif %}
                   {% if row.puede_eliminar %}
                     <details class="private-confirmation">

@@ -32,6 +32,38 @@ class QuestionnaireValidationTests(SimpleTestCase):
         case.pop("secciones")
         self.assertEqual(validar_cuestionario(case), [])
 
+    def test_rejects_mixed_response_families_and_invalid_ranges(self):
+        case = copy.deepcopy(self.case)
+        case["familia_base"] = "opcion_multiple"
+        case["preguntas"][2]["tipo"] = "escala"
+        case["preguntas"][2]["escala"] = {"min": 1, "max": 5}
+        errors = validar_cuestionario(case)
+        self.assertTrue(any("familia base" in error for error in errors))
+
+        case = copy.deepcopy(self.case)
+        case["reglas_scoring"] = [
+            {"puntaje_min": 0, "puntaje_max": 20, "segmento": "A"},
+            {"puntaje_min": 22, "puntaje_max": 80, "segmento": "B"},
+        ]
+        case["resultado"]["resultados"] = [
+            {"segmento": "A", "contenido": "A"},
+            {"segmento": "B", "contenido": "B"},
+        ]
+        errors = validar_cuestionario(case)
+        self.assertTrue(any("hueco" in error for error in errors))
+
+    def test_accepts_dimension_personalization_contract(self):
+        case = copy.deepcopy(self.case)
+        case["personalizacion_dimension"] = [
+            {
+                "seccion": "Captación",
+                "bajo": "Empieza por captar.",
+                "medio": "Refuerza tu captación.",
+                "alto": "Tu captación es sólida.",
+            }
+        ]
+        self.assertEqual(validar_cuestionario(case), [])
+
     def test_rejects_wrapper_and_scoring_on_non_scored_questionnaire(self):
         self.assertIn(
             "cuestionario.id debe ser un texto no vacío.",

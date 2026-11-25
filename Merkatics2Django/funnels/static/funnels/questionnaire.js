@@ -57,7 +57,10 @@
     for (const step of questions) {
       const index = Number(step.dataset.questionIndex);
       const answer = currentAnswer(index);
-      if (!answer) return null;
+      if (!answer) {
+        if (step.dataset.obligatoria === "true") return null;
+        continue;
+      }
       answers[String(index)] = answer;
     }
     answersField.value = JSON.stringify(answers);
@@ -69,7 +72,7 @@
       const step = steps[current];
       if (step.hasAttribute("data-question-index")) {
         const answer = currentAnswer(Number(step.dataset.questionIndex));
-        if (!answer) {
+        if (!answer && step.dataset.obligatoria !== "false") {
           error.textContent = "Responde esta pregunta para continuar.";
           error.hidden = false;
           step.querySelector("[data-answer-input]")?.focus();

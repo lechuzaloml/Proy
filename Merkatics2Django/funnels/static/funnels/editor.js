@@ -12,6 +12,7 @@
   const scoringNote = document.getElementById("editor-scoring-note");
   const scoringConfirmation = document.getElementById("editor-scoring-confirmation");
   const scoringError = document.getElementById("editor-scoring-error");
+  const isNewQuestionnaire = root.hasAttribute("data-new-questionnaire");
   let configuration;
   let previewIndex = 0;
 
@@ -120,16 +121,21 @@
   const newQuestion = (type) => {
     const question = {
       id: `pregunta-${crypto.randomUUID()}`,
-      texto: "Escribe la pregunta",
+      texto: isNewQuestionnaire ? "" : "Escribe la pregunta",
       participa_scoring: false,
       tipo: type === "si_no" ? "opcion_multiple" : type,
     };
+    if (isNewQuestionnaire && !configuration.familia_base) {
+      configuration.familia_base = type;
+    }
     if (question.tipo === "opcion_multiple") {
       question.opciones = type === "si_no"
         ? [{ texto: "Sí" }, { texto: "No" }]
-        : [{ texto: "Opción 1" }, { texto: "Opción 2" }];
+        : isNewQuestionnaire
+          ? [{ texto: "" }, { texto: "" }]
+          : [{ texto: "Opción 1" }, { texto: "Opción 2" }];
     } else if (question.tipo === "escala") {
-      question.escala = { min: 1, max: 5 };
+      question.escala = { min: 1, max: 5, etiqueta_min: "", etiqueta_max: "" };
     }
     return question;
   };
@@ -151,6 +157,7 @@
     if (!enabled) {
       if (
         configuration.usa_scoring &&
+        Array.isArray(configuration.resultado?.resultados) &&
         configuration.resultado.resultados.length > 1 &&
         !confirmed
       ) {
@@ -158,7 +165,17 @@
         scoringInput.checked = true;
         return;
       }
-      const firstResult = configuration.resultado?.resultados?.[0];
+      const firstResult = Array.isArray(configuration.resultado?.resultados)
+        ? configuration.resultado.resultados.find((result) =>
+          result &&
+          typeof result === "object" &&
+          !Array.isArray(result) &&
+          typeof result.segmento === "string" &&
+          result.segmento.trim() &&
+          typeof result.contenido === "string" &&
+          result.contenido.trim()
+        )
+        : null;
       if (!firstResult) {
         scoringError.textContent = "Añade al menos un resultado por segmento antes de desactivar el scoring.";
         scoringError.hidden = false;
@@ -186,11 +203,15 @@
       configuration.reglas_scoring = [{
         puntaje_min: 0,
         puntaje_max: 0,
-        segmento: "General",
+        segmento: isNewQuestionnaire ? "" : "General",
       }];
       configuration.resultado = {
         tipo: "por_segmento",
-        resultados: [{ ...fixedResult, segmento: "General" }],
+        resultados: [{
+          ...fixedResult,
+          segmento: isNewQuestionnaire ? "" : "General",
+          contenido: isNewQuestionnaire ? "" : (fixedResult.contenido || ""),
+        }],
       };
       configuration.preguntas = configuration.preguntas.map((question) => ({
         ...question,
@@ -395,13 +416,13 @@
     );
     if (welcomeData.habilitada ?? true) {
       const welcomeBody = element("div", "custom-editor-welcome-body");
-      labelField(welcomeBody, "Título de bienvenida", welcomeData.titulo ?? "Diagnóstico inicial de crecimiento", {
+      labelField(welcomeBody, "Título de bienvenida", welcomeData.titulo ?? (isNewQuestionnaire ? "" : "Diagnóstico inicial de crecimiento"), {
         onChange: (value) => {
           ensureWelcome();
           configuration.bienvenida.titulo = value;
         },
       });
-      labelField(welcomeBody, "Descripción", welcomeData.descripcion ?? "Antes de empezar, te haremos unas preguntas para entender mejor tu situación actual.", {
+      labelField(welcomeBody, "Descripción", welcomeData.descripcion ?? (isNewQuestionnaire ? "" : "Antes de empezar, te haremos unas preguntas para entender mejor tu situación actual."), {
         multiline: true,
         onChange: (value) => {
           ensureWelcome();
@@ -422,7 +443,7 @@
           configuration.bienvenida.tiempoEstimado = value;
         },
       });
-      labelField(welcomeRow, "Texto del botón", welcomeData.textoBoton ?? "Iniciar diagnóstico", {
+      labelField(welcomeRow, "Texto del botón", welcomeData.textoBoton ?? (isNewQuestionnaire ? "" : "Iniciar diagnóstico"), {
         onChange: (value) => {
           ensureWelcome();
           configuration.bienvenida.textoBoton = value;
@@ -458,6 +479,7 @@
       "editor-questions-heading",
     );
     const questionList = Array.isArray(configuration.preguntas) ? configuration.preguntas : [];
+    const sectionNames = Array.isArray(configuration.secciones) ? configuration.secciones : [];
     if (!questionList.length) {
       questions.append(element("p", "admin-empty", "Todavía no hay preguntas. Elige un tipo y agrega la primera."));
     }
@@ -476,11 +498,40 @@
         element("h3", "", `Pregunta ${questionIndex + 1}`),
       );
       title.append(titleCopy);
+      button(title, "Subir", () => {
+        if (questionIndex === 0) return;
+        const [item] = configuration.preguntas.splice(questionIndex, 1);
+        configuration.preguntas.splice(questionIndex - 1, 0, item);
+        render();
+      }, questionIndex === 0);
+      button(title, "Bajar", () => {
+        if (questionIndex === configuration.preguntas.length - 1) return;
+        const [item] = configuration.preguntas.splice(questionIndex, 1);
+        configuration.preguntas.splice(questionIndex + 1, 0, item);
+        render();
+      }, questionIndex === configuration.preguntas.length - 1);
+      button(title, "Duplicar", () => {
+        const copy = structuredClone(question);
+        copy.id = `pregunta-${crypto.randomUUID()}`;
+        configuration.preguntas.splice(questionIndex + 1, 0, copy);
+        render();
+      });
       button(title, "Eliminar pregunta", () => {
         configuration.preguntas.splice(questionIndex, 1);
+        if (isNewQuestionnaire && configuration.preguntas.length === 0) {
+          delete configuration.familia_base;
+        }
         render();
-      }, questionList.length <= 1);
+      });
       card.append(title);
+      checkbox(
+        card,
+        "Pregunta obligatoria",
+        question.obligatoria !== false,
+        (enabled) => {
+          question.obligatoria = enabled;
+        },
+      );
       labelField(card, "Texto de la pregunta", question.texto, {
         multiline: true,
         maxLength: 1000,
@@ -489,14 +540,29 @@
           updatePreview();
         },
       });
-      labelField(card, "Sección", question.seccion || "", {
-        onChange: (value) => {
-          if (value) question.seccion = value;
-          else delete question.seccion;
-          syncSections();
-          updatePreview();
-        },
+      const questionSectionLabel = element("label");
+      questionSectionLabel.append(document.createTextNode("Sección"));
+      const questionSectionSelect = element("select");
+      const noSectionOption = element("option", "", "Sin sección");
+      noSectionOption.value = "";
+      questionSectionSelect.append(noSectionOption);
+      [...new Set(sectionNames.filter((name) => typeof name === "string" && name.trim()))]
+        .forEach((name) => {
+          const option = element("option", "", name);
+          option.value = name;
+          questionSectionSelect.append(option);
+        });
+      questionSectionSelect.value = question.seccion || "";
+      questionSectionSelect.addEventListener("change", () => {
+        if (questionSectionSelect.value) {
+          question.seccion = questionSectionSelect.value;
+        } else {
+          delete question.seccion;
+        }
+        updatePreview();
       });
+      questionSectionLabel.append(questionSectionSelect);
+      card.append(questionSectionLabel);
 
       if (question.tipo === "opcion_multiple") {
         const options = element("fieldset", "custom-editor-options");
@@ -622,24 +688,50 @@
       element("legend", "", "Secciones"),
       element("p", "", "Agrupa las preguntas por tema."),
     );
-    const sectionNames = Array.isArray(configuration.secciones) ? configuration.secciones : [];
     sectionNames.forEach((name, index) => {
       const row = element("div", "custom-editor-option");
       labelField(row, `Sección ${index + 1}`, name, {
+        event: "change",
+        rerender: true,
         onChange: (value) => {
-          configuration.secciones[index] = value;
+          const previousName = configuration.secciones[index];
+          const newName = value.trim();
+          configuration.secciones[index] = newName;
+          for (const question of configuration.preguntas || []) {
+            if (question.seccion === previousName) {
+              if (newName) question.seccion = newName;
+              else delete question.seccion;
+            }
+          }
+          if (Array.isArray(configuration.personalizacion_dimension)) {
+            for (const dimension of configuration.personalizacion_dimension) {
+              if (dimension.seccion === previousName) {
+                dimension.seccion = newName;
+              }
+            }
+          }
           updatePreview();
         },
       });
       button(row, "Quitar", () => {
+        const removedName = configuration.secciones[index];
         configuration.secciones.splice(index, 1);
+        for (const question of configuration.preguntas || []) {
+          if (question.seccion === removedName) delete question.seccion;
+        }
+        if (Array.isArray(configuration.personalizacion_dimension)) {
+          configuration.personalizacion_dimension =
+            configuration.personalizacion_dimension.filter(
+              (dimension) => dimension.seccion !== removedName,
+            );
+        }
         render();
       }, sectionNames.length <= 1);
       sections.append(row);
     });
     button(sections, "Añadir sección", () => {
       configuration.secciones = configuration.secciones || [];
-      configuration.secciones.push("");
+      configuration.secciones.push(`Nueva sección ${configuration.secciones.length + 1}`);
       render();
     });
     questions.append(sections);
@@ -649,12 +741,27 @@
     const typeLabel = element("label");
     typeLabel.append(document.createTextNode("Tipo de pregunta"));
     const typeSelect = element("select");
+    const familyTypes = configuration.familia_base
+      ? [configuration.familia_base]
+      : questionList.length
+        ? Array.from(new Set(questionList.map((question) =>
+          question.tipo === "opcion_multiple"
+            ? ((question.opciones || []).every((option) => ["Sí", "No"].includes(option.texto))
+              ? "si_no"
+              : "opcion_multiple")
+            : question.tipo
+          )))
+        : [];
+    const availableTypes = familyTypes.length
+      ? familyTypes
+      : ["opcion_multiple", "si_no", "escala", "abierta"];
     for (const [type, text] of [
       ["opcion_multiple", "Opción múltiple"],
       ["si_no", "Sí o no"],
       ["escala", "Escala"],
       ["abierta", "Respuesta abierta"],
     ]) {
+      if (!availableTypes.includes(type)) continue;
       const option = element("option", "", text);
       option.value = type;
       typeSelect.append(option);
@@ -710,9 +817,9 @@
       button(scoringSection, "Añadir rango", () => {
         const segment = `Nuevo segmento ${configuration.reglas_scoring.length + 1}`;
         configuration.reglas_scoring.push({
-          puntaje_min: 0,
-          puntaje_max: 0,
-          segmento: segment,
+        puntaje_min: 0,
+        puntaje_max: 0,
+        segmento: isNewQuestionnaire ? "" : segment,
         });
         if (!configuration.resultado.resultados.some((result) => result.segmento === segment)) {
           configuration.resultado.resultados.push({
@@ -827,6 +934,52 @@
       }
     }
 
+    const dimensionSection = section(
+      fields,
+      "custom-editor-questions custom-editor-config-section",
+      "05",
+      "Personalización",
+      "Resultados por dimensión",
+      "Opcional: redacta una explicación baja, media o alta para cada sección. Se selecciona por el porcentaje calculado.",
+      "editor-dimension-heading",
+    );
+    configuration.personalizacion_dimension = Array.isArray(configuration.personalizacion_dimension)
+      ? configuration.personalizacion_dimension
+      : [];
+    configuration.personalizacion_dimension.forEach((item, index) => {
+      const fieldset = element("fieldset", "custom-editor-question");
+      fieldset.append(element("legend", "", item.seccion || `Dimensión ${index + 1}`));
+      labelField(fieldset, "Sección", item.seccion, {
+        onChange: (value) => {
+          item.seccion = value;
+          fieldset.querySelector("legend").textContent = value || `Dimensión ${index + 1}`;
+        },
+      });
+      for (const [nivel, titulo] of [["bajo", "Resultado bajo"], ["medio", "Resultado medio"], ["alto", "Resultado alto"]]) {
+        labelField(fieldset, titulo, item[nivel], {
+          multiline: true,
+          maxLength: 5000,
+          onChange: (value) => {
+            item[nivel] = value;
+          },
+        });
+      }
+      button(fieldset, "Quitar dimensión", () => {
+        configuration.personalizacion_dimension.splice(index, 1);
+        render();
+      });
+      dimensionSection.append(fieldset);
+    });
+    button(dimensionSection, "Añadir dimensión", () => {
+      configuration.personalizacion_dimension.push({
+        seccion: configuration.secciones?.[0] || "Nueva dimensión",
+        bajo: "Texto para nivel bajo",
+        medio: "Texto para nivel medio",
+        alto: "Texto para nivel alto",
+      });
+      render();
+    });
+
     updatePreview();
   };
 
@@ -840,12 +993,133 @@
     scoringConfirmation.hidden = true;
     scoringInput.checked = true;
   });
-  form.addEventListener("submit", () => {
+  let autosaveTimer = null;
+  let autosaveRequestInFlight = false;
+  let autosavePending = false;
+  let autosaveRevision = 0;
+  let createdDraftUrl = null;
+  let createdDraftIsCurrent = false;
+  const parseCreationResponse = async (response) => {
+    const contentType = response.headers.get("content-type") || "";
+    if (!contentType.toLowerCase().includes("application/json")) {
+      if (!response.ok) {
+        throw new Error(`No se pudo guardar el borrador (HTTP ${response.status}).`);
+      }
+      throw new Error(
+        "El servidor devolvió una respuesta inesperada. Recarga el editor e inténtalo de nuevo.",
+      );
+    }
+
+    let result;
+    try {
+      result = await response.json();
+    } catch (_error) {
+      throw new Error(
+        "El servidor devolvió una respuesta JSON inválida. Inténtalo de nuevo.",
+      );
+    }
+    if (!response.ok) {
+      const errors = Array.isArray(result?.errors)
+        ? result.errors.filter((error) => typeof error === "string" && error.trim())
+        : [];
+      throw new Error(
+        errors.join(" ") || `No se pudo guardar el borrador (HTTP ${response.status}).`,
+      );
+    }
+    if (!result || typeof result.redirect !== "string" || !result.redirect) {
+      throw new Error(
+        "El servidor no indicó dónde abrir el borrador guardado. Inténtalo de nuevo.",
+      );
+    }
+    return result;
+  };
+  const sendAutosave = () => {
+    if (autosaveRequestInFlight) {
+      autosavePending = true;
+      return;
+    }
+    autosaveRequestInFlight = true;
+    autosavePending = false;
+    if (isNewQuestionnaire) createdDraftIsCurrent = false;
+    const requestRevision = autosaveRevision;
     syncSections();
     configuration.id = configuration.id || "";
     configuration.cliente = nameInput.value.trim();
     configuration.estado = "borrador";
     configurationInput.value = JSON.stringify(configuration);
+    const payload = new URLSearchParams();
+    payload.set("csrfmiddlewaretoken", form.querySelector("[name=csrfmiddlewaretoken]").value);
+    payload.set("nombre", nameInput.value.trim());
+    payload.set("configuracion", configurationInput.value);
+    payload.set("intent", "save");
+    fetch(form.action || window.location.href, {
+      method: "POST",
+      headers: { "X-Requested-With": "XMLHttpRequest" },
+      body: payload,
+    }).then(async (response) => {
+      if (isNewQuestionnaire) {
+        const result = await parseCreationResponse(response);
+        createdDraftUrl = result.redirect;
+        createdDraftIsCurrent = requestRevision === autosaveRevision;
+        scoringError.hidden = true;
+        return;
+      }
+      if (!response.ok) {
+        throw new Error(
+          `No se pudo guardar automáticamente (HTTP ${response.status}). Usa el botón Guardar.`,
+        );
+      }
+    }).catch((error) => {
+      scoringError.textContent = error instanceof TypeError
+        ? "No se pudo conectar con el servidor. Revisa tu conexión e inténtalo de nuevo."
+        : error.message || "No se pudo guardar automáticamente. Usa el botón Guardar.";
+      scoringError.hidden = false;
+      if (isNewQuestionnaire) createdDraftIsCurrent = false;
+    }).finally(() => {
+      autosaveRequestInFlight = false;
+      if (autosavePending) {
+        autosavePending = false;
+        sendAutosave();
+        return;
+      }
+      if (
+        autosaveTimer === null &&
+        isNewQuestionnaire &&
+        createdDraftUrl &&
+        createdDraftIsCurrent
+      ) {
+        window.location.assign(createdDraftUrl);
+      }
+    });
+  };
+  const scheduleAutosave = () => {
+    autosaveRevision += 1;
+    if (isNewQuestionnaire) createdDraftIsCurrent = false;
+    window.clearTimeout(autosaveTimer);
+    autosaveTimer = window.setTimeout(() => {
+      autosaveTimer = null;
+      sendAutosave();
+    }, 1800);
+  };
+  root.addEventListener("input", scheduleAutosave);
+  root.addEventListener("change", scheduleAutosave);
+  form.addEventListener("submit", (event) => {
+    syncSections();
+    configuration.id = configuration.id || "";
+    configuration.cliente = nameInput.value.trim();
+    configuration.estado = "borrador";
+    configurationInput.value = JSON.stringify(configuration);
+    if (!isNewQuestionnaire || event.submitter?.value === "preview") return;
+    event.preventDefault();
+    window.clearTimeout(autosaveTimer);
+    autosaveTimer = null;
+    autosaveRevision += 1;
+    createdDraftIsCurrent = false;
+    if (autosaveRequestInFlight) {
+      autosavePending = true;
+    } else {
+      sendAutosave();
+    }
   });
   render();
 })();

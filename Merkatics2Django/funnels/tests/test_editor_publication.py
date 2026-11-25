@@ -5,13 +5,17 @@ from concurrent.futures import ThreadPoolExecutor
 from unittest import skipUnless
 
 from django.db import close_old_connections, connection
-from django.test import TestCase, TransactionTestCase
+from django.test import Client, TestCase, TransactionTestCase
 from django.urls import reverse
 
 from funnels.models import Cuestionario, Plantilla, VersionCuestionario
+from funnels.motor import validar_cuestionario
 from funnels.services import ErrorPublicacion, publicar_cuestionario
 from funnels.tests.support import questionnaire_config
-from subscriptions.planes import limite_cuestionarios_publicados
+from subscriptions.planes import (
+    limite_borradores_por_empresa,
+    limite_cuestionarios_publicados,
+)
 from users.models import Usuario
 from workspaces.models import Membresia, Workspace
 
@@ -66,6 +70,292 @@ class QuestionnaireEditorTests(TestCase):
                 "intent": values.pop("intent", "save"),
                 **values,
             },
+        )
+
+    def test_create_from_zero_opens_the_existing_empty_editor_and_saves_each_type(self):
+        create_url = reverse("crear_cuestionario", args=[self.workspace.uid])
+        initial = self.client.get(create_url)
+        self.assertEqual(initial.status_code, 200)
+        self.assertContains(initial, "Personaliza tu cuestionario")
+        self.assertContains(initial, 'id="editor-fields"')
+        self.assertContains(initial, 'id="editor-preview"')
+        self.assertContains(initial, "editor.js")
+        self.assertContains(initial, "&quot;preguntas&quot;: []")
+        self.assertContains(initial, "&quot;contenido&quot;: &quot;&quot;")
+
+        for base_type in ("si_no", "opcion_multiple", "escala", "abierta"):
+            with self.subTest(base_type=base_type):
+                question = {
+                    "id": f"desde-cero-{base_type}",
+                    "texto": "Pregunta de prueba",
+                    "tipo": "opcion_multiple" if base_type == "si_no" else base_type,
+                    "participa_scoring": False,
+                }
+                if base_type == "si_no":
+                    question["opciones"] = [
+                        {"texto": "Sí"},
+                        {"texto": "No"},
+                    ]
+                elif base_type == "opcion_multiple":
+                    question["opciones"] = [
+                        {"texto": "Opción A"},
+                        {"texto": "Opción B"},
+                    ]
+                elif base_type == "escala":
+                    question["escala"] = {"min": 1, "max": 5}
+                configuration = {
+                    "id": f"config-{base_type}",
+                    "cliente": f"Desde cero {base_type}",
+                    "estado": "borrador",
+                    "familia_base": base_type,
+                    "usa_scoring": False,
+                    "posicion_contacto": "final",
+                    "secciones": [],
+                    "bienvenida": {
+                        "habilitada": True,
+                        "titulo": "Antes de empezar",
+                        "descripcion": "Responde el cuestionario.",
+                        "textoBoton": "Comenzar",
+                    },
+                    "preguntas": [question],
+                    "resultado": {
+                        "tipo": "fijo",
+                        "contenido": "Gracias por responder.",
+                    },
+                }
+                response = self.client.post(
+                    create_url,
+                    {
+                        "nombre": f"Desde cero {base_type}",
+                        "configuracion": json.dumps(configuration),
+                        "intent": "save",
+                    },
+                )
+                self.assertEqual(response.status_code, 302)
+                draft = Cuestionario.objects.para(self.workspace).get(
+                    nombre=f"Desde cero {base_type}"
+                )
+                self.assertEqual(draft.estado, Cuestionario.Estado.BORRADOR)
+                self.assertEqual(
+                    validar_cuestionario(draft.configuracion),
+                    [],
+                )
+
+    def test_create_from_zero_retry_updates_the_existing_draft(self):
+        create_url = reverse("crear_cuestionario", args=[self.workspace.uid])
+        creation_id = "stable-create-operation"
+        configuration = copy.deepcopy(self.configuration)
+        configuration["id"] = creation_id
+
+        first_response = self.client.post(
+            create_url,
+            {
+                "nombre": "Borrador desde cero",
+                "configuracion": json.dumps(configuration, ensure_ascii=False),
+                "intent": "save",
+            },
+            HTTP_X_REQUESTED_WITH="XMLHttpRequest",
+        )
+        self.assertEqual(first_response.status_code, 201)
+        redirect_url = first_response.json()["redirect"]
+
+        latest_configuration = copy.deepcopy(configuration)
+        latest_configuration["preguntas"][0]["texto"] = "Edición más reciente"
+        retry_response = self.client.post(
+            create_url,
+            {
+                "nombre": "Borrador actualizado",
+                "configuracion": json.dumps(
+                    latest_configuration,
+                    ensure_ascii=False,
+                ),
+                "intent": "save",
+            },
+            HTTP_X_REQUESTED_WITH="XMLHttpRequest",
+        )
+
+        self.assertEqual(retry_response.status_code, 200)
+        self.assertEqual(retry_response.json()["redirect"], redirect_url)
+        drafts = Cuestionario.objects.para(self.workspace).filter(
+            configuracion__id=creation_id,
+        )
+        self.assertEqual(drafts.count(), 1)
+        draft = drafts.get()
+        self.assertEqual(draft.nombre, "Borrador actualizado")
+        self.assertEqual(
+            draft.configuracion["preguntas"][0]["texto"],
+            "Edición más reciente",
+        )
+        self.assertEqual(
+            VersionCuestionario.objects.para(self.workspace)
+            .filter(cuestionario=draft)
+            .count(),
+            1,
+        )
+
+    def test_create_from_zero_rejects_a_missing_stable_identifier(self):
+        create_url = reverse("crear_cuestionario", args=[self.workspace.uid])
+        configuration = copy.deepcopy(self.configuration)
+        configuration.pop("id")
+
+        response = self.client.post(
+            create_url,
+            {
+                "nombre": "Creación sin identificador",
+                "configuracion": json.dumps(configuration, ensure_ascii=False),
+                "intent": "save",
+            },
+            HTTP_X_REQUESTED_WITH="XMLHttpRequest",
+        )
+
+        self.assertEqual(response.status_code, 400)
+        self.assertIn(
+            "cuestionario.id debe ser un texto no vacío.",
+            response.json()["errors"],
+        )
+        self.assertEqual(
+            Cuestionario.objects.para(self.workspace).count(),
+            1,
+        )
+
+    def test_create_retry_rejects_a_published_questionnaire_with_the_same_id(self):
+        create_url = reverse("crear_cuestionario", args=[self.workspace.uid])
+        creation_id = "published-create-operation"
+        configuration = copy.deepcopy(self.configuration)
+        configuration["id"] = creation_id
+        configuration["estado"] = Cuestionario.Estado.PUBLICADO
+        published_questionnaire = Cuestionario.objects.para(self.workspace).create(
+            nombre="Cuestionario publicado",
+            estado=Cuestionario.Estado.PUBLICADO,
+            configuracion=configuration,
+            creado_por=self.user,
+        )
+        VersionCuestionario.objects.para(self.workspace).create(
+            cuestionario=published_questionnaire,
+            numero=1,
+            configuracion=configuration,
+            publicada=True,
+        )
+
+        retry_configuration = copy.deepcopy(configuration)
+        retry_configuration["preguntas"][0]["texto"] = "Cambio que no debe guardarse"
+        response = self.client.post(
+            create_url,
+            {
+                "nombre": "Nombre que no debe guardarse",
+                "configuracion": json.dumps(
+                    retry_configuration,
+                    ensure_ascii=False,
+                ),
+                "intent": "save",
+            },
+            HTTP_X_REQUESTED_WITH="XMLHttpRequest",
+        )
+
+        self.assertEqual(response.status_code, 409)
+        self.assertEqual(
+            response.json()["errors"],
+            [
+                "Esta operación ya está asociada a un cuestionario "
+                "que no puede reutilizarse como borrador."
+            ],
+        )
+        published_questionnaire.refresh_from_db()
+        self.assertEqual(published_questionnaire.estado, Cuestionario.Estado.PUBLICADO)
+        self.assertEqual(published_questionnaire.nombre, "Cuestionario publicado")
+        self.assertEqual(
+            published_questionnaire.configuracion["preguntas"][0]["texto"],
+            configuration["preguntas"][0]["texto"],
+        )
+        self.assertEqual(
+            Cuestionario.objects.para(self.workspace)
+            .filter(configuracion__id=creation_id)
+            .count(),
+            1,
+        )
+
+    def test_create_retry_at_draft_limit_reuses_existing_but_new_id_is_rejected(self):
+        create_url = reverse("crear_cuestionario", args=[self.workspace.uid])
+        self.workspace.plan = "inicial"
+        self.workspace.save(update_fields=["plan"])
+        limit = limite_borradores_por_empresa(self.workspace.plan)
+        creation_id = "creation-at-draft-limit"
+        configuration = copy.deepcopy(self.configuration)
+        configuration["id"] = creation_id
+
+        first_response = self.client.post(
+            create_url,
+            {
+                "nombre": "Creación al límite",
+                "configuracion": json.dumps(configuration, ensure_ascii=False),
+                "intent": "save",
+            },
+            HTTP_X_REQUESTED_WITH="XMLHttpRequest",
+        )
+        self.assertEqual(first_response.status_code, 201)
+        redirect_url = first_response.json()["redirect"]
+
+        for index in range(limit - 2):
+            extra_configuration = questionnaire_config()
+            extra_configuration["id"] = f"draft-at-limit-{index}"
+            Cuestionario.objects.para(self.workspace).create(
+                nombre=f"Borrador al límite {index}",
+                configuracion=extra_configuration,
+                creado_por=self.user,
+            )
+
+        latest_configuration = copy.deepcopy(configuration)
+        latest_configuration["preguntas"][0]["texto"] = "Edición al límite"
+        retry_response = self.client.post(
+            create_url,
+            {
+                "nombre": "Creación al límite actualizada",
+                "configuracion": json.dumps(
+                    latest_configuration,
+                    ensure_ascii=False,
+                ),
+                "intent": "save",
+            },
+            HTTP_X_REQUESTED_WITH="XMLHttpRequest",
+        )
+
+        self.assertEqual(retry_response.status_code, 200)
+        self.assertEqual(retry_response.json()["redirect"], redirect_url)
+        self.assertEqual(
+            Cuestionario.objects.para(self.workspace)
+            .filter(estado=Cuestionario.Estado.BORRADOR)
+            .count(),
+            limit,
+        )
+        draft = Cuestionario.objects.para(self.workspace).get(
+            configuracion__id=creation_id,
+        )
+        self.assertEqual(draft.nombre, "Creación al límite actualizada")
+        self.assertEqual(
+            draft.configuracion["preguntas"][0]["texto"],
+            "Edición al límite",
+        )
+
+        new_configuration = copy.deepcopy(configuration)
+        new_configuration["id"] = "different-create-operation"
+        limit_response = self.client.post(
+            create_url,
+            {
+                "nombre": "Otro borrador",
+                "configuracion": json.dumps(
+                    new_configuration,
+                    ensure_ascii=False,
+                ),
+                "intent": "save",
+            },
+            HTTP_X_REQUESTED_WITH="XMLHttpRequest",
+        )
+        self.assertEqual(limit_response.status_code, 400)
+        self.assertTrue(
+            any(
+                "límite provisional" in error
+                for error in limit_response.json()["errors"]
+            )
         )
 
     def test_editor_uses_the_ported_screen_and_saves_valid_draft_without_a_version(self):
@@ -601,6 +891,77 @@ class QuestionnairePublicationLimitTests(TestCase):
                 publicada=True,
             ).exists()
         )
+
+
+@skipUnless(
+    connection.vendor == "mysql",
+    "La prueba concurrente requiere el bloqueo por fila de MySQL.",
+)
+class ConcurrentQuestionnaireCreationTests(TransactionTestCase):
+    def setUp(self):
+        self.user = Usuario.objects.create(correo="concurrent-editor@example.com")
+        self.workspace = Workspace.objects.create(
+            slug="concurrent-create-company",
+            nombre="Empresa de creación concurrente",
+        )
+        Membresia.objects.para(self.workspace).create(
+            correo=self.user.correo,
+            usuario=self.user,
+            rol=Membresia.Rol.USUARIO,
+            editar_cuestionarios=True,
+        )
+        self.create_url = reverse("crear_cuestionario", args=[self.workspace.uid])
+        self.configuration = questionnaire_config()
+        self.configuration["id"] = "concurrent-create-operation"
+
+    def test_simultaneous_retries_create_and_update_only_one_draft(self):
+        start = threading.Barrier(2)
+
+        def create(name):
+            close_old_connections()
+            try:
+                client = Client()
+                session = client.session
+                session["usuario_uid"] = str(self.user.uid)
+                session.save()
+                configuration = copy.deepcopy(self.configuration)
+                configuration["preguntas"][0]["texto"] = name
+                start.wait(timeout=10)
+                response = client.post(
+                    self.create_url,
+                    {
+                        "nombre": name,
+                        "configuracion": json.dumps(
+                            configuration,
+                            ensure_ascii=False,
+                        ),
+                        "intent": "save",
+                    },
+                    HTTP_X_REQUESTED_WITH="XMLHttpRequest",
+                )
+                return response.status_code, response.json()["redirect"]
+            finally:
+                close_old_connections()
+
+        with ThreadPoolExecutor(max_workers=2) as executor:
+            results = list(executor.map(create, ("Concurrente A", "Concurrente B")))
+
+        self.assertCountEqual([status for status, _ in results], [200, 201])
+        self.assertEqual(len({redirect for _, redirect in results}), 1)
+        draft = Cuestionario.objects.para(self.workspace).get(
+            configuracion__id="concurrent-create-operation",
+        )
+        self.assertIn(
+            draft.configuracion["preguntas"][0]["texto"],
+            {"Concurrente A", "Concurrente B"},
+        )
+        self.assertEqual(
+            VersionCuestionario.objects.para(self.workspace)
+            .filter(cuestionario=draft)
+            .count(),
+            1,
+        )
+        self.assertEqual(Cuestionario.objects.para(self.workspace).count(), 1)
 
 
 @skipUnless(

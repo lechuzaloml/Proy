@@ -93,6 +93,7 @@ class PublicQuestionnaireFlowTests(TestCase):
         self.assertNotContains(response, "segmento-privado")
         self.assertNotContains(response, "segmento-forjado")
         self.assertNotContains(response, "puntaje_total")
+        self.assertNotContains(response, "Volver al inicio")
         contact = Contacto.objects.para(self.workspace).get(attempt_id=attempt)
         diagnosis = Diagnostico.objects.para(self.workspace).get(contacto=contact)
         self.assertEqual(contact.correo, "prueba@example.com")
@@ -102,6 +103,70 @@ class PublicQuestionnaireFlowTests(TestCase):
         self.assertEqual(diagnosis.respuestas["0"]["valor_legible"], "Tenemos un proceso")
         self.assertEqual(contact.consentimiento_version, "provisional-v1")
         self.assertContains(response, "result-profile-chart")
+
+    def test_retired_optimization_cta_is_not_shown_on_questionnaire_result(self):
+        configuration = questionnaire_config()
+        configuration["resultado"]["resultados"][0]["cta"] = {
+            "texto": "## Explorar oportunidades de optimización",
+            "accion": "explorar_oportunidades_de_optimizacion",
+        }
+        questionnaire = Cuestionario.objects.para(self.workspace).create(
+            nombre="Diagnóstico con acción retirada",
+            estado=Cuestionario.Estado.PUBLICADO,
+            configuracion=configuration,
+            version_actual=1,
+        )
+        VersionCuestionario.objects.para(self.workspace).create(
+            cuestionario=questionnaire,
+            numero=1,
+            configuracion=configuration,
+            publicada=True,
+        )
+        url = reverse(
+            "cuestionario_publico",
+            args=[self.workspace.slug, questionnaire.uid],
+        )
+
+        response = self.client.post(
+            url,
+            valid_contact_post(uuid.uuid4()),
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertNotContains(response, "Explorar oportunidades de optimización")
+        self.assertNotContains(response, "explorar_oportunidades_de_optimizacion")
+
+    def test_retired_reporting_cta_is_not_shown_on_questionnaire_result(self):
+        configuration = questionnaire_config()
+        configuration["resultado"]["resultados"][0]["cta"] = {
+            "texto": "## Documentar el procedimiento de reporte",
+            "accion": "documentar_procedimiento_de_reporte",
+        }
+        questionnaire = Cuestionario.objects.para(self.workspace).create(
+            nombre="Diagnóstico con acción de reporte retirada",
+            estado=Cuestionario.Estado.PUBLICADO,
+            configuracion=configuration,
+            version_actual=1,
+        )
+        VersionCuestionario.objects.para(self.workspace).create(
+            cuestionario=questionnaire,
+            numero=1,
+            configuracion=configuration,
+            publicada=True,
+        )
+        url = reverse(
+            "cuestionario_publico",
+            args=[self.workspace.slug, questionnaire.uid],
+        )
+
+        response = self.client.post(
+            url,
+            valid_contact_post(uuid.uuid4()),
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertNotContains(response, "Documentar el procedimiento de reporte")
+        self.assertNotContains(response, "documentar_procedimiento_de_reporte")
 
     def test_missing_consent_cannot_create_contact_or_diagnosis(self):
         payload = valid_contact_post(uuid.uuid4(), consentimiento="")
@@ -273,6 +338,7 @@ class DemoQuestionnaireTests(TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, "Demostración: no se guardan datos.")
         self.assertContains(response, "Tu resultado está listo.")
+        self.assertNotContains(response, "Volver al inicio")
         self.assertEqual(Contacto.objects.sin_alcance().count(), 0)
         self.assertEqual(Diagnostico.objects.sin_alcance().count(), 0)
         self.assertEqual(LimiteEnviosIP.objects.count(), 0)

@@ -65,7 +65,7 @@
       {% endif %}
 
       {% for row in question_rows %}
-        <section class="questionnaire-view flow-card" data-flow-step data-question-index="{{ row.index }}" hidden>
+        <section class="questionnaire-view flow-card" data-flow-step data-question-index="{{ row.index }}" data-obligatoria="{{ row.question.obligatoria|default:'true'|yesno:'true,false' }}" hidden>
           <div class="flow-progress">
             <p aria-live="polite" class="question-progress" data-progress-text>Pregunta {{ row.index|add:1 }} de {{ question_rows|length }}</p>
             <progress class="question-progress-bar" max="{{ question_rows|length }}" value="{{ row.index|add:1 }}" aria-label="Progreso del cuestionario"></progress>

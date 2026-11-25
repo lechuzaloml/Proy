@@ -20,7 +20,7 @@
           <h1>{{ popup.titulo }}</h1>
           {% if popup.imagen_url %}<img alt="" class="registro-evento__event-image" src="{{ popup.imagen_url }}">{% endif %}
           <p class="registro-evento__date">{{ popup.fecha_evento|date:"l j \\d\\e F, Y · g:i a" }}</p>
-          <p>{{ popup.resumen }}</p>
+          <p class="registro-evento__summary">{{ popup.resumen }}</p>
           <div class="registro-evento__schedule">
             {% for horario in popup.horarios %}<span>{{ horario }}</span>{% endfor %}
           </div>

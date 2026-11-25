@@ -11,7 +11,7 @@
     <nav class="public-actions library-workspace-links" aria-label="Cuestionarios de mis empresas">
       {% for workspace in workspaces_copiables %}
         <a class="secondary-button" href="{% url 'mis_cuestionarios' workspace.uid %}">
-          Ver mis cuestionarios{% if workspaces_copiables|length > 1 %} — {{ workspace.nombre }}{% endif %}
+          Ver mis cuestionarios — {{ workspace.nombre }}
         </a>
       {% endfor %}
     </nav>

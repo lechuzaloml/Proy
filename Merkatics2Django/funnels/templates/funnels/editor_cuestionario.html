@@ -3,7 +3,7 @@
 {% block title %}{% if publicado %}Despublica primero{% else %}Personaliza tu cuestionario{% endif %} · {{ workspace.nombre }}{% endblock %}
 {% block body_class %}{% if not publicado %}questionnaire-editor-page{% endif %}{% endblock %}
 {% block page_title %}{% if publicado %}Despublica primero{% else %}Personaliza tu cuestionario{% endif %}{% endblock %}
-{% block page_help %}{{ cuestionario.nombre }}{% endblock %}
+{% block page_help %}{% if is_new %}Nuevo borrador{% else %}{{ cuestionario.nombre }}{% endif %}{% endblock %}
 {% block extra_head %}<link rel="stylesheet" href="{% static 'funnels/index.css' %}">{% endblock %}
 {% block content %}
   {% if publicado %}
@@ -21,12 +21,12 @@
       {% endif %}
     </div>
   {% else %}
-    <div class="custom-editor">
+    <div class="custom-editor"{% if is_new %} data-new-questionnaire{% endif %}>
       <a class="secondary-button" href="{% url 'mis_cuestionarios' workspace.uid %}">Volver a Mis cuestionarios</a>
       <header class="custom-editor-header">
-        <p class="eyebrow">Copia guardada · los cambios se guardan en Django</p>
+        <p class="eyebrow">{% if is_new %}Nuevo cuestionario · empieza con campos vacíos{% else %}Copia guardada · los cambios se guardan en Django{% endif %}</p>
         <h1>Personaliza tu cuestionario</h1>
-        <p>Los cambios se aplican a esta copia, no a la plantilla original.</p>
+        <p>{% if is_new %}Completa los campos, agrega preguntas y define el resultado. Se guardará como borrador.{% else %}Los cambios se aplican a esta copia, no a la plantilla original.{% endif %}</p>
         {% if cuestionario.creado_por %}
           <small>Creado por {{ cuestionario.creado_por.nombre|default:cuestionario.creado_por.correo }}</small>
         {% endif %}
@@ -38,7 +38,7 @@
             form="questionnaire-editor-form"
             maxlength="120"
             required
-            value="{{ form.nombre.value|default_if_none:cuestionario.nombre }}"
+            value="{% if is_new %}{{ form.nombre.value|default_if_none:'' }}{% else %}{{ form.nombre.value|default_if_none:cuestionario.nombre }}{% endif %}"
           >
         </label>
         <label class="custom-editor-toggle" for="editor-scoring-enabled">
@@ -72,7 +72,7 @@
         </div>
       {% endif %}
 
-      <form id="questionnaire-editor-form" method="post">
+      <form id="questionnaire-editor-form" method="post"{% if is_new %} action="{% url 'crear_cuestionario' workspace.uid %}"{% endif %}>
         {% csrf_token %}
         <input id="editor-configuration-input" name="configuracion" type="hidden">
         <div class="custom-editor-workspace">
@@ -92,8 +92,8 @@
           </aside>
         </div>
         <footer aria-busy="false" class="custom-editor-actions">
-          <button class="secondary-button" name="intent" type="submit" value="save">Guardar</button>
-          <button class="submit-button" name="intent" type="submit" value="preview">Previsualizar cuestionario</button>
+          <button class="secondary-button" name="intent" type="submit" value="save">Guardar borrador</button>
+          <button class="submit-button" name="intent" type="submit" value="preview">Probar</button>
         </footer>
       </form>
       <textarea hidden id="editor-initial-configuration">{{ configuration_json }}</textarea>
