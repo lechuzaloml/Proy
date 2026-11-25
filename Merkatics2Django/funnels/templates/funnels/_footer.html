@@ -1,8 +1,12 @@
+{% load static %}
 <footer class="public-footer {% if footer_compact %}public-footer-compact{% endif %}">
   <div class="public-footer-inner">
     <div class="public-footer-main">
       <div class="public-footer-brand">
-        <a href="/" aria-label="merkatics-ClearIa, Inicio">merkatics-ClearIa</a>
+        <a href="/" aria-label="merkatics-ClearIa, Inicio">
+          <img src="{% static 'funnels/merkatic-brand-mark.png' %}" alt="" width="35" height="35">
+          <span>merkatics-ClearIa</span>
+        </a>
         <p>Diagnósticos y recursos para impulsar el crecimiento de tu negocio.</p>
       </div>
       <nav class="public-footer-links" aria-label="Enlaces del pie de página">

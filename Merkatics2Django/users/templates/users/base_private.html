@@ -12,7 +12,10 @@
 </head>
 <body id="top" class="{% block body_class %}{% endblock %}">
   <header class="private-topbar">
-    <a class="private-brand" href="{% url 'selector_workspace' %}">merkatics-ClearIa</a>
+    <a class="private-brand" href="{% url 'selector_workspace' %}">
+      <img src="{% static 'funnels/merkatic-brand-mark.png' %}" alt="" width="35" height="35">
+      <span>merkatics-ClearIa</span>
+    </a>
     <a class="private-home-link" href="{% url 'inicio' %}">Inicio</a>
     <div class="private-space-switcher">
       <span class="private-meta-label">Espacio activo</span>

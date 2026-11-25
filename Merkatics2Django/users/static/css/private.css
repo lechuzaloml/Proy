@@ -23,11 +23,21 @@
 }
 
 .private-brand {
+  display: inline-flex;
+  align-items: center;
+  gap: .5rem;
   color: var(--graphite);
   font-weight: 800;
   letter-spacing: -.025em;
   text-decoration: none;
   white-space: nowrap;
+}
+
+.private-brand img {
+  width: 35px;
+  height: 35px;
+  flex: 0 0 auto;
+  object-fit: contain;
 }
 
 .private-home-link {
