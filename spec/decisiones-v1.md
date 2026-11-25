@@ -59,3 +59,18 @@ sin modificar sus diez reglas.
     despublicar pasan por el servidor.
 20. Solo la plataforma elimina empresas, solo si están suspendidas o sin
     propietario; se cancela su suscripción y se borran todos sus datos.
+21. **Creación desde cero:** el flujo abre directamente el editor existente
+    `Personaliza tu cuestionario`, con los campos y preguntas vacíos. El
+    administrador añade la primera pregunta para fijar una única familia,
+    define los resultados y el momento del contacto; solo se guarda cuando la
+    configuración ya es válida y conserva el aislamiento por workspace.
+22. **Límite provisional de borradores:** cada empresa puede tener hasta 20
+    borradores por defecto; el tope está centralizado en
+    `subscriptions/planes.py` y puede configurarse sin tocar las pantallas.
+23. **Cobertura de rangos:** con scoring activado, las reglas deben comenzar
+    en 0, cubrir contiguamente hasta el puntaje máximo calculado y no
+    traslaparse. El motor rechaza huecos o traslapes al guardar y publicar.
+24. **Personalización por dimensión sin IA:** la configuración opcional
+    `personalizacion_dimension` permite textos bajo, medio y alto por sección.
+    El servidor calcula el porcentaje real y selecciona el nivel sin mostrar al
+    prospecto puntaje ni segmento; es compatible con los contratos anteriores.

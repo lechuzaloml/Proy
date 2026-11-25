@@ -95,8 +95,7 @@
       },
       {
         "segmento": "preparacion_basica",
-        "contenido": "Hay prácticas básicas en desarrollo. Documenten cómo reportar una inquietud y acuerden cuándo revisar permisos y las pautas compartidas con el equipo.",
-        "cta": { "texto": "Documentar el procedimiento de reporte", "accion": "documentar_procedimiento_de_reporte" }
+        "contenido": "Hay prácticas básicas en desarrollo. Documenten cómo reportar una inquietud y acuerden cuándo revisar permisos y las pautas compartidas con el equipo."
       },
       {
         "segmento": "buenas_practicas_en_uso",

@@ -76,8 +76,7 @@
       },
       {
         "segmento": "practicas_consistentes",
-        "contenido": "Tus respuestas indican que ya aplican varias prácticas de planificación y medición. Una conversación puede enfocarse en optimizar las acciones actuales y detectar nuevas oportunidades.",
-        "cta": { "texto": "Explorar oportunidades de optimización", "accion": "explorar_oportunidades_de_optimizacion" }
+        "contenido": "Tus respuestas indican que ya aplican varias prácticas de planificación y medición. Una conversación puede enfocarse en optimizar las acciones actuales y detectar nuevas oportunidades."
       }
     ]
   }
