@@ -3,6 +3,8 @@ import express from "express";
 import { resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { procesarPersonalizacion } from "./personalizar.js";
+import { crearHandlerIniciar, crearHandlerPortal, crearHandlerEstado, crearHandlerWebhook } from "./suscripcion/handlers.js";
+import { conDependencias, registrarError } from "./suscripcion/runtime.js";
 
 const root = resolve(fileURLToPath(new URL("..", import.meta.url)));
 dotenv.config({ path: resolve(root, ".env.local") });
@@ -10,11 +12,103 @@ dotenv.config({ path: resolve(root, ".env.local") });
 const app = express();
 const port = Number(process.env.PORT ?? 3000);
 
+app.post(
+  "/api/stripe/webhook",
+  express.raw({ type: "application/json", limit: "1mb" }),
+  async (request, response) => {
+    try {
+      await conDependencias(
+        "stripe.webhook",
+        ["STRIPE_WEBHOOK_SECRET"],
+        response,
+        (dependencias) => crearHandlerWebhook(dependencias)(
+          {
+            method: request.method,
+            headers: request.headers,
+            body: request.body,
+            async *[Symbol.asyncIterator]() {
+              if (Buffer.isBuffer(request.body)) {
+                yield new Uint8Array(request.body);
+              }
+            },
+          },
+          response,
+        ),
+      );
+    } catch (error: unknown) {
+      registrarError("stripe.webhook", error);
+      if (!response.headersSent) {
+        response.status(500).json({ error: "No se pudo procesar el webhook." });
+      }
+    }
+  },
+);
+
 app.use(express.json({ limit: "32kb" }));
 
 app.post("/api/personalizar", async (request, response) => {
   const resultado = await procesarPersonalizacion(request.body);
   response.status(resultado.status).json(resultado.body);
+});
+
+async function ejecutarSuscripcion(
+  request: express.Request,
+  response: express.Response,
+  paso: string,
+  variables: readonly ("STRIPE_PRICE_ID" | "STRIPE_WEBHOOK_SECRET")[],
+  crearHandler:
+    | typeof crearHandlerIniciar
+    | typeof crearHandlerPortal
+    | typeof crearHandlerEstado,
+) {
+  await conDependencias(
+    paso,
+    variables,
+    response,
+    (dependencias) => crearHandler(dependencias)(
+      {
+        method: request.method,
+        headers: request.headers,
+        body: request.body,
+        async *[Symbol.asyncIterator]() {
+          if (Buffer.isBuffer(request.body)) {
+            yield new Uint8Array(request.body);
+          }
+        },
+      },
+      response,
+    ),
+  );
+}
+
+app.post("/api/suscripcion/iniciar", async (request, response) => {
+  await ejecutarSuscripcion(
+    request,
+    response,
+    "suscripcion.iniciar",
+    ["STRIPE_PRICE_ID"],
+    crearHandlerIniciar,
+  );
+});
+
+app.post("/api/suscripcion/portal", async (request, response) => {
+  await ejecutarSuscripcion(
+    request,
+    response,
+    "suscripcion.portal",
+    [],
+    crearHandlerPortal,
+  );
+});
+
+app.post("/api/suscripcion/estado", async (request, response) => {
+  await ejecutarSuscripcion(
+    request,
+    response,
+    "suscripcion.estado",
+    [],
+    crearHandlerEstado,
+  );
 });
 
 if (

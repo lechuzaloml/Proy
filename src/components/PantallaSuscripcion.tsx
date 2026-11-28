@@ -7,7 +7,7 @@ import {
   signInWithPopup,
   type User,
 } from "firebase/auth";
-import { doc, getDoc } from "firebase/firestore";
+import { doc, getDocFromServer } from "firebase/firestore";
 import { DIAS_PRUEBA, PRECIO, PRECIO_PROVISIONAL } from "../config/suscripcion";
 import {
   limiteDePlan,
@@ -77,6 +77,7 @@ export default function PantallaSuscripcion() {
   const retornoExitoso = parametros.get("checkout") === "success";
   const retornoCancelado = parametros.get("checkout") === "cancelled";
   const slugRetorno = parametros.get("slug") ?? "";
+  const sessionIdRetorno = parametros.get("session_id") ?? "";
   const slugValido = /^[a-z0-9][a-z0-9-]{1,38}[a-z0-9]$/.test(slug) &&
     !["admin", "e", "api", "assets", "static", "login", "clearia"].includes(slug);
   const urlPublica = slugValido
@@ -116,6 +117,7 @@ export default function PantallaSuscripcion() {
       setEsperaTerminada(true);
       return;
     }
+    const usuarioActual = usuario;
     const database = db;
     if (!database) {
       setErrorPreparacion("Firebase no está configurado. No se puede verificar la membresía.");
@@ -135,7 +137,30 @@ export default function PantallaSuscripcion() {
         if (!database) {
           throw new Error("Firebase no está configurado.");
         }
-        const membresia = await getDoc(doc(
+        if (sessionIdRetorno) {
+          const token = await usuarioActual.getIdToken();
+          const respuestaPreparacion = await fetch("/api/suscripcion/estado", {
+            method: "POST",
+            headers: {
+              Authorization: `Bearer ${token}`,
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({
+              slug: slugRetorno,
+              sessionId: sessionIdRetorno,
+            }),
+          });
+          if (!respuestaPreparacion.ok) {
+            const datosPreparacion: unknown = await respuestaPreparacion
+              .json()
+              .catch(() => null);
+            throw new Error(
+              campoString(datosPreparacion, "error") ??
+              "No se pudo confirmar la sesión de Checkout.",
+            );
+          }
+        }
+        const membresia = await getDocFromServer(doc(
           database,
           "empresas",
           slugRetorno,
@@ -180,7 +205,14 @@ export default function PantallaSuscripcion() {
       cancelado = true;
       window.clearTimeout(temporizador);
     };
-  }, [authListo, intentoPreparar, retornoExitoso, slugRetorno, usuario]);
+  }, [
+    authListo,
+    intentoPreparar,
+    retornoExitoso,
+    sessionIdRetorno,
+    slugRetorno,
+    usuario,
+  ]);
 
   async function iniciarSesionGoogle(): Promise<void> {
     if (!auth) {

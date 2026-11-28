@@ -203,7 +203,11 @@ export function crearHandlerIniciar(dependencias: DependenciasSuscripcion) {
         return;
       }
       if (prueba.exists) {
-        enviarError(respuesta, 409, "Esta cuenta ya utilizó su prueba gratuita.");
+        enviarError(
+          respuesta,
+          409,
+          "Este correo ya tiene una empresa registrada. No puedes crear otra empresa con esta cuenta.",
+        );
         return;
       }
 
@@ -340,6 +344,66 @@ export function crearHandlerEstado(dependencias: DependenciasSuscripcion) {
     }
 
     try {
+      const sessionId = body?.sessionId;
+      if (typeof sessionId === "string" && sessionId.trim()) {
+        const session = await dependencias.stripe.checkout.sessions.retrieve(
+          sessionId.trim(),
+        );
+        const metadata = session.metadata;
+        const sessionSlug = metadataString(metadata, "slug");
+        const sessionCorreo = metadataString(metadata, "correo")?.toLowerCase();
+        const subscriptionId = idStripe(session.subscription);
+        const customerId = idStripe(session.customer);
+        if (
+          session.mode !== "subscription" ||
+          session.status !== "complete" ||
+          sessionSlug !== slug ||
+          sessionCorreo !== identidad.correo ||
+          !subscriptionId ||
+          !customerId
+        ) {
+          return enviarError(
+            respuesta,
+            409,
+            "La sesión de Checkout no corresponde a esta empresa y cuenta.",
+          );
+        }
+        const subscription = await dependencias.stripe.subscriptions.retrieve(
+          subscriptionId,
+        );
+        const nombre = metadataString(metadata, "nombre");
+        const planMetadata = metadataString(metadata, "planId");
+        const planId = planMetadata ?? "inicial";
+        if (
+          !validarNombre(nombre) ||
+          !validarPlanSuscripcion(planId) ||
+          typeof subscription.trial_end !== "number"
+        ) {
+          return enviarError(
+            respuesta,
+            400,
+            "La sesión completada no contiene los datos requeridos.",
+          );
+        }
+        const resultado = await registrarCheckout(dependencias, {
+          slug,
+          nombre: nombre.trim(),
+          correo: identidad.correo,
+          planId,
+          stripeCustomerId: customerId,
+          stripeSubscriptionId: subscriptionId,
+          pruebaHasta: new Date(subscription.trial_end * 1000),
+        });
+        if (resultado === "conflicto") {
+          enviarError(
+            respuesta,
+            409,
+            "Esta sesión no puede asociarse a la empresa porque el correo o el identificador ya están registrados.",
+          );
+          return;
+        }
+      }
+
       const miembro = await dependencias.firestore
         .doc(`empresas/${slug}/miembros/${identidad.correo}`)
         .get();

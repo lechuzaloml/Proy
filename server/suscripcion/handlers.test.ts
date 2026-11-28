@@ -229,6 +229,26 @@ describe("endpoints de suscripción con Stripe y Firebase simulados", () => {
     expect(respuesta.codigo).toBe(403);
   });
 
+  it("rechaza crear otra empresa con un correo que ya tiene una registrada", async () => {
+    const { dependencias, firestore } = crearDependencias();
+    firestore.documentos.set("pruebas/duena@example.com", {
+      slug: "empresa-actual",
+      creadoEn: new Date(),
+    });
+    const respuesta = new RespuestaSimulada();
+
+    await crearHandlerIniciar(dependencias)(
+      solicitud({ slug: "empresa-nueva", nombre: "Empresa Nueva", planId: "pro" }),
+      respuesta,
+    );
+
+    expect(respuesta.codigo).toBe(409);
+    expect(respuesta.body).toEqual({
+      error:
+        "Este correo ya tiene una empresa registrada. No puedes crear otra empresa con esta cuenta.",
+    });
+  });
+
   it("crea la empresa, la membresía, la suscripción privada y la prueba una sola vez", async () => {
     const { dependencias, firestore } = crearDependencias();
     const evento = {
