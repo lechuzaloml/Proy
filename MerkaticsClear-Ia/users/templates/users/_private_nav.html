@@ -1,0 +1,16 @@
+{% if membresia %}
+  {% if puede_ver_resumen %}<a class="{% if nav_active == 'resumen' %}is-active{% endif %}" href="{% url 'resumen_workspace' membresia.workspace.uid %}">Resumen</a>{% endif %}
+  {% if puede_ver_leads %}<a class="{% if nav_active == 'contactos' %}is-active{% endif %}" href="{% url 'contactos' membresia.workspace.uid %}">Contactos</a>{% endif %}
+  {% if puede_ver_cuestionarios %}<a class="{% if nav_active == 'cuestionarios' %}is-active{% endif %}" href="{% url 'mis_cuestionarios' membresia.workspace.uid %}">Cuestionarios</a>{% endif %}
+  {% if puede_editar_cuestionarios %}<a href="{% url 'biblioteca' %}">Biblioteca</a>{% endif %}
+  {% if puede_administrar_miembros %}<a class="{% if nav_active == 'miembros' %}is-active{% endif %}" href="{% url 'miembros' membresia.workspace.uid %}">Miembros</a>{% endif %}
+  {% if membresia.rol == "propietario" or membresia.rol == "admin" %}<a class="{% if nav_active == 'evento' %}is-active{% endif %}" href="{% url 'mi_evento' membresia.workspace.uid %}">Mi evento</a>{% endif %}
+  {% if not puede_ver_resumen and not puede_ver_leads and not puede_ver_cuestionarios and not puede_editar_cuestionarios and not puede_administrar_miembros %}
+    <p class="private-no-permissions">No tienes permisos para ver las secciones del espacio. Pide ayuda a un administrador.</p>
+  {% endif %}
+{% elif es_admin_plataforma %}
+  <a class="{% if nav_active == 'plataforma' %}is-active{% endif %}" href="{% url 'consola_plataforma' %}">Empresas</a>
+  <a class="{% if nav_active == 'crear_empresa' %}is-active{% endif %}" href="{% url 'crear_workspace' %}">Crear empresa</a>
+{% else %}
+  <a href="{% url 'selector_workspace' %}">Seleccionar empresa</a>
+{% endif %}

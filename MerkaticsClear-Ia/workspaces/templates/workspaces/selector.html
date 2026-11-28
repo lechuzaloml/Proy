@@ -1,0 +1,29 @@
+{% extends "users/base_private.html" %}
+{% block title %}Tus empresas · merkatics-ClearIa{% endblock %}
+{% block page_title %}Selecciona una empresa{% endblock %}
+{% block page_help %}Abre el espacio de trabajo en el que necesitas continuar.{% endblock %}
+{% block content %}
+<section class="private-card admin-card">
+  {% if membresias %}
+    <div class="private-card-grid">
+      {% for membresia in membresias %}
+        <article class="private-stat">
+          <div>
+            <h2>{{ membresia.workspace.nombre }}</h2>
+            <p>{{ membresia.rol|capfirst }}</p>
+            <a class="private-button" href="{% url 'resumen_workspace' workspace_uid=membresia.workspace.uid %}">Abrir empresa</a>
+          </div>
+        </article>
+      {% endfor %}
+    </div>
+  {% else %}
+    <div class="private-empty">
+      <h2>Esta cuenta no tiene acceso a una empresa</h2>
+      <p>Pide a un administrador que te invite con el correo {{ request.usuario.correo }}.</p>
+    </div>
+  {% endif %}
+  {% if es_admin_plataforma %}
+    <p><a class="private-button-secondary" href="{% url 'consola_plataforma' %}">Ir a la consola de plataforma</a></p>
+  {% endif %}
+</section>
+{% endblock %}

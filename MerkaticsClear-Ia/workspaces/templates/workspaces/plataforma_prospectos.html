@@ -1,0 +1,48 @@
+{% extends "users/base_private.html" %}
+{% block title %}Prospectos · {{ workspace.nombre }}{% endblock %}
+{% block page_title %}Prospectos de {{ workspace.nombre }}{% endblock %}
+{% block page_help %}Datos de contacto y resumen de diagnósticos. Vista de solo lectura para el superadministrador.{% endblock %}
+{% block content %}
+  <section class="private-card admin-card">
+    <p><a class="private-button-secondary" href="{% url 'consola_plataforma' %}">Volver a Empresas</a></p>
+    <form class="private-filter-form admin-filters" method="get">
+      <label>Buscar por nombre o correo
+        <input name="q" type="search" value="{{ query }}">
+      </label>
+      <button class="private-button" type="submit">Buscar</button>
+    </form>
+    {% if rows %}
+      <div class="private-table-wrap admin-table-scroll">
+        <table class="admin-table">
+          <thead><tr><th>Nombre</th><th>Correo</th><th>Teléfono</th><th>Cuestionario</th><th>Segmento</th><th>Resultado</th><th>Origen</th><th>Estado</th><th>Fecha</th></tr></thead>
+          <tbody>
+          {% for row in rows %}
+            <tr>
+              <td>{{ row.contact.nombre }}</td>
+              <td>{{ row.contact.correo }}</td>
+              <td>{{ row.contact.telefono }}</td>
+              <td>{% if row.diagnosis %}{{ row.diagnosis.cuestionario.nombre }}{% else %}Sin diagnóstico{% endif %}</td>
+              <td>{% if row.diagnosis %}{{ row.diagnosis.segmento|default:"—" }}{% else %}—{% endif %}</td>
+              <td>{% if row.diagnosis %}{{ row.diagnosis.porcentaje }}%{% else %}—{% endif %}</td>
+              <td>{{ row.origen_label }}</td>
+              <td><span class="private-badge">{{ row.contact.get_estado_display }}</span></td>
+              <td>{{ row.contact.creado|date:"d/m/Y H:i" }}</td>
+            </tr>
+          {% endfor %}
+          </tbody>
+        </table>
+      </div>
+      <nav aria-label="Paginación de prospectos" class="private-actions">
+        {% if page_obj.has_previous %}
+          <a href="?{% if query %}q={{ query|urlencode }}&amp;{% endif %}page={{ page_obj.previous_page_number }}">Anterior</a>
+        {% endif %}
+        <span>Página {{ page_obj.number }} de {{ page_obj.paginator.num_pages }}</span>
+        {% if page_obj.has_next %}
+          <a href="?{% if query %}q={{ query|urlencode }}&amp;{% endif %}page={{ page_obj.next_page_number }}">Siguiente</a>
+        {% endif %}
+      </nav>
+    {% else %}
+      <p class="private-empty">No hay prospectos que coincidan con la búsqueda.</p>
+    {% endif %}
+  </section>
+{% endblock %}

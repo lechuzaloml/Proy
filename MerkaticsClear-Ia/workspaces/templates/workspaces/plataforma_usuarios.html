@@ -1,0 +1,35 @@
+{% extends "users/base_private.html" %}
+{% block title %}Usuarios · {{ workspace.nombre }}{% endblock %}
+{% block page_title %}Usuarios de {{ workspace.nombre }}{% endblock %}
+{% block page_help %}Miembros vinculados a esta empresa. Vista de solo lectura para el superadministrador.{% endblock %}
+{% block content %}
+  <section class="private-card admin-card">
+    <p><a class="private-button-secondary" href="{% url 'consola_plataforma' %}">Volver a Empresas</a></p>
+    {% if membresias %}
+      <div class="private-table-wrap admin-table-scroll">
+        <table class="admin-table">
+          <thead><tr><th>Nombre</th><th>Correo</th><th>Rol</th><th>Membresía</th><th>Cuenta</th></tr></thead>
+          <tbody>
+          {% for membresia in membresias %}
+            <tr>
+              <td>{% if membresia.usuario %}{{ membresia.usuario.nombre|default:"Sin nombre" }}{% else %}Sin cuenta vinculada{% endif %}</td>
+              <td>{{ membresia.correo }}</td>
+              <td>{{ membresia.get_rol_display }}</td>
+              <td><span class="private-badge{% if membresia.estado == 'activo' %} private-badge-active{% else %} private-badge-inactive{% endif %}">{{ membresia.get_estado_display }}</span></td>
+              <td>
+                {% if membresia.usuario %}
+                  {% if membresia.usuario.activo %}Activa{% else %}Desactivada{% endif %}
+                {% else %}
+                  Sin vincular
+                {% endif %}
+              </td>
+            </tr>
+          {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    {% else %}
+      <p class="private-empty">Esta empresa todavía no tiene miembros.</p>
+    {% endif %}
+  </section>
+{% endblock %}

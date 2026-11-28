@@ -1,0 +1,113 @@
+{% extends "users/base_private.html" %}
+{% load static %}
+{% block title %}Resumen · {{ workspace.nombre }}{% endblock %}
+{% block page_title %}Resumen del espacio{% endblock %}
+{% block page_help %}Consulta la actividad reciente y accede a las tareas principales de {{ workspace.nombre }}.{% endblock %}
+{% block content %}
+  {% if sin_permisos %}
+    <section class="private-card admin-card private-empty" role="status">
+      <h2>No tienes permisos para ver los paneles de este espacio</h2>
+      <p>Pide a un administrador de {{ workspace.nombre }} que te asigne los permisos que necesitas.</p>
+    </section>
+  {% else %}
+    {% if puede_administrar_suscripcion and suscripcion %}
+      <section aria-label="Estado de la suscripción" class="admin-subscription-banner{% if suscripcion.estado == 'pago_pendiente' %} admin-subscription-banner-warning{% endif %}">
+        <div>
+          <p class="admin-subscription-mode">Modo de prueba</p>
+          {% if suscripcion.estado == "prueba" %}<p>Prueba gratuita: te quedan {{ dias_prueba_restantes }} días</p>{% endif %}
+          {% if suscripcion.estado == "pago_pendiente" %}
+            <p class="admin-subscription-warning">Hay un pago pendiente. {% if puede_gestionar_suscripcion %}Actualiza el método de pago en el portal.{% else %}El propietario debe actualizar el método de pago.{% endif %}</p>
+          {% endif %}
+          <p>Estado de la suscripción: {{ suscripcion.get_estado_display }}</p>
+          <p>Plan: {{ workspace.get_plan_display }}</p>
+        </div>
+        {% if puede_gestionar_suscripcion %}
+          <form method="post" action="{% url 'portal_suscripcion' workspace.uid %}">
+            {% csrf_token %}
+            <button class="secondary-button" type="submit">Administrar suscripción</button>
+          </form>
+        {% endif %}
+      </section>
+    {% endif %}
+    <section class="private-card-grid" aria-label="Indicadores del espacio">
+      {% if puede_ver_leads %}
+        <article class="private-stat"><span>Contactos nuevos · últimos 7 días</span><strong>{{ contactos_nuevos }}</strong></article>
+        <article class="private-stat"><span>Total de contactos</span><strong>{{ total_contactos }}</strong></article>
+      {% endif %}
+      {% if puede_ver_cuestionarios %}
+        <article class="private-stat"><span>Cuestionarios publicados</span><strong>{{ cuestionarios_publicados }}</strong></article>
+      {% endif %}
+      {% if puede_administrar_miembros %}
+        <article class="private-stat"><span>Miembros activos</span><strong>{{ miembros_activos }}</strong></article>
+      {% endif %}
+    </section>
+
+    <section class="private-card admin-card">
+      <h2>Accesos rápidos</h2>
+      <div class="private-actions">
+        {% if puede_editar_cuestionarios %}<a class="private-button" href="{% url 'biblioteca' %}">Copiar una plantilla</a>{% endif %}
+        {% if puede_administrar_miembros %}
+          <a class="private-button-secondary" href="{% url 'mi_evento' workspace.uid %}">
+            Mi evento{% if popup_evento %} · {{ popup_evento.get_estado_display }}{% else %} · Configurar evento{% endif %}
+          </a>
+        {% endif %}
+        {% if puede_administrar_miembros %}<a class="private-button-secondary" href="{% url 'miembros' workspace.uid %}#invite-member">Invitar a un miembro</a>{% endif %}
+        {% if puede_ver_leads %}<a class="private-button-secondary" href="{% url 'contactos' workspace.uid %}">Ver contactos</a>{% endif %}
+      </div>
+    </section>
+
+    {% if puede_ver_leads %}
+      <section class="private-card admin-card">
+        <h2>Últimos contactos</h2>
+        {% if contactos_recientes %}
+          <div class="private-table-wrap admin-table-scroll">
+            <table class="admin-table">
+              <thead><tr><th>Nombre</th><th>Cuestionario</th><th>Origen</th><th>Fecha</th></tr></thead>
+              <tbody>
+              {% for row in contactos_recientes %}
+                <tr>
+                  <td><a href="{% url 'contacto_detalle' workspace.uid row.contact.uid %}">{{ row.contact.nombre }}</a></td>
+                  <td>{% if row.diagnosis %}{{ row.diagnosis.cuestionario.nombre }}{% else %}Sin cuestionario asociado{% endif %}</td>
+                  <td>{{ row.origen_label }}</td>
+                  <td>{{ row.contact.creado|date:"d/m/Y H:i" }}</td>
+                </tr>
+              {% endfor %}
+              </tbody>
+            </table>
+          </div>
+        {% else %}
+          <p class="private-empty">Todavía no hay contactos. Comparte un cuestionario publicado para recibir respuestas.</p>
+        {% endif %}
+      </section>
+    {% endif %}
+
+    {% if puede_ver_cuestionarios %}
+      <section class="private-card admin-card">
+        <h2>Enlaces públicos</h2>
+        {% if publicados %}
+          <ul class="private-link-list">
+            {% for row in publicados %}
+              <li>
+                <strong>{{ row.cuestionario.nombre }}</strong>
+                <a href="{{ row.public_url }}">{{ row.public_url }}</a>
+                <button class="private-button-secondary" type="button" data-copy-link="{{ row.public_url }}">Copiar enlace</button>
+              </li>
+            {% endfor %}
+          </ul>
+        {% else %}
+          <p class="private-empty">Aún no hay cuestionarios publicados. Publica uno desde Cuestionarios para compartir su enlace.</p>
+        {% endif %}
+      </section>
+    {% endif %}
+
+    <section class="private-card admin-card">
+      <h2>Cómo funciona</h2>
+      <div class="private-how-steps">
+        <article><strong>1. Copia una plantilla</strong><span>Elige una base en la Biblioteca y guárdala como borrador en tu espacio.</span></article>
+        <article><strong>2. Publica y comparte</strong><span>Publica el cuestionario y comparte su enlace con tus prospectos.</span></article>
+        <article><strong>3. Da seguimiento</strong><span>Las respuestas se guardan en Contactos, dentro de este espacio.</span></article>
+      </div>
+    </section>
+  {% endif %}
+{% endblock %}
+{% block extra_scripts %}<script src="{% static 'funnels/public-links.js' %}" defer></script>{% endblock %}

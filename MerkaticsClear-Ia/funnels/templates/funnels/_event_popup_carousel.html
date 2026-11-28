@@ -1,0 +1,31 @@
+{% if event_popups %}
+<div class="promo-modal-backdrop" data-popup-carousel role="dialog" aria-modal="true" aria-labelledby="promo-title" tabindex="-1" hidden>
+  {% for popup in event_popups %}
+    <div class="promo-modal" data-popup-slide="{{ forloop.counter0 }}" data-popup-key="workspace:{{ popup.workspace.slug }}" {% if not forloop.first %}hidden{% endif %}>
+      <button aria-label="Cerrar promoción" class="promo-modal-close" data-popup-close type="button">×</button>
+      <div class="promo-modal-content">
+        <div class="promo-modal-copy">
+          <p class="promo-modal-kicker">{{ popup.insignia|default:popup.workspace.nombre }}</p>
+          <h2{% if forloop.first %} id="promo-title"{% endif %}>{{ popup.titulo }}</h2>
+          <p class="promo-modal-description">{{ popup.resumen }}</p>
+          <div class="promo-modal-actions">
+            <a class="submit-button promo-modal-primary" data-popup-return-key="workspace:{{ popup.workspace.slug }}" href="{% url 'registro_evento' popup.workspace.slug %}"><center> Reserva tu plaza </center></a>
+            <button class="promo-modal-secondary" data-popup-close type="button">No gracias</button>
+          </div>
+        </div>
+        {% if popup.imagen_url or popup.anfitrion_foto_url %}
+          <div aria-label="Imagen del evento" class="promo-modal-visual">
+            <img alt="{{ popup.anfitrion_nombre|default:popup.titulo }}" class="promo-modal-visual-inner promo-modal-visual-image" src="{{ popup.imagen_url|default:popup.anfitrion_foto_url }}">
+          </div>
+        {% endif %}
+      </div>
+    </div>
+  {% endfor %}
+  <div class="promo-carousel-controls">
+    <button aria-label="Popup anterior" data-popup-previous type="button">←</button>
+    <span aria-live="polite" data-popup-count></span>
+    <button aria-label="Siguiente popup" data-popup-next type="button">→</button>
+    <div aria-label="Seleccionar popup" class="promo-carousel-indicators" data-popup-indicators></div>
+  </div>
+</div>
+{% endif %}

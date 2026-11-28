@@ -1,0 +1,55 @@
+{% extends "users/base_private.html" %}
+{% block title %}Contactos · {{ workspace.nombre }}{% endblock %}
+{% block page_title %}Contactos{% endblock %}
+{% block page_help %}Consulta las respuestas y diagnósticos recibidos en este espacio y da seguimiento a cada persona.{% endblock %}
+{% block content %}
+  <section class="private-card admin-card">
+    <p class="private-storage-notice">Aquí se guardan las personas que respondieron los cuestionarios de tu empresa. Solo tu empresa puede verlas.</p>
+    <nav class="private-tabs" aria-label="Filtrar contactos por origen">
+      {% for value,label in origin_filters %}
+        <a href="?origen={{ value }}" {% if filters.origen == value %}aria-current="page"{% endif %}>{{ label }}</a>
+      {% endfor %}
+    </nav>
+    <form method="get" class="private-filter-form admin-filters">
+      <input type="hidden" name="origen" value="{{ filters.origen }}">
+      <label>Buscar por nombre o correo<input name="q" type="search" value="{{ filters.q }}"></label>
+      <label>Estado
+        <select name="estado"><option value="">Todos</option>{% for value,label in states %}<option value="{{ value }}" {% if filters.estado == value %}selected{% endif %}>{{ label }}</option>{% endfor %}</select>
+      </label>
+      <label>Cuestionario
+        <select name="cuestionario"><option value="">Todos</option>{% for questionnaire in questionnaires %}<option value="{{ questionnaire.uid }}" {% if filters.cuestionario == questionnaire.uid|stringformat:"s" %}selected{% endif %}>{{ questionnaire.nombre }}</option>{% endfor %}</select>
+      </label>
+      <label>Orden
+        <select name="orden"><option value="fecha" {% if filters.orden == "fecha" %}selected{% endif %}>Fecha</option><option value="porcentaje" {% if filters.orden == "porcentaje" %}selected{% endif %}>Madurez del proceso</option></select>
+      </label>
+      <label>Segmento<input name="segmento" value="{{ filters.segmento }}"></label>
+      <button class="private-button" type="submit">Aplicar filtros</button>
+    </form>
+
+    {% if rows %}
+      <div class="private-table-wrap admin-table-scroll">
+        <table class="admin-table">
+          <thead><tr><th>Nombre</th><th>Correo</th><th>Cuestionario</th><th>Origen</th><th>Estado</th><th>Madurez del proceso</th><th>Fecha</th></tr></thead>
+          <tbody>
+          {% for row in rows %}
+            <tr>
+              <td><a href="{% url 'contacto_detalle' workspace.uid row.contact.uid %}">{{ row.contact.nombre }}</a></td>
+              <td>{{ row.contact.correo }}</td>
+              <td>{% if row.diagnosis %}{{ row.diagnosis.cuestionario.nombre }}{% else %}Sin diagnóstico{% endif %}</td>
+              <td>{{ row.origen_label }}</td>
+              <td><span class="private-badge">{{ row.contact.get_estado_display }}</span></td>
+              <td>{% if row.diagnosis %}{{ row.diagnosis.porcentaje }}%{% else %}—{% endif %}</td>
+              <td>{{ row.contact.creado|date:"d/m/Y H:i" }}</td>
+            </tr>
+          {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    {% else %}
+      <p class="private-empty">
+        No hay contactos que coincidan con los filtros.
+        {% if filters.origen == "eventos" %}Todavía no hay una fuente de eventos conectada a este espacio.{% else %}Comparte un cuestionario publicado para recibir respuestas.{% endif %}
+      </p>
+    {% endif %}
+  </section>
+{% endblock %}
